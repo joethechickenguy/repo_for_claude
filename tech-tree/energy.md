@@ -143,7 +143,7 @@ over the same five years, adds **~45 W per person**.
 | Total | | **~3-4 kW** |
 
 So a lean colony can plausibly be launch-ready around 3.5-4 kW per person, about half the 1960 US
-figure, which included cars, homes and a whole consumer economy. That is why this tree ends Stage 5
+figure, which included cars, homes and a whole consumer economy. That is why the tree ends Stage 5
 at 3.5 kW and gates Stage 6 on a capability checklist instead of watts: cryogenics (`has_lox`,
 `lox_kg_per_day`), precision turbomachinery (`feed_system`, `tolerance_mm`), guidance
 (`guidance_mode`, `has_tracking`), and life support (`life_support_days`, capsule). The slide rule

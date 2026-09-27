@@ -2,25 +2,17 @@
 """Validate the Bootstrap tech tree and regenerate derived docs.
 
 Checks:
-  - every node has the required fields and a known kind
-  - node ids are unique
-  - every prerequisite (requires.nodes, requires.any_of) names an existing node
-  - no prerequisite comes from a later stage
-  - the graph has no cycles
-  - every state variable read or written is declared in state-variables.yaml
-  - every pages_bundle is declared in page-bundles.yaml
-  - every source is an http(s) URL
-  - every resource a node costs is declared in resources.yaml, and the job producing it is
-    unlocked by one of the node's ancestors or by a node in an earlier stage
+  - every node has the required fields and a known kind; ids are unique
+  - every prerequisite exists and comes from the same or an earlier stage; no cycles
+  - every state variable, page bundle and resource is declared
+  - every resource a node costs is producible by an ancestor or an earlier stage
+  - pressures drive declared variables and name real nodes as answers
+  - workshops open with, and add dials from, real nodes
+  - every critical-path node is an ancestor of a gate
 
-Writes (unless --check):
-  tech-tree/generated/dependencies.md   Mermaid graph per stage + critical path
-  tech-tree/generated/bundles.md        page bundles and the nodes each discounts
-  tech-tree/generated/state-index.md    which nodes read and write each state variable
-  tech-tree/generated/summary.md        node counts per stage and kind
+Writes (unless --check): tech-tree/generated/{dependencies,routes,bundles,state-index,summary}.md
 
-Usage: python3 tools/validate_tree.py [--check]
-Exit code 1 if any error is found.
+Usage: python3 tools/validate_tree.py [--check]      Exit 1 on any error.
 """
 
 import glob
@@ -30,13 +22,11 @@ from collections import defaultdict
 
 import yaml
 
-ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tech-tree")
-ROOT = os.path.normpath(ROOT)
+ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tech-tree"))
 
 KINDS = {"project", "upgrade", "decision_option", "gate", "hub", "workshop"}
-REQUIRED = ["id", "name", "stage", "kind", "critical_path", "problem", "requires", "notebook"]
-REQUIRED_NON_GATE = ["unlocks", "pages_bundle", "without_pages", "fallback",
-                     "energy_effect", "numbers_status"]
+REQUIRED = ["id", "name", "stage", "beat", "kind", "critical_path", "problem", "requires", "notebook"]
+REQUIRED_NON_GATE = ["unlocks", "pages_bundle", "without_pages", "numbers_status"]
 STARTING_JOBS = {"gather_wood", "knap_flint", "build"}
 
 
@@ -56,9 +46,12 @@ def load():
 
 def prereqs(node):
     req = node.get("requires") or {}
-    direct = list(req.get("nodes") or [])
-    alts = [list(group) for group in (req.get("any_of") or [])]
-    return direct, alts
+    return list(req.get("nodes") or []), [list(g) for g in (req.get("any_of") or [])]
+
+
+def all_prereqs(node):
+    d, alts = prereqs(node)
+    return d + [x for g in alts for x in g]
 
 
 def validate(stages, state_vars, bundles, resources):
@@ -77,39 +70,53 @@ def validate(stages, state_vars, bundles, resources):
             if n.get("kind") not in KINDS:
                 errors.append(f"{fname}: {nid} has unknown kind {n.get('kind')!r}")
             if n.get("stage") != data["stage"]:
-                errors.append(f"{fname}: {nid} stage {n.get('stage')} != file stage {data['stage']}")
+                errors.append(f"{fname}: {nid} stage != file stage")
             for src in n.get("sources") or []:
                 if not str(src).startswith(("http://", "https://")):
                     errors.append(f"{fname}: {nid} source is not a URL: {src}")
-            if n.get("kind") == "workshop":
-                ws = {w["id"] for w in data.get("workshops") or []}
-                if n.get("workshop") not in ws:
-                    errors.append(f"{fname}: {nid} names unknown workshop {n.get('workshop')!r}")
             if "trap" in (n.get("tags") or []) and "trap_lesson" not in n:
                 warnings.append(f"{fname}: trap {nid} has no trap_lesson")
             sentences = str(n.get("notebook", "")).count(". ") + 1
-            if sentences < 3 or sentences > 7:
-                warnings.append(f"{fname}: {nid} notebook has ~{sentences} sentences (aim for 3-6)")
+            if sentences < 2 or sentences > 7:
+                warnings.append(f"{fname}: {nid} notebook has ~{sentences} sentences (aim for 2-5)")
 
     declared_vars = set(state_vars)
     bundle_ids = set(bundles["bundles"]) | {"none"}
-    # pressures and workshop dials must reference real state variables and nodes
+
+    # workshops: base definitions once, extensions (`extends: true`) add dials in later stages
+    workshops = {}
+    for fname, data in stages:
+        for w in data.get("workshops") or []:
+            if w.get("extends"):
+                if w["id"] not in workshops:
+                    errors.append(f"{fname}: workshop {w['id']} extends nothing (no earlier base definition)")
+                    continue
+                workshops[w["id"]]["dials"].extend(w.get("dials") or [])
+            else:
+                if w["id"] in workshops:
+                    errors.append(f"{fname}: workshop {w['id']} defined twice; use extends: true")
+                if w.get("opens_with") not in nodes:
+                    errors.append(f"{fname}: workshop {w['id']} opens_with unknown node {w.get('opens_with')!r}")
+                workshops[w["id"]] = {"name": w["name"], "opens_with": w.get("opens_with"), "dials": list(w.get("dials") or [])}
+            for d in w.get("dials") or []:
+                if d.get("added_by") not in nodes:
+                    errors.append(f"{fname}: dial {w['id']}.{d['id']} added_by unknown node {d.get('added_by')!r}")
+    for nid, n in nodes.items():
+        if n.get("kind") == "workshop" and n.get("workshop") not in workshops:
+            errors.append(f"{nid} names unknown workshop {n.get('workshop')!r}")
     for fname, data in stages:
         for pr in data.get("pressures") or []:
             if pr.get("drives") not in declared_vars:
                 errors.append(f"{fname}: pressure {pr['id']} drives undeclared variable {pr.get('drives')!r}")
             for a in pr.get("answers") or []:
-                if a not in nodes and a not in {w["id"] for w in data.get("workshops") or []}:
+                if a not in nodes and a not in workshops:
                     errors.append(f"{fname}: pressure {pr['id']} answer {a!r} is not a node or workshop")
-        for w in data.get("workshops") or []:
-            if w.get("opens_with") not in nodes:
-                errors.append(f"{fname}: workshop {w['id']} opens_with unknown node {w.get('opens_with')!r}")
-            for d in w.get("dials") or []:
-                if d.get("added_by") not in nodes:
-                    errors.append(f"{fname}: dial {w['id']}.{d['id']} added_by unknown node {d.get('added_by')!r}")
+        hb = data.get("heartbeat")
+        if hb and hb not in {p["id"] for p in data.get("pressures") or []}:
+            errors.append(f"{fname}: heartbeat {hb!r} is not one of the stage's pressures")
+
     for nid, n in nodes.items():
-        direct, alts = prereqs(n)
-        for p in direct + [x for g in alts for x in g]:
+        for p in all_prereqs(n):
             if p not in nodes:
                 errors.append(f"{nid}: unknown prerequisite {p}")
             elif nodes[p]["stage"] > n["stage"]:
@@ -121,13 +128,11 @@ def validate(stages, state_vars, bundles, resources):
         if b is not None and b not in bundle_ids:
             errors.append(f"{nid}: unknown pages_bundle '{b}'")
 
-    # cycle check (treat any_of members as edges too; a cycle through an alternative is still a bug)
     color = {}
 
     def visit(nid, stack):
         color[nid] = 1
-        direct, alts = prereqs(nodes[nid])
-        for p in direct + [x for g in alts for x in g]:
+        for p in all_prereqs(nodes[nid]):
             if p not in nodes:
                 continue
             if color.get(p) == 1:
@@ -140,7 +145,6 @@ def validate(stages, state_vars, bundles, resources):
         if color.get(nid) is None:
             visit(nid, [nid])
 
-    # every critical node should be an ancestor of its own stage gate or of the final gate
     def ancestors(start):
         reach, todo = set(), [start]
         while todo:
@@ -148,15 +152,13 @@ def validate(stages, state_vars, bundles, resources):
             if cur in reach or cur not in nodes:
                 continue
             reach.add(cur)
-            direct, alts = prereqs(nodes[cur])
-            todo.extend(direct + [x for g in alts for x in g])
+            todo.extend(all_prereqs(nodes[cur]))
         return reach
 
-    # every consumed resource must have a producing job the player can already have unlocked
-    job_unlocked_by = {}
+    job_unlocked_by = defaultdict(list)
     for nid, n in nodes.items():
         for job in (n.get("unlocks") or {}).get("jobs") or []:
-            job_unlocked_by.setdefault(job, []).append(nid)
+            job_unlocked_by[job].append(nid)
     for nid, n in nodes.items():
         for res in ((n.get("requires") or {}).get("resources") or {}):
             if res not in resources:
@@ -169,13 +171,10 @@ def validate(stages, state_vars, bundles, resources):
             if not producers:
                 errors.append(f"resources.yaml: {res} produced by '{job}', which no node unlocks")
                 continue
-            # fine if an ancestor unlocks it, or an earlier stage offers it (earlier optional
-            # nodes stay buildable, so the player can always go back for them)
             anc = ancestors(nid) - {nid}
             earlier = [p for p in producers if nodes[p]["stage"] < n["stage"]]
             if not anc.intersection(producers) and not earlier:
-                warnings.append(f"{nid} costs {res}, but no ancestor unlocks {job} "
-                                f"(unlocked by {', '.join(producers)})")
+                warnings.append(f"{nid} costs {res}, but no ancestor unlocks {job} (unlocked by {', '.join(producers)})")
 
     final_gate = stages[-1][1]["gate"]["id"]
     final_reach = ancestors(final_gate)
@@ -192,7 +191,7 @@ def validate(stages, state_vars, bundles, resources):
     return nodes, errors, warnings
 
 
-def mermaid_id(nid):
+def mid(nid):
     return nid.replace("-", "_")
 
 
@@ -201,55 +200,70 @@ def write_generated(stages, nodes, state_vars, bundles):
     os.makedirs(out, exist_ok=True)
     header = "<!-- Generated by tools/validate_tree.py. Do not edit by hand. -->\n\n"
 
-    # dependencies.md
-    lines = [header, "# Dependency graphs\n\n",
-             "Solid arrows are required prerequisites. Dotted arrows are alternatives "
-             "(any one group satisfies `any_of`). Thick borders mark the critical path; "
-             "nodes from earlier stages appear as rounded boxes.\n\n"]
+    # dependencies.md: per stage, beats table then mermaid graph
+    lines = [header, "# Stage structure and dependency graphs\n\n"]
     for fname, data in stages:
         ids = {n["id"] for n in data["nodes"]}
-        lines.append(f"## Stage {data['stage']}: {data['name']}\n\n```mermaid\nflowchart TD\n")
+        lines.append(f"## Stage {data['stage']}: {data['name']}\n\n")
+        lines.append(f"Heartbeat: `{data.get('heartbeat')}`. Gate: {data['gate']['name']}.\n\n")
+        if data.get("pressures"):
+            lines.append("| Pressure | Red when | Answers |\n| --- | --- | --- |\n")
+            for p in data["pressures"]:
+                lines.append(f"| {p['name']} | {p['red_when']} | {', '.join(p.get('answers', []))} |\n")
+            lines.append("\n")
+        for w in data.get("workshops") or []:
+            head = f"**{w['id']}** (extends)" if w.get("extends") else f"**{w['name']}** (opens with `{w['opens_with']}`)"
+            lines.append(head + ": " + "; ".join(f"{d['name']} (from `{d['added_by']}`)" for d in w.get("dials") or []) + "\n\n")
+        lines.append("| Beat | Node | Kind | Substantive | Problem |\n| --- | --- | --- | --- | --- |\n")
+        for n in sorted(data["nodes"], key=lambda x: (x["beat"], x["id"])):
+            sub = "yes" if "substantive" in (n.get("tags") or []) else ""
+            lines.append(f"| {n['beat']} | `{n['id']}` | {n['kind']} | {sub} | {n['problem']} |\n")
+        lines.append("\n```mermaid\nflowchart TD\n")
         external = set()
         for n in data["nodes"]:
-            label = n["name"].replace('"', "'")
-            lines.append(f'  {mermaid_id(n["id"])}["{label}"]\n')
-            direct, alts = prereqs(n)
-            for p in direct:
-                if p not in ids:
-                    external.add(p)
-                lines.append(f"  {mermaid_id(p)} --> {mermaid_id(n['id'])}\n")
-            for group in alts:
-                for p in group:
-                    if p not in ids:
-                        external.add(p)
-                    lines.append(f"  {mermaid_id(p)} -.-> {mermaid_id(n['id'])}\n")
+            lines.append(f'  {mid(n["id"])}["{n["name"].replace(chr(34), chr(39))}"]\n')
+            d, alts = prereqs(n)
+            for p in d:
+                external.update([p] if p not in ids else [])
+                lines.append(f"  {mid(p)} --> {mid(n['id'])}\n")
+            for g in alts:
+                for p in g:
+                    external.update([p] if p not in ids else [])
+                    lines.append(f"  {mid(p)} -.-> {mid(n['id'])}\n")
         for p in sorted(external):
-            label = nodes[p]["name"].replace('"', "'") if p in nodes else p
-            lines.append(f'  {mermaid_id(p)}("{label} (S{nodes[p]["stage"] if p in nodes else "?"})")\n')
-        crit = [mermaid_id(n["id"]) for n in data["nodes"] if n.get("critical_path")]
+            lines.append(f'  {mid(p)}("{nodes[p]["name"]} (S{nodes[p]["stage"]})")\n')
+        crit = [mid(n["id"]) for n in data["nodes"] if n.get("critical_path")]
         if crit:
-            lines.append("  classDef crit stroke-width:3px\n")
-            lines.append(f"  class {','.join(crit)} crit\n")
+            lines.append("  classDef crit stroke-width:3px\n  class " + ",".join(crit) + " crit\n")
         lines.append("```\n\n")
-        lines.append("Critical path: " + " → ".join(
-            n["name"] for n in data["nodes"] if n.get("critical_path")) + "\n\n")
     with open(os.path.join(out, "dependencies.md"), "w") as f:
+        f.write("".join(lines))
+
+    # routes.md
+    lines = [header, "# Routes to each gate\n\nEvery route passes. Routes starting with T are traps.\n\n"]
+    for fname, data in stages:
+        lines.append(f"## Stage {data['stage']}: {data['gate']['name']}\n\n| Route | Nodes | State written |\n| --- | --- | --- |\n")
+        for r in data["gate"].get("routes", []):
+            ns = [n for n in data["nodes"] if r in (n.get("route") or [])]
+            st = sorted({v for n in ns for v in (n.get("writes_state") or [])})
+            lines.append(f"| {r} | {', '.join('`'+n['id']+'`' for n in ns)} | {', '.join('`'+v+'`' for v in st)} |\n")
+        lines.append("\n")
+    with open(os.path.join(out, "routes.md"), "w") as f:
         f.write("".join(lines))
 
     # bundles.md
     by_bundle = defaultdict(list)
     for n in nodes.values():
         by_bundle[n.get("pages_bundle")].append(n)
-    lines = [header, "# Page bundles and the nodes they discount\n\n"]
+    lines = [header, "# Page bundles and the nodes they change\n\n"]
     total = 0
     for bid, b in bundles["bundles"].items():
         total += b["pages"]
         lines.append(f"## {b['name']} ({b['pages']} pages)\n\n{b['summary']}\n\n")
         for n in sorted(by_bundle.get(bid, []), key=lambda x: (x["stage"], x["id"])):
-            lines.append(f"- S{n['stage']} `{n['id']}` {n['name']}: without pages, {n.get('without_pages', '')}\n")
+            lines.append(f"- S{n['stage']} `{n['id']}`: without pages, {n.get('without_pages', '')}\n")
         lines.append("\n")
-    lines.append(f"Total if every bundle is taken: {total} pages against a budget of "
-                 f"{bundles['page_budget']}.\n")
+    lines.append(f"Total if every bundle is taken: {total} pages against a budget of {bundles['page_budget']}.\n")
     with open(os.path.join(out, "bundles.md"), "w") as f:
         f.write("".join(lines))
 
@@ -260,31 +274,26 @@ def write_generated(stages, nodes, state_vars, bundles):
             reads[v].append(n["id"])
         for v in n.get("writes_state") or []:
             writes[v].append(n["id"])
-    lines = [header, "# State variable index\n\n",
-             "| Variable | Type | Written by | Read by |\n| --- | --- | --- | --- |\n"]
+    lines = [header, "# State variable index\n\n| Variable | Type | Written by | Read by |\n| --- | --- | --- | --- |\n"]
     for v, meta in state_vars.items():
-        w = ", ".join(f"`{x}`" for x in sorted(writes.get(v, []))) or "(starting value / draft)"
-        r = ", ".join(f"`{x}`" for x in sorted(reads.get(v, []))) or "(gates or UI only)"
+        w = ", ".join(f"`{x}`" for x in sorted(writes.get(v, []))) or "(simulation / draft)"
+        r = ", ".join(f"`{x}`" for x in sorted(reads.get(v, []))) or "(gates, pressures or UI)"
         lines.append(f"| `{v}` | {meta['type']} | {w} | {r} |\n")
     with open(os.path.join(out, "state-index.md"), "w") as f:
         f.write("".join(lines))
 
     # summary.md
     lines = [header, "# Tree summary\n\n",
-             "| Stage | Name | Nodes | Critical | Substantive | Pressures | Workshops | Traps | Labor sinks | Routes to gate |\n",
-             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"]
+             "| Stage | Name | Nodes | Substantive | Accelerants | Pressures | Workshops | Traps | Routes |\n",
+             "| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"]
     tot = 0
     for fname, data in stages:
         ns = data["nodes"]
         tot += len(ns)
-        lines.append("| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |\n".format(
-            data["stage"], data["name"], len(ns),
-            sum(1 for n in ns if n.get("critical_path")),
-            sum(1 for n in ns if "substantive" in (n.get("tags") or [])),
-            len(data.get("pressures") or []), len(data.get("workshops") or []),
-            sum(1 for n in ns if "trap" in (n.get("tags") or [])),
-            sum(1 for n in ns if "labor_sink" in (n.get("tags") or [])),
-            ", ".join(data["gate"].get("routes", []))))
+        tag = lambda t: sum(1 for n in ns if t in (n.get("tags") or []))
+        lines.append(f"| {data['stage']} | {data['name']} | {len(ns)} | {tag('substantive')} | {tag('accelerant')} | "
+                     f"{len(data.get('pressures') or [])} | {len(data.get('workshops') or [])} | {tag('trap')} | "
+                     f"{', '.join(data['gate'].get('routes', []))} |\n")
     lines.append(f"\nTotal nodes: {tot}\n")
     with open(os.path.join(out, "summary.md"), "w") as f:
         f.write("".join(lines))

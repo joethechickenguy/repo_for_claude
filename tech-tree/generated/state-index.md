@@ -4,151 +4,140 @@
 
 | Variable | Type | Written by | Read by |
 | --- | --- | --- | --- |
-| `bundles_taken` | set | (starting value / draft) | `alloy_steels`, `bayer_alumina`, `coal_mining`, `human_computers`, `iron_prospecting`, `mineral_prospecting`, `oil_drilling`, `quench_temper`, `tin_survey_kestel`, `trail_green_stones` |
-| `draft_roster` | set | (starting value / draft) | `apprentice_system`, `boring_mill`, `small_liquid_rocket` |
-| `forest_cover` | number | `blast_furnace`, `charcoal_clamps`, `coppicing`, `shallow_pits` | `blast_furnace`, `charcoal_clamps`, `coppicing`, `fuel_alcohol`, `gate_reliable_smelting`, `gate_steam`, `shallow_pits` |
+| `bundles_taken` | set | (simulation / draft) | `coal_mining`, `human_computers`, `iron_prospecting`, `mineral_prospecting`, `nitrogen_fixation`, `quench_temper`, `trail_green_stones` |
+| `draft_roster` | set | (simulation / draft) | `boring_mill`, `first_liquid_rocket` |
+| `tool_wear` | number | (simulation / draft) | (gates, pressures or UI) |
+| `fuel_balance` | number | (simulation / draft) | `power_station_expansion` |
+| `shop_hours_balance` | number | `alloy_steels`, `electric_motors_preview`, `planer_milling` | (gates, pressures or UI) |
+| `power_balance_kw` | number | `distribution_grid`, `lox_plant_scaleup`, `power_station_expansion` | `gate_liquid_oxygen`, `lox_plant_scaleup`, `nitrogen_fixation` |
+| `stand_days_balance` | number | `test_stand` | (gates, pressures or UI) |
+| `lox_balance` | number | (simulation / draft) | (gates, pressures or UI) |
+| `year` | number | `test_campaign` | (gates, pressures or UI) |
+| `dv_margin_km_s` | number | `crew_safety`, `midcourse_correction`, `rocket_workshop` | `gate_landing` |
+| `forest_cover` | number | `blast_furnace`, `charcoal_clamps`, `coppicing`, `ore_roasting`, `shallow_pits` | `blast_furnace`, `charcoal_clamps`, `coppicing`, `fuel_alcohol`, `gate_reliable_smelting`, `gate_steam`, `shallow_pits` |
+| `malachite_left_kg` | number | `trail_green_stones` | `ore_roasting` |
+| `mine_water_m` | number | `coal_seam_choice`, `drainage_adit`, `shallow_pits` | `drainage_adit`, `mine_drainage_manual`, `savery_pump` |
+| `haul_workers` | count | `rails_wagonways` | (gates, pressures or UI) |
+| `chemical_balance` | number | (simulation / draft) | (gates, pressures or UI) |
+| `iron_quality` | count | `bessemer_converter`, `blast_furnace`, `deposit_choice` | `bloom_smithing`, `gate_steam` |
+| `tolerance_mm` | number | `measurement`, `precision_grinding`, `surface_plates` | `claude_expander`, `compressors`, `gate_generator`, `gyroscopes`, `precision_grinding` |
+| `known_flaws` | set | `test_campaign` | `gate_landing` |
 | `coppice_area` | number | `coppicing` | `blast_furnace` |
-| `river_sites` | count | (starting value / draft) | `water_turbine`, `water_wheels` |
-| `haul_distance_days` | number | `coal_seam_choice`, `deposit_choice`, `ore_road`, `shallow_pits` | `rails_wagonways` |
-| `mine_depth_m` | number | (starting value / draft) | (gates or UI only) |
-| `cropland_ha` | number | `fuel_alcohol` | (gates or UI only) |
-| `hcl_pollution` | flag | `soda_ash` | `gate_generator` |
+| `river_sites` | count | (simulation / draft) | `water_turbine`, `water_wheels` |
+| `haul_distance_days` | number | `coal_seam_choice`, `deposit_choice`, `shallow_pits`, `trail_green_stones` | `rails_wagonways` |
+| `cropland_ha` | number | `fuel_alcohol` | (gates, pressures or UI) |
+| `hcl_pollution` | flag | `soda_ash` | (gates, pressures or UI) |
 | `arsenic_exposure` | number | `arsenical_copper` | `gate_reliable_smelting` |
 | `boiler_explosions` | count | `high_pressure_engine`, `newcomen_engine`, `savery_pump` | `gate_steam` |
-| `fuel_balance` | number | (starting value / draft) | (gates or UI only) |
-| `mine_water_m` | number | `coal_seam_choice`, `drainage_adit`, `shallow_pits` | `drainage_adit`, `mine_drainage_manual`, `savery_pump` |
-| `metal_tools` | count | (starting value / draft) | (gates or UI only) |
-| `iron_quality` | count | `blast_furnace`, `deposit_choice` | `bloom_smithing`, `gate_steam` |
 | `deposits_known` | set | `iron_prospecting` | `deposit_choice` |
-| `bloom_kg` | number | (starting value / draft) | (gates or UI only) |
-| `iron_kg_total` | number | (starting value / draft) | (gates or UI only) |
-| `campaigns_run` | count | (starting value / draft) | (gates or UI only) |
-| `terrain_allows_adit` | flag | (starting value / draft) | (gates or UI only) |
-| `has_adit` | flag | `drainage_adit` | `gate_steam` |
-| `malachite_mined_kg` | number | (starting value / draft) | `ore_roasting` |
-| `ore_type` | enum | `ore_roasting` | (gates or UI only) |
+| `ore_type` | enum | `ore_roasting` | (gates, pressures or UI) |
 | `iron_ore_grade` | number | `deposit_choice` | `bloomery` |
-| `iron_ore_phosphorus` | enum | `deposit_choice` | `basic_lining`, `bessemer_converter` |
-| `coal_sulfur` | enum | `coal_seam_choice` | `blast_furnace`, `gate_steam` |
-| `iron_sulfur` | enum | (starting value / draft) | `bessemer_converter`, `manganese_additions` |
-| `coke_rate` | number | `hot_blast` | (gates or UI only) |
-| `has_copper_ore` | flag | `trail_green_stones` | `ore_road` |
-| `has_copper` | flag | `crucibles_blowpipes` | (gates or UI only) |
-| `has_bronze` | flag | `tin_bronze` | `gate_reliable_smelting` |
-| `has_tin_source` | flag | `tin_survey_kestel` | `tin_bronze` |
-| `has_iron` | flag | `bloomery` | (gates or UI only) |
-| `iron_tools` | count | `bloom_smithing` | (gates or UI only) |
-| `has_steel_edges` | flag | `quench_temper` | `screw_cutting_lathe` |
+| `iron_ore_phosphorus` | enum | `deposit_choice` | `bessemer_converter` |
+| `coal_sulfur` | enum | `coal_seam_choice` | `bessemer_converter`, `blast_furnace`, `gate_steam` |
+| `coke_rate` | number | `hot_blast` | (gates, pressures or UI) |
+| `mineral_sites` | set | `mineral_prospecting` | `alloy_steels`, `aluminum`, `arc_furnace`, `bessemer_converter`, `electronics_lab`, `nitrogen_fixation`, `oil` |
+| `has_copper_ore` | flag | `trail_green_stones` | (gates, pressures or UI) |
+| `has_copper` | flag | `crucibles_blowpipes` | (gates, pressures or UI) |
+| `has_bronze` | flag | `tin_bronze` | `bearings_lubrication`, `gate_reliable_smelting` |
+| `has_tin_source` | flag | `tin_survey_kestel` | (gates, pressures or UI) |
+| `has_iron` | flag | `bloomery` | (gates, pressures or UI) |
+| `iron_tools` | count | `bloom_smithing` | (gates, pressures or UI) |
+| `has_steel_edges` | flag | `quench_temper` | (gates, pressures or UI) |
 | `has_cast_iron` | flag | `blast_furnace` | `finery_forge`, `sand_casting` |
-| `has_foundry` | flag | `sand_casting` | (gates or UI only) |
+| `has_foundry` | flag | `sand_casting` | (gates, pressures or UI) |
 | `has_coal` | flag | `coal_mining` | `coal_seam_choice`, `newcomen_engine` |
-| `has_coke` | flag | `coal_seam_choice` | `coal_gas_tar`, `hot_blast`, `puddling` |
-| `has_lime` | flag | `lime_burning` | `blast_furnace`, `portland_cement` |
-| `has_rolling_mill` | flag | `plate_rolling` | (gates or UI only) |
+| `has_coke` | flag | `coal_seam_choice` | `soda_ash` |
+| `has_lime` | flag | `lime_burning` | `blast_furnace` |
+| `has_rolling_mill` | flag | `plate_rolling` | (gates, pressures or UI) |
 | `plate_quality` | enum | `plate_rolling` | `high_pressure_engine`, `newcomen_engine` |
-| `wrought_iron_capacity` | number | `finery_forge`, `puddling` | (gates or UI only) |
-| `has_steel` | flag | `bessemer_converter` | (gates or UI only) |
-| `steel_quality` | count | `basic_lining`, `bessemer_converter`, `manganese_additions`, `open_hearth` | `compressors`, `gate_generator`, `steam_turbine` |
-| `has_open_hearth` | flag | `open_hearth` | (gates or UI only) |
-| `has_arc_furnace` | flag | `arc_furnace_carbide` | (gates or UI only) |
-| `has_alloy_steel` | flag | `alloy_steels` | `gas_generator_turbopump` |
-| `has_alumina` | flag | `bayer_alumina` | `hall_heroult` |
-| `has_aluminum` | flag | `hall_heroult` | `duralumin`, `gate_liquid_oxygen`, `hydrogen_peroxide`, `solid_motors` |
-| `has_duralumin` | flag | `duralumin` | `capsule`, `lander_stage`, `rocket_workshop` |
-| `has_glass` | flag | `glassworks` | (gates or UI only) |
-| `has_copper_wire` | flag | `wire_drawing` | (gates or UI only) |
-| `has_insulated_wire` | flag | `wire_insulation` | `distribution_grid` |
-| `mineral_sites` | set | `mineral_prospecting` | (gates or UI only) |
-| `has_cement` | flag | `portland_cement` | (gates or UI only) |
-| `has_nitrate` | flag | `niter_beds` | `black_powder_rockets`, `sulfuric_acid` |
-| `nitrate_source` | enum | `birkeland_eyde`, `haber_bosch`, `niter_beds` | `gate_liquid_oxygen`, `niter_to_fixation` |
-| `nitrate_capacity` | number | `niter_to_fixation` | (gates or UI only) |
-| `has_sulfuric_acid` | flag | `sulfuric_acid` | (gates or UI only) |
-| `has_soda_ash` | flag | `soda_ash` | `glassworks` |
-| `has_ammonia_byproduct` | flag | `coal_gas_tar` | `soda_ash` |
-| `has_coal_tar` | flag | `coal_gas_tar` | `hypergolic_propellants` |
-| `has_caustic` | flag | `chlor_alkali` | `bayer_alumina`, `hydrogen_peroxide`, `life_support`, `solid_motors` |
-| `has_hydrogen` | flag | `chlor_alkali` | `haber_bosch` |
-| `has_carbide` | flag | `arc_furnace_carbide` | `welding` |
-| `has_ammonia` | flag | `haber_bosch` | `ostwald_nitric` |
-| `has_nitric_acid` | flag | `ostwald_nitric` | `hypergolic_propellants` |
-| `has_crude` | flag | `oil_drilling` | `oil_refining` |
-| `has_kerosene` | flag | `oil_refining` | `gate_engine`, `gate_liquid_oxygen`, `rocket_workshop` |
+| `wrought_iron_capacity` | number | `finery_forge` | (gates, pressures or UI) |
+| `has_steel` | flag | `bessemer_converter` | (gates, pressures or UI) |
+| `steel_quality` | count | `bessemer_converter`, `open_hearth` | `compressors`, `gate_generator`, `steam_turbine` |
+| `has_open_hearth` | flag | `open_hearth` | (gates, pressures or UI) |
+| `has_arc_furnace` | flag | `arc_furnace` | (gates, pressures or UI) |
+| `has_alloy_steel` | flag | `alloy_steels` | `gas_generator_turbopump`, `gate_liquid_oxygen` |
+| `has_aluminum` | flag | `aluminum` | `gate_engine`, `gate_liquid_oxygen`, `solid_motors` |
+| `has_duralumin` | flag | `aluminum` | `capsule`, `lander_stage`, `rocket_workshop` |
+| `has_glass` | flag | `glassworks` | (gates, pressures or UI) |
+| `has_cement` | flag | `portland_cement` | `launch_complex` |
+| `has_copper_wire` | flag | `wire_drawing` | (gates, pressures or UI) |
+| `has_insulated_wire` | flag | `wire_drawing` | `distribution_grid` |
+| `has_nitrate` | flag | `niter_beds` | (gates, pressures or UI) |
+| `nitrate_source` | enum | `niter_beds`, `nitrogen_fixation` | `hypergolic_propellants` |
+| `has_nitric_acid` | flag | `nitrogen_fixation` | (gates, pressures or UI) |
+| `has_sulfuric_acid` | flag | `sulfuric_acid` | (gates, pressures or UI) |
+| `has_soda_ash` | flag | `soda_ash` | (gates, pressures or UI) |
+| `has_caustic` | flag | `chlor_alkali` | `aluminum`, `hydrogen_peroxide`, `solid_motors` |
+| `has_hydrogen` | flag | `chlor_alkali` | (gates, pressures or UI) |
+| `has_carbide` | flag | `arc_furnace` | `welding` |
+| `has_kerosene` | flag | `oil` | `gate_engine`, `gate_liquid_oxygen`, `rocket_workshop` |
 | `has_ethanol` | flag | `fuel_alcohol` | `gate_engine`, `rocket_workshop` |
-| `has_peroxide` | flag | `hydrogen_peroxide` | `steam_turbopump` |
-| `has_hypergolics` | flag | `hypergolic_propellants` | `gate_engine`, `lander_stage`, `midcourse_correction`, `rocket_workshop` |
-| `has_solids` | flag | `solid_motors` | `launch_escape`, `rocket_workshop`, `stage_separation` |
+| `has_peroxide` | flag | `hydrogen_peroxide` | (gates, pressures or UI) |
+| `has_hypergolics` | flag | `hypergolic_propellants` | `gate_engine`, `lander_stage`, `rocket_workshop` |
+| `has_solids` | flag | `solid_motors` | `crew_safety`, `gate_engine`, `stage_separation` |
 | `water_wheels_built` | count | `water_wheels` | `blast_furnace`, `trip_hammer` |
-| `engine_type` | enum | `high_pressure_engine`, `newcomen_engine`, `savery_pump`, `watt_engine` | `dynamo`, `gate_steam`, `locomotive`, `rotative_engine_shafting` |
-| `coal_per_engine_kw` | number | `newcomen_engine`, `watt_engine` | (gates or UI only) |
-| `mine_drained_by_engine` | flag | `high_pressure_engine`, `newcomen_engine`, `watt_engine` | (gates or UI only) |
-| `factory_power_kw` | number | `rotative_engine_shafting` | (gates or UI only) |
-| `hydro_kw` | number | `water_turbine` | `birkeland_eyde`, `dynamo` |
-| `dynamo_output_kw` | number | `dynamo` | (gates or UI only) |
-| `grid_kw` | number | `distribution_grid` | `arc_furnace_carbide`, `birkeland_eyde`, `chlor_alkali`, `electric_motors`, `hall_heroult`, `lox_plant_scaleup` |
-| `has_ac` | flag | `distribution_grid` | (gates or UI only) |
-| `power_station_efficiency` | number | `steam_turbine` | (gates or UI only) |
-| `has_magneto` | flag | `magneto_generator` | (gates or UI only) |
-| `has_electromagnet` | flag | `electromagnets` | (gates or UI only) |
-| `has_battery` | flag | `voltaic_cells` | (gates or UI only) |
-| `trained_smiths` | count | `apprentice_system` | `bloom_smithing`, `crucibles_blowpipes` |
-| `trained_miners` | count | `apprentice_system` | (gates or UI only) |
-| `machinists_trained` | count | `boring_mill`, `screw_cutting_lathe`, `surface_plates` | `claude_expander`, `gate_generator`, `gate_steam`, `planer_milling`, `precision_grinding`, `surface_plates`, `watt_engine` |
-| `glassblowers_trained` | count | `glassworks` | `dewar_flasks`, `vacuum_pumps`, `vacuum_tubes` |
-| `welders_trained` | count | `welding` | `regenerative_cooling`, `weld_radiography` |
-| `electrical_engineers_trained` | count | `dynamo` | (gates or UI only) |
-| `rocket_engineers_trained` | count | `small_liquid_rocket` | `injector_design` |
+| `engine_type` | enum | `high_pressure_engine`, `newcomen_engine`, `savery_pump`, `watt_engine` | `dynamo`, `gate_steam`, `rotative_engine_shafting` |
+| `coal_per_engine_kw` | number | `newcomen_engine`, `watt_engine` | (gates, pressures or UI) |
+| `mine_drained_by_engine` | flag | `high_pressure_engine`, `newcomen_engine`, `watt_engine` | (gates, pressures or UI) |
+| `factory_power_kw` | number | `rotative_engine_shafting` | (gates, pressures or UI) |
+| `hydro_kw` | number | `water_turbine` | `dynamo`, `gate_generator`, `nitrogen_fixation`, `power_station_expansion` |
+| `dynamo_output_kw` | number | `dynamo` | `distribution_grid` |
+| `grid_kw` | number | `distribution_grid`, `power_station_expansion` | `aluminum`, `arc_furnace`, `chlor_alkali` |
+| `has_ac` | flag | `distribution_grid` | (gates, pressures or UI) |
+| `power_station_efficiency` | number | `steam_turbine` | (gates, pressures or UI) |
+| `has_magneto` | flag | `magneto_generator` | (gates, pressures or UI) |
+| `has_electromagnet` | flag | `electrical_laboratory` | (gates, pressures or UI) |
+| `has_battery` | flag | `electrical_laboratory` | (gates, pressures or UI) |
+| `trained_smiths` | count | (simulation / draft) | `bloom_smithing`, `crucibles_blowpipes` |
+| `trained_miners` | count | `tin_survey_kestel` | (gates, pressures or UI) |
+| `machinists_trained` | count | `boring_mill`, `claude_expander`, `screw_cutting_lathe`, `surface_plates` | `gate_generator`, `gate_steam`, `surface_plates`, `watt_engine` |
+| `glassblowers_trained` | count | `glassworks` | `electronics_lab`, `vacuum_and_dewar` |
+| `welders_trained` | count | `welding` | `capsule`, `regenerative_cooling`, `test_campaign` |
+| `electrical_engineers_trained` | count | `dynamo` | (gates, pressures or UI) |
+| `rocket_engineers_trained` | count | `first_liquid_rocket` | (gates, pressures or UI) |
+| `has_flat_reference` | flag | `surface_plates` | (gates, pressures or UI) |
+| `has_lathe` | flag | `screw_cutting_lathe` | (gates, pressures or UI) |
+| `has_instruments` | flag | `measurement` | (gates, pressures or UI) |
+| `bearing_quality` | count | `bearings_lubrication`, `oil`, `precision_grinding` | `claude_expander`, `dynamo`, `gas_generator_turbopump`, `gate_generator`, `guidance_choice`, `gyroscopes`, `hydrogen_peroxide`, `precision_grinding`, `steam_turbine`, `water_turbine` |
 | `has_boring_mill` | flag | `boring_mill` | `watt_engine` |
-| `has_flat_reference` | flag | `surface_plates` | `screw_cutting_lathe` |
-| `has_lathe` | flag | `screw_cutting_lathe` | (gates or UI only) |
-| `tolerance_mm` | number | `measurement_standards`, `precision_grinding` | `claude_expander`, `compressors`, `gyroscopes`, `inertial_guidance`, `precision_grinding` |
-| `machine_shop_capacity` | number | `alloy_steels`, `electric_motors`, `planer_milling` | `steam_turbine` |
-| `has_ball_bearings` | flag | `precision_grinding` | `gas_generator_turbopump`, `gyroscopes`, `steam_turbopump` |
-| `max_pressure_atm` | number | `compressors` | `haber_bosch`, `linde_liquefier`, `wind_tunnel` |
-| `has_high_vacuum` | flag | `vacuum_pumps` | `vacuum_tubes` |
-| `has_dewar` | flag | `dewar_flasks` | `linde_liquefier` |
-| `has_liquid_air` | flag | `cascade_liquefier`, `claude_expander`, `linde_liquefier` | `air_separation` |
-| `cryo_process` | enum | `claude_expander`, `linde_liquefier` | `air_separation`, `gate_liquid_oxygen`, `lox_plant_scaleup` |
-| `has_lox` | flag | `air_separation` | `life_support`, `welding` |
-| `lox_kg_per_day` | number | `air_separation`, `lox_plant_scaleup` | `launch_complex` |
-| `storage_capacity_t` | number | `covered_stores` | (gates or UI only) |
-| `pump_workers` | count | `mine_drainage_manual` | (gates or UI only) |
-| `rail_km` | number | `rails_wagonways` | `gate_generator`, `launch_complex`, `locomotive` |
-| `has_locomotive` | flag | `locomotive` | `mineral_prospecting`, `oil_drilling` |
-| `has_tubes` | flag | `vacuum_tubes` | `radar_altimeter`, `radio`, `weld_radiography` |
-| `has_radio` | flag | `radio` | `instrumentation`, `radio_command_guidance`, `tracking_network` |
-| `instrumentation_level` | count | `instrumentation` | `injector_design`, `test_campaign`, `test_stand` |
-| `calc_hours` | number | `human_computers` | `inertial_guidance`, `rocket_workshop`, `tracking_network` |
-| `has_gyros` | flag | `gyroscopes` | `inertial_guidance`, `thrust_vector_control` |
-| `guidance_quality` | count | `gyroscopes`, `inertial_guidance` | `sounding_rocket` |
-| `guidance_mode` | enum | `inertial_guidance`, `radio_command_guidance` | `lunar_impactor`, `uncrewed_orbital_flight` |
-| `has_tvc` | flag | `thrust_vector_control` | (gates or UI only) |
-| `has_test_stand` | flag | `test_stand` | (gates or UI only) |
+| `max_pressure_atm` | number | `compressors` | `linde_liquefier`, `nitrogen_fixation` |
+| `has_high_vacuum` | flag | `vacuum_and_dewar` | `electronics_lab` |
+| `has_dewar` | flag | `vacuum_and_dewar` | (gates, pressures or UI) |
+| `has_liquid_air` | flag | `cascade_liquefier`, `claude_expander`, `linde_liquefier` | (gates, pressures or UI) |
+| `cryo_process` | enum | `cascade_liquefier`, `claude_expander`, `linde_liquefier` | `air_separation`, `gate_liquid_oxygen`, `lox_plant_scaleup` |
+| `has_lox` | flag | `air_separation` | `capsule` |
+| `lox_kg_per_day` | number | `air_separation`, `launch_complex`, `lox_plant_scaleup` | `launch_complex` |
+| `pump_workers` | count | `mine_drainage_manual` | (gates, pressures or UI) |
+| `rail_km` | number | `rails_wagonways` | `gate_generator`, `launch_complex`, `mineral_prospecting`, `oil` |
+| `has_adit` | flag | `drainage_adit` | `gate_steam` |
+| `has_tubes` | flag | `electronics_lab` | `lander_stage` |
+| `has_radio` | flag | `electronics_lab` | `tracking_network` |
+| `instrumentation_level` | count | `instrumentation` | `injector_design`, `test_campaign` |
+| `calc_hours` | number | `human_computers` | `guidance_choice`, `rocket_workshop` |
+| `has_gyros` | flag | `gyroscopes` | (gates, pressures or UI) |
+| `has_tvc` | flag | `gyroscopes` | (gates, pressures or UI) |
+| `guidance_quality` | count | `gyroscopes` | `guidance_choice` |
+| `guidance_mode` | enum | `guidance_choice` | (gates, pressures or UI) |
+| `has_test_stand` | flag | `test_stand` | (gates, pressures or UI) |
 | `injector_quality` | count | `injector_design` | `gate_engine`, `lander_throttle` |
-| `has_regen_cooling` | flag | `regenerative_cooling` | (gates or UI only) |
-| `feed_system` | enum | `gas_generator_turbopump`, `pressure_fed_booster_engine`, `steam_turbopump` | `gate_engine`, `rocket_workshop` |
-| `turbopump_quality` | count | `gas_generator_turbopump`, `steam_turbopump` | `gate_engine` |
-| `has_weld_xray` | flag | `weld_radiography` | `capsule`, `test_campaign` |
-| `has_wind_tunnel` | flag | `wind_tunnel` | `sounding_rocket`, `test_campaign` |
-| `flight_tests` | count | `sounding_rocket` | `test_campaign` |
-| `vehicle_design` | set | `rocket_workshop` | `single_stage_attempt`, `uncrewed_orbital_flight` |
-| `has_staging` | flag | `stage_separation` | (gates or UI only) |
-| `has_launch_pad` | flag | `launch_complex` | (gates or UI only) |
+| `has_regen_cooling` | flag | `regenerative_cooling` | (gates, pressures or UI) |
+| `feed_system` | enum | `gas_generator_turbopump`, `hydrogen_peroxide`, `pressure_fed_booster_engine` | `gate_engine`, `rocket_workshop` |
+| `turbopump_quality` | count | `gas_generator_turbopump`, `hydrogen_peroxide` | `gate_engine` |
+| `flight_tests` | count | `test_campaign` | `test_campaign` |
+| `vehicle_design` | set | `rocket_workshop` | (gates, pressures or UI) |
+| `has_staging` | flag | `stage_separation` | (gates, pressures or UI) |
+| `has_launch_pad` | flag | `launch_complex` | (gates, pressures or UI) |
 | `has_tracking` | flag | `tracking_network` | `midcourse_correction` |
-| `orbital_flights` | count | `uncrewed_orbital_flight` | (gates or UI only) |
-| `lunar_probes` | count | `lunar_impactor` | (gates or UI only) |
 | `has_midcourse` | flag | `midcourse_correction` | `gate_landing` |
-| `capsule_mass_t` | number | `capsule` | (gates or UI only) |
-| `life_support_days` | number | `life_support` | (gates or UI only) |
-| `has_pressure_suit` | flag | `pressure_suit` | `gate_landing` |
-| `has_escape_system` | flag | `launch_escape` | `gate_landing` |
-| `lander_design` | set | `lander_stage` | `uncrewed_lunar_landing` |
-| `lander_propellant` | enum | `lander_stage` | (gates or UI only) |
+| `capsule_mass_t` | number | `capsule` | (gates, pressures or UI) |
+| `life_support_days` | number | `capsule` | (gates, pressures or UI) |
+| `has_pressure_suit` | flag | `crew_safety` | `gate_landing` |
+| `has_escape_system` | flag | `crew_safety` | `gate_landing` |
+| `lander_design` | set | `lander_stage` | (gates, pressures or UI) |
 | `lander_throttle` | flag | `lander_throttle` | `gate_landing` |
-| `has_radar_altimeter` | flag | `radar_altimeter` | (gates or UI only) |
-| `landing_tolerance` | number | `landing_gear` | (gates or UI only) |
-| `lunar_landers_flown` | count | `uncrewed_lunar_landing` | (gates or UI only) |
-| `known_flaws` | set | `test_campaign` | `gate_landing` |
+| `has_radar_altimeter` | flag | `lander_stage` | (gates, pressures or UI) |
+| `landing_tolerance` | number | `lander_stage` | (gates, pressures or UI) |
 | `fixed_flaws` | set | `test_campaign` | `gate_landing` |
 | `has_bellows` | flag | `forced_draft_for_iron`, `pot_bellows` | `bloomery`, `forced_draft_for_iron`, `gate_reliable_smelting` |
 | `has_wind_furnaces` | flag | `forced_draft_for_iron`, `wind_furnaces` | `bloomery`, `forced_draft_for_iron`, `gate_reliable_smelting` |
+| `metal_tools` | count | `arsenical_copper`, `ground_stone_axes`, `stone_molds`, `tin_bronze` | (gates, pressures or UI) |

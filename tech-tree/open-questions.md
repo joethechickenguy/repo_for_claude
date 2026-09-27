@@ -1,83 +1,51 @@
 # Open questions
 
-Places where history or physics is unclear, where the tree had to guess, or where realism and fun
-pull apart. Roughly in order of how much they affect the design.
+Unresolved points, roughly by how much they affect the design.
 
 ## Realism vs fun
 
-1. **Draft animals.** Base rules have no animals. Wild aurochs and horses existed in Anatolia around
-   10,000 BCE, but domestication took generations of selective breeding. Should the colony be able to
-   domesticate (a long, optional project), or is muscle plus machines the intended flavor? The tree
-   assumes no animals, which makes `ore_road`, wheelbarrows and rails more valuable.
-2. **The test campaign's randomness.** [failure-modes.md](failure-modes.md) proposes deterministic
-   discovery with hidden exposure counts, keeping chance only at launch. Is any randomness acceptable
-   at launch, or should outcomes be fully seed-deterministic?
-3. **Muscle doesn't count toward watts.** Treadwheels and bucket chains do real work but add nothing
-   to the headline number. That keeps the metric about machines, but a player running 2,000 walkers
-   may feel cheated. Worth one notebook entry.
-4. **Stage 1 length.** At 18 nodes and ~14 million person-days if every route is built, Stage 1 is
-   labor-bound at about 4 in-game years. Reaching 90 minutes of play may need more small unlocks
-   (the prototype found that slowing existing ones creates lulls).
-5. **Gate conditions that require a route.** The Stage 1 gate requires one of four upgrades. A player
-   who just keeps using blowpipes could argue they have "reliable smelting". Requiring a route keeps
-   state meaningful; is that acceptable?
+1. **Draft animals.** Base rules have none; wild aurochs and horses existed, but domestication is
+   generations of breeding. The tree assumes muscle plus machines, which makes roads and rails worth
+   more. Decide, or make domestication a long optional project.
+2. **Muscle doesn't count toward watts.** Treadwheels and bucket chains do real work but don't move
+   the headline number. Intentional; needs one notebook entry so it doesn't feel like a cheat.
+3. **Stage 1 length.** Six years and 14 nodes for 90 minutes depends on the furnace campaign loop
+   carrying the middle of the stage. If it doesn't, add unlocks, not longer projects.
+4. **Launch randomness.** `failure-modes.md` proposes deterministic discovery and a seeded launch.
+   Fully deterministic (same choices, same result) or a shown probability at launch?
 
 ## Materials the region may not provide
 
-These are the biggest realism risks, because each one is a hard dependency somewhere in the tree.
+5. **Platinum** (Ostwald catalyst). None confirmed in Anatolia. Fallback in the tree: cobalt oxide
+   catalyst, or nitric acid from saltpeter and sulfuric acid. Needs a chemist's check.
+6. **Cryolite.** Natural cryolite came from Greenland; the tree synthesizes it from fluorite via HF.
+   Real, dangerous, maybe its own milestone.
+7. **Rubber.** Not local. Insulation is silk/varnish; suits and solid binders use a polysulfide
+   synthetic from chlorine, sulfur and alcohol-derived ethylene. Plausibility at this scale unverified.
+8. **Tungsten.** If not found: carbon filaments (short life), chromium-only tool steel. Realistic
+   enough for triodes? Early tubes also used tantalum and oxide cathodes.
+9. **Which minerals exist where.** Ergani copper, Kestel tin, Guleman chromite, Seydişehir bauxite
+   are sourced. Oil (Batman, Baku), iron sites and the minor minerals are a design list. Fix the
+   real list before writing the survey bundle's text.
 
-6. **Platinum** (Ostwald nitric acid catalyst; the peroxide process used platinum electrodes). Anatolia
-   has no significant platinum that the tree could confirm. Options: trace platinum from placer gold
-   (slow, tiny), cobalt or iron oxide catalysts for ammonia oxidation (less efficient; historically
-   explored), or nitric acid by the older saltpeter-and-sulfuric route. The tree currently lists
-   `platinum_kg: 5` and flags it.
-7. **Cryolite.** Natural cryolite came almost entirely from Greenland. The tree has `synthesize_cryolite`
-   from fluorite via hydrofluoric acid, which is real chemistry but adds a dangerous step. Should it be
-   its own node?
-8. **Rubber and gaskets.** Natural rubber and gutta-percha are tropical. The tree uses cotton/silk and
-   varnish for wire insulation and a polysulfide synthetic (Thiokol-type, 1920s) for suits and solid
-   propellant binder. Whether a polysulfide made from local chlorine, sulfur and ethanol-derived
-   ethylene is realistic at this scale needs a chemist's check.
-9. **Tungsten** for filaments and tool steel. If the survey finds none, tubes fall back on carbon or
-   oxide-coated filaments (shorter life) and tool steel on chromium alone. Is that fallback realistic
-   enough for triodes? Early tubes used tantalum and oxide cathodes too.
-10. **Which minerals exist where.** The tree names Ergani (copper), Kestel (tin), Guleman (chromite)
-    and Seydişehir (bauxite), which are sourced, plus Batman and Baku (oil), iron ore sites and
-    minor minerals, which are not checked against maps. Tungsten, platinum, cryolite and natural
-    rubber are the likely gaps. The geological survey bundle is the in-game promise; the designer
-    should fix the real list before writing its text.
+## Numbers to check
 
-## History and physics that need checking
-
-11. **Pre-industrial energy figures.** Smil's per-capita numbers were read from search snippets, not
-    the book. Verify before quoting in the notebook.
-12. **Early LOX plant energy.** The tree assumes ~1 kWh/kg for an early Linde plant. The real figure
-    for a 1900s plant could be several times higher. It only matters for Stage 6 watts, not
-    feasibility.
-13. **Stage 1 rates** (charcoal per smelter, copper tool lifetime, flint wear) are prototype
-    placeholders. Experimental archaeology has better numbers for bloomeries than for early copper.
-14. **Ethanol vs kerosene Isp in the workshop.** The mockup's 280 s and 310 s are play values. Real
-    V-2 performance was ~200 s at sea level and 239 s in vacuum at only 15 bar chamber pressure. A
-    better model would make Isp depend on chamber pressure (which the turbopump sets) and nozzle
-    expansion (which depends on the stage's altitude). That's a real lesson but adds a factor.
-15. **The Δv budget.** 15.3 km/s is the mockup's figure. Luna 9 braked from about 2.6 km/s in a direct
-    descent; a parking-orbit route costs slightly more. The budget should probably differ by route
-    (direct vs parking orbit) and by lander propellant.
-16. **Tracking coverage.** A single site sees the Moon for only part of each day. The Soviets and
-    Americans used networks spread across longitudes. With one colony, should tracking stations be
-    built far away (a huge project), or is partial coverage an accepted risk?
-17. **Radiation, thermal and landing-site limits.** A one-way pilot on the lunar surface faces hours
-    of either sun or night. "Survives the landing" is well defined only if there's a time window.
-    The mockup's four days of oxygen suggests "alive at landing plus some hours".
+10. **Smil's per-capita energy figures** in `energy.md` came from search excerpts, not the book.
+11. **Early LOX plant energy** (~1 kWh/kg assumed) may be several times too low for a 1900s plant.
+    Affects Stage 6 watts only.
+12. **Workshop Isp values** (280/310 s) are play values; real V-2 was ~200 s sea level, 239 s vacuum
+    at 15 bar. Package C's model should make Isp depend on chamber pressure and nozzle expansion,
+    which the rocket engine workshop already exposes.
+13. **Δv budget** of 15.3 km/s should differ by route (direct vs parking orbit) and lander propellant.
+14. **Tracking coverage.** One site sees the Moon only part of each day. Accept partial coverage or
+    make distant stations a project?
+15. **Survival window.** "Alive at landing" needs a time definition; the capsule has four days of air
+    and now thermal control. Decide the window the score requires.
 
 ## Structure
 
-18. **How late-stage state gets read.** Many Stage 5-6 nodes check capability flags (`has_lox`,
-    `feed_system`, `tolerance_mm`). The engine could derive `has_*` flags from completed nodes to
-    avoid storing them twice.
-19. **Variants.** The mortal-colonists mode needs its own Stage 1 (agriculture, medicine, children).
-    The 1 AD start (recruiting locals, Han China's blast furnaces) would skip much of Stages 1-2 and
-    should probably start at the Stage 2 gate with a different state. Neither is written here.
-20. **Minimum-pages speedrun.** Every node has a `without_pages` path, so a zero-page run is
-    possible. Its length hasn't been estimated; the hardest spots are `haber_bosch` (effectively
-    unavailable without pages, fallback to arc or niter), `basic_lining` and `hydrogen_peroxide`.
+16. **Variants** (mortal colonists, 1 AD start, politics) are not written. The 1 AD start probably
+    begins at the Stage 2 gate with different state.
+17. **Zero-page run.** Every node has a `without_pages` route, so it's possible; its length is
+    unestimated. Hardest spots: Haber-Bosch (unavailable; arc process instead), the basic lining,
+    peroxide.

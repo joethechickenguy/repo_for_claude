@@ -73,32 +73,26 @@ pressures:
 # ---------------------------------------------------------------------------------------------
 workshops:
   - id: furnace_workshop
-    name: Furnace workshop
-    opens_with: bloomery
-    loop: "A campaign is one furnace run of ~30 days. Set the dials, run, read yield / carbon / sulfur / fuel, adjust. 60-100 campaigns per stage."
+    extends: true
     dials:
-      - {id: fuel_ratio, name: "Charcoal : ore", range: [0.5, 2.0], added_by: bloomery,
-         effect: "Below ~0.8 the ore doesn't fully reduce and yield collapses; above ~1.3 the iron picks up carbon and comes out as brittle cast lumps the smiths can't work",
-         basis: "Experimental bloomery smelts run near 1:1; higher ratios raise carbon ([Bloomery](https://en.wikipedia.org/wiki/Bloomery))"}
-      - {id: air_supply, name: "Air supply", options: [blowpipes, bellows_crews, wind_site], added_by: bloomery,
-         effect: "Sets furnace temperature. Below ~1,150 C the slag freezes and the campaign fails",
-         basis: "Forced draft lifts a charcoal fire from ~900 C to 1,200 C+"}
       - {id: ore_choice, name: "Ore", options: [bog_iron, hillside_ore], added_by: deposit_choice,
          effect: "Grade sets yield (bog ~40% Fe, hillside ~60%); bog iron carries phosphorus and lowers iron_quality",
          basis: "Bloomeries want ore above ~50% Fe ([Rom & Bohr](https://donwagner.dk/arch-iron/resources/Rom_Bohr_Bloomery.pdf))"}
+      - {id: charge_mode, name: "Charge", options: [copper, iron_bloom, iron_blast], added_by: bloomery,
+         effect: "Iron bloomery: charcoal:ore near 1:1; below ~0.8 the ore doesn't reduce, above ~1.3 the iron comes out as brittle cast lumps",
+         basis: "Experimental bloomery smelts ([Bloomery](https://en.wikipedia.org/wiki/Bloomery))"}
       - {id: stack_height, name: "Stack height (m)", range: [3, 10], added_by: blast_furnace,
          effect: "Above ~5 m with a strong blast, iron absorbs enough carbon to melt and run continuously: cast iron, ~1 t/day, instead of 30 kg blooms",
          basis: "Cast iron at ~4% C melts near 1,150 C"}
       - {id: blast_source, name: "Blast", options: [treadwheels, water_wheel], added_by: blast_furnace,
          effect: "A water wheel blows a tall furnace with no walkers; treadwheels need ~60 walkers per furnace (estimate)",
-         basis: "Du Shi's water-powered bellows, 31 AD ([Du Shi](https://en.wikipedia.org/wiki/Du_Shi))"}
+         basis: "Du Shi's water-powered bellows, 31 AD"}
       - {id: furnace_fuel, name: "Fuel", options: [charcoal, coke], added_by: coal_seam_choice,
          effect: "Coke frees the forest. Coke from the high-sulfur seam carries sulfur into the iron: iron_quality -1 (hot shortness)",
-         basis: "Darby's 1709 coke smelting relied on unusually low-sulfur coal ([Darby](https://en.wikipedia.org/wiki/Abraham_Darby_I))"}
+         basis: "Darby's 1709 coke smelting relied on unusually low-sulfur coal"}
       - {id: flux, name: "Lime per ton of ore", range: [0, 300], added_by: lime_burning,
          effect: "Lime lets slag flow without taking iron with it: yield +25% in the blast furnace. Too much thickens the slag",
          basis: "Limestone flux forms calcium silicate slag"}
-    outputs: [yield_pct, carbon_pct, sulfur_flag, fuel_per_ton, tons_per_day]
 
   - id: engine_workshop
     name: Engine workshop
@@ -146,8 +140,6 @@ nodes:
     writes_state: [deposits_known]
     pages_bundle: geological_survey
     without_pages: "Different route: the deposits are found in the order prospecting parties stumble on them (bog iron first, hillside after ~3 more years of searching), so the phosphorus problem is met before the choice exists"
-    fallback: "Bog iron only until the hillside is found"
-    energy_effect: "None"
     numbers_status: "Estimate"
     sources: ["https://donwagner.dk/arch-iron/resources/Rom_Bohr_Bloomery.pdf"]
     tags: []
@@ -176,8 +168,6 @@ nodes:
     writes_state: [iron_ore_grade, iron_ore_phosphorus, iron_quality, haul_distance_days]
     pages_bundle: geological_survey
     without_pages: "See iron_prospecting"
-    fallback: "None needed"
-    energy_effect: "None"
     numbers_status: "Grades and distances are estimates; phosphorus in bog iron is well attested"
     sources: ["https://en.wikipedia.org/wiki/Bog_iron"]
     tags: [substantive]
@@ -203,13 +193,11 @@ nodes:
       labor_person_days: 700000
     unlocks:
       jobs: [smelt_iron_bloom]    # per campaign: 1 t ore + ratio x 1 t charcoal -> yield% bloom
-      effects: ["Opens the furnace workshop with two dials: charcoal:ore and air supply"]
+      effects: ["Furnace workshop gains the iron charge mode: the Stage 1 air and fuel dials now apply to iron, with a narrower window"]
     reads_state: [iron_ore_grade, has_bellows, has_wind_furnaces]
     writes_state: [has_iron]
     pages_bundle: metallurgy_1
     without_pages: "Different route: the dials start at wrong defaults and the notebook entry is blank until three campaigns have run; the player finds the ratio by trial (typically 8-10 campaigns instead of 2-3)"
-    fallback: "Hard wall without forced air: no bellows or wind furnace means no iron. The game says so and points back to the Stage 1 upgrades, which stay buildable"
-    energy_effect: "Charcoal at 75 MJ/kg; iron needs ~1 kg charcoal per kg ore"
     numbers_status: "Charcoal:ore ~1:1 and ore-to-bloom ~0.17 are sourced from experimental smelts; campaign length is a game value"
     sources:
       - "https://en.wikipedia.org/wiki/Bloomery"
@@ -237,8 +225,6 @@ nodes:
     writes_state: [has_bellows, has_wind_furnaces]
     pages_bundle: metallurgy_1
     without_pages: "Same"
-    fallback: "Haul ore to the ridge furnaces (more porters)"
-    energy_effect: "None"
     numbers_status: "Game structure"
     sources: []
     tags: [substantive]
@@ -267,8 +253,6 @@ nodes:
     writes_state: [iron_tools]
     pages_bundle: metallurgy_1
     without_pages: "1.5x labor; first bars are slaggy"
-    fallback: "Stone anvils and hammers (slower)"
-    energy_effect: "Forge charcoal counts"
     numbers_status: "Estimate"
     sources: []
     tags: [substantive]
@@ -298,8 +282,6 @@ nodes:
     writes_state: [has_steel_edges]
     pages_bundle: metallurgy_1
     without_pages: "Different route: more trials, each shown with its result (too soft, cracked in the quench, right), so the player learns the window by seeing it"
-    fallback: "Work-hardening only"
-    energy_effect: "Small"
     numbers_status: "Roughly 0.6-1% carbon for hardenable tool steel is standard; trial counts are game values"
     sources: ["https://en.wikipedia.org/wiki/Quenching"]
     tags: [substantive, research_loop]
@@ -327,8 +309,6 @@ nodes:
     writes_state: [forest_cover, coppice_area]
     pages_bundle: primitive_technology
     without_pages: "Workers notice regrowth from stumps after 2 years; 1.5x labor"
-    fallback: "Keep clear-cutting and walk further"
-    energy_effect: "Caps sustainable charcoal; makes the need for coal visible"
     numbers_status: "Coppice rotations of 7-20 years are sourced; yields are estimates"
     sources: ["https://en.wikipedia.org/wiki/Coppicing"]
     tags: [labor_sink, substantive]
@@ -355,8 +335,6 @@ nodes:
     writes_state: [has_coal]
     pages_bundle: geological_survey
     without_pages: "Different route: only the near seam is found at first; its sulfur is discovered by using it. The far seam turns up after 3 more years of prospecting"
-    fallback: "Charcoal and coppice; energy growth stalls"
-    energy_effect: "Coal counts at ~27 MJ/kg when burned for work. Opens the steep part of the energy curve"
     numbers_status: "Heating values standard; rates are estimates"
     sources: ["https://en.wikipedia.org/wiki/Coal"]
     tags: [new_energy_source]
@@ -384,8 +362,6 @@ nodes:
     writes_state: [coal_sulfur, has_coke, haul_distance_days, mine_water_m]
     pages_bundle: geological_survey
     without_pages: "See coal_mining"
-    fallback: "None needed"
-    energy_effect: "Coking losses count"
     numbers_status: "Coke yield 60-70% is typical (estimate); seam properties are game values"
     sources: ["https://en.wikipedia.org/wiki/Coke_(fuel)"]
     tags: [substantive]
@@ -415,8 +391,6 @@ nodes:
     writes_state: [has_lime]
     pages_bundle: primitive_technology
     without_pages: "No penalty; lime plaster was known here in the Neolithic"
-    fallback: "Clay-bonded walls, relined every few campaigns"
-    energy_effect: "Kiln wood counts"
     numbers_status: "CaCO3 -> CaO + CO2 (56% by mass) is exact; wood per kg is an estimate"
     sources: ["https://en.wikipedia.org/wiki/Lime_kiln"]
     tags: []
@@ -444,8 +418,6 @@ nodes:
     writes_state: [water_wheels_built]
     pages_bundle: steam_engines
     without_pages: "Undershot wheels only (half output), 1.5x labor"
-    fallback: "Treadwheels: ~60 walkers per blast furnace (labor sink)"
-    energy_effect: "Mechanical work x 2.5 (see energy.md)"
     numbers_status: "Du Shi (31 AD) sourced; power per wheel is an estimate"
     sources: ["https://en.wikipedia.org/wiki/Du_Shi"]
     tags: [new_energy_source, substantive]
@@ -476,8 +448,6 @@ nodes:
     writes_state: [has_cast_iron, forest_cover, iron_quality]
     pages_bundle: metallurgy_2
     without_pages: "Different route: the first two campaigns freeze (too short a stack, too weak a blast) and the notebook fills in only after; ~3 more campaigns"
-    fallback: "More bloomeries (no cast iron, so no cylinders; the engine needs a finery-and-forge route, slower)"
-    energy_effect: "Largest single fuel user; big surge. Forest or coal becomes the visible bottleneck"
     numbers_status: "Chinese cast iron by the 5th century BCE is sourced; tonnage and fuel rates are estimates"
     sources: ["https://en.wikipedia.org/wiki/History_of_metallurgy_in_China"]
     tags: [labor_sink, substantive]
@@ -505,8 +475,6 @@ nodes:
     writes_state: [wrought_iron_capacity]
     pages_bundle: metallurgy_2
     without_pages: "1.5x labor"
-    fallback: "Keep bloomeries for wrought iron"
-    energy_effect: "More charcoal per ton of bar"
     numbers_status: "Estimate"
     sources: ["https://en.wikipedia.org/wiki/Finery_forge"]
     tags: [substantive]
@@ -532,8 +500,6 @@ nodes:
     writes_state: [has_foundry]
     pages_bundle: metallurgy_2
     without_pages: "1.5x labor; many castings full of holes"
-    fallback: "Loam molds (slower)"
-    energy_effect: "Remelting counts"
     numbers_status: "Estimate"
     sources: ["https://en.wikipedia.org/wiki/Sand_casting"]
     tags: []
@@ -560,8 +526,6 @@ nodes:
     writes_state: []
     pages_bundle: steam_engines
     without_pages: "1.5x labor"
-    fallback: "More smiths"
-    energy_effect: "Mechanical"
     numbers_status: "Estimate"
     sources: []
     tags: []
@@ -590,8 +554,6 @@ nodes:
     writes_state: [pump_workers]
     pages_bundle: none
     without_pages: "No penalty"
-    fallback: "Accept reduced ore from the upper galleries"
-    energy_effect: "Muscle only"
     numbers_status: "Rag-and-chain pumps are well attested; flow rates are estimates"
     sources: ["https://en.wikipedia.org/wiki/Chain_pump"]
     tags: [labor_sink, teaches_bottleneck, substantive]
@@ -621,8 +583,6 @@ nodes:
     writes_state: [has_adit, mine_water_m]
     pages_bundle: none
     without_pages: "No penalty"
-    fallback: "Pumps or engines"
-    energy_effect: "None; frees labor"
     numbers_status: "Estimate. Historic adits ran for kilometers and took decades"
     sources: ["https://en.wikipedia.org/wiki/Adit"]
     tags: [labor_sink, substantive]
@@ -647,8 +607,6 @@ nodes:
     writes_state: [forest_cover, haul_distance_days, mine_water_m]
     pages_bundle: none
     without_pages: "Same"
-    fallback: "None"
-    energy_effect: "None"
     numbers_status: "Game values"
     sources: []
     tags: [substantive]
@@ -681,8 +639,6 @@ nodes:
     writes_state: [boiler_explosions, engine_type]
     pages_bundle: steam_engines
     without_pages: "Same; the trap is the same for everyone"
-    fallback: "Newcomen"
-    energy_effect: "Burns coal for little work; watts rise, gate stays closed"
     numbers_status: "Suction lift of ~9-10 m and Savery's boiler failures are sourced"
     sources:
       - "https://en.wikipedia.org/wiki/Steam_power_during_the_Industrial_Revolution"
@@ -719,8 +675,6 @@ nodes:
     writes_state: [engine_type, mine_drained_by_engine, coal_per_engine_kw, boiler_explosions]
     pages_bundle: steam_engines
     without_pages: "Different route: the plate dial starts hidden and the first boiler is built at the default (margin 1.3); the dial appears after the first failure or after 2 years, whichever comes first"
-    fallback: "None needed"
-    energy_effect: "Large coal burn for small work: a big watt surge under raw accounting; flat under work x 2.5"
     numbers_status: "Newcomen efficiency ~0.3-0.5% and Watt's ~75% saving are sourced; the 4 kW / 2-3 t coal per day example is an estimate"
     sources:
       - "https://en.wikipedia.org/wiki/Newcomen_atmospheric_engine"
@@ -751,8 +705,6 @@ nodes:
     writes_state: [has_boring_mill, machinists_trained]
     pages_bundle: machine_tools
     without_pages: "Different route: not offered until an engine has run 2 years and the workshop has shown its steam leakage; then 2x labor"
-    fallback: "Hand-scraping cylinders (very slow)"
-    energy_effect: "Small"
     numbers_status: "Wilkinson's 1774 boring machine is sourced"
     sources:
       - "https://en.wikipedia.org/wiki/John_Wilkinson_(industrialist)"
@@ -781,8 +733,6 @@ nodes:
     writes_state: [engine_type, mine_drained_by_engine, coal_per_engine_kw]
     pages_bundle: steam_engines
     without_pages: "Different route: the condenser dial appears only after a Newcomen engine has run for 2 years (you must see the waste before the fix is conceivable); with the pages it's available at once"
-    fallback: "Newcomen"
-    energy_effect: "Same work, a quarter of the coal: the fuel bar relaxes"
     numbers_status: "Separate condenser (1765) and ~75% fuel saving are sourced"
     sources: ["https://en.wikipedia.org/wiki/Watt_steam_engine"]
     tags: [skill_builder, substantive]
@@ -811,8 +761,6 @@ nodes:
     writes_state: [has_rolling_mill, plate_quality]
     pages_bundle: metallurgy_2
     without_pages: "2x labor"
-    fallback: "Hammered plate at thick gauges (heavier, slower to make)"
-    energy_effect: "Mechanical"
     numbers_status: "Estimate"
     sources: ["https://en.wikipedia.org/wiki/Rolling_(metalworking)"]
     tags: [substantive]
@@ -840,8 +788,6 @@ nodes:
     writes_state: [engine_type, mine_drained_by_engine, boiler_explosions]
     pages_bundle: steam_engines
     without_pages: "2x labor on the first high-pressure boiler"
-    fallback: "Stay at low pressure"
-    energy_effect: "Efficiency like early Watt; compact"
     numbers_status: "Trevithick's high-pressure engines (c. 1800) are sourced; the margin model is a game design"
     sources: ["https://en.wikipedia.org/wiki/Richard_Trevithick"]
     tags: [scar, substantive]

@@ -1,221 +1,168 @@
-# Stage 1: Fire and stone
-# Bare hands to reliable copper (or bronze) smelting.
-# Target: ~90 min of play, ~4 in-game years. Prototype covers ~16 min.
-# Schema: see tech-tree/README.md#node-schema
+# Stage 1: Fire and stone. Bare hands to metal tools made faster than they wear out.
+# ~90 min, ~6 in-game years. Heartbeat: tools. See DESIGN.md for the layer model.
 
 stage: 1
 name: Fire and stone
 opening_problem: "Ten thousand people on a hillside in eastern Anatolia, holding paper. Nobody has a knife."
+heartbeat: tool_wear
 starting_jobs: [gather_wood, knap_flint, build]
 gate:
   id: gate_reliable_smelting
   name: Reliable smelting
   condition:
-    energy_w_per_person: 250      # proposed recalibration; prototype used 400
-    metal_tools: 5000             # copper_tools + bronze_tools
+    energy_w_per_person: 250
+    state: ["metal_tools >= 5000", "tool_wear >= 0"]
   routes: [A_wind, B_bellows, C_arsenic, D_tin]
+
+pressures:
+  - id: tool_wear
+    name: Tools
+    drives: tool_wear
+    heartbeat: true
+    rises_with: ["every gatherer, digger, miner and builder wears a tool; flint lasts ~20 worker-days, copper ~200, bronze ~400"]
+    red_when: "tools < tool users"
+    effect_when_red: "Workers without a tool drop to quarter speed"
+    answers: [ground_stone_axes, stone_molds, tin_bronze, arsenical_copper]
+    introduced_in_beat: 1
+  - id: wood_distance
+    name: Nearest wood
+    drives: forest_cover
+    rises_with: ["gathering and charcoal burning clear the nearest stands first"]
+    red_when: "forest_cover < 70 (stage 1 scale)"
+    effect_when_red: "Wood per gatherer falls by a third as crews walk farther"
+    answers: [ground_stone_axes, charcoal_clamps]
+    introduced_in_beat: 3
+  - id: ore_outcrop
+    name: Green stone left
+    drives: malachite_left_kg
+    rises_with: ["every kg of malachite mined"]
+    red_when: "malachite_left_kg < 20000"
+    effect_when_red: "Ore per miner halves; the outcrop is running out"
+    answers: [ore_roasting, tin_survey_kestel]
+    introduced_in_beat: 5
+
+workshops:
+  - id: furnace_workshop
+    name: Furnace workshop
+    opens_with: crucibles_blowpipes
+    loop: "A campaign is one furnace run (~30 days). Set the dials, run, read metal out, fuel used and failures. Grows through Stages 2 and 3."
+    dials:
+      - {id: air_supply, name: "Air supply", options: [blowpipes, bellows_crews, wind_site], added_by: crucibles_blowpipes,
+         effect: "Blowpipes reach copper's melting point barely and slowly; bellows or a wind site double or triple output per crucible",
+         basis: "Forced draft lifts a charcoal fire from ~900 C to 1,200 C+"}
+      - {id: fuel_ratio, name: "Charcoal per kg ore", range: [2, 15], added_by: crucibles_blowpipes,
+         effect: "Too little: the charge never reaches temperature and the campaign fails. More than needed is just fuel burned",
+         basis: "Copper melts at 1,085 C; prototype uses 10 kg charcoal per kg copper"}
+    outputs: [metal_kg, fuel_kg, failed_campaigns]
 
 nodes:
 
-  - id: cordage_baskets
-    name: Cordage and baskets
+  # ---- Beat 1: tools and wood ---------------------------------------------------------------------
+  - id: ground_stone_axes
+    name: Ground-stone axes
     stage: 1
-    kind: upgrade
+    beat: 1
+    kind: project
     critical_path: false
-    problem: "Wood and clay are carried in armfuls, and every trip loses a share of the load on the way back."
+    problem: "Flint flakes chip and snag on hardwood; felling one oak takes a crew all day."
     requires:
-      nodes: []
-      resources: {blades: 200}
-      labor_person_days: 40000   # estimate
+      state: ["tool_wear < 0.8"]
+      resources: {blades: 500}
+      labor_person_days: 60000
     unlocks:
-      jobs: [strip_fiber]        # 5 kg bast fiber per worker-day (estimate)
-      effects: ["gather_wood and dig_clay +25% while fiber stock > 0; baskets wear out like tools"]
-    reads_state: []
-    writes_state: []
+      jobs: [grind_axes]          # 1 axe per 4 worker-days (estimate); lasts ~100 worker-days
+      effects: ["Gather wood with an axe: 60 kg/day instead of 40. First tool-mix decision: knappers vs grinders"]
+    writes_state: [metal_tools]
     pages_bundle: primitive_technology
-    without_pages: "Found by trial within weeks; about 2x labor"
-    fallback: "Carry in hide or bark wraps; no bonus"
-    energy_effect: "None"
-    numbers_status: "Estimate. Bast fiber cordage is among the oldest known technologies, but rates are game guesses."
+    without_pages: "Different route: the first axes shatter (wrong stone); crews find greenstone after ~6 months of trials"
+    numbers_status: "Estimate. Experimental archaeology gives hours to days per axe"
     sources: []
-    tags: [quick_win]
+    tags: [substantive, accelerant]
     notebook: >
-      A single plant fiber snaps easily. Twist a bundle of fibers one way, then twist two of those
-      bundles together the other way, and each strand's urge to untwist locks the other in place.
-      That counter-twist is why a thin cord can hold a person's weight. Impressions of cord survive
-      on fired clay from tens of thousands of years ago, long before pottery was used for cooking.
+      A flaked edge is sharp but brittle. Grinding tough fine-grained stone like basalt against
+      sandstone with water makes a blunter edge that survives thousands of blows. Neolithic farmers
+      cleared much of Europe with ground axes.
 
   - id: digging_sticks
     name: Fire-hardened digging sticks
     stage: 1
+    beat: 1
     kind: project
     critical_path: true
     problem: "The river terraces are full of clay, but it sits under a meter of gravel that bare hands can't move."
     requires:
-      nodes: []
+      state: ["wood_kg > 300"]
       resources: {wood_kg: 1000}
       labor_person_days: 120000
     unlocks:
-      jobs: [dig_clay]            # 50 kg clay per worker-day with a tool
-    reads_state: []
-    writes_state: []
+      jobs: [dig_clay]            # 50 kg/day with a tool
     pages_bundle: primitive_technology
-    without_pages: "Obvious to anyone who has read about it; 1.5x labor without pages"
-    fallback: "None needed"
-    energy_effect: "None"
-    numbers_status: "Prototype values, game estimates"
+    without_pages: "1.5x labor"
+    numbers_status: "Prototype values"
     sources: []
-    tags: [prototype]
+    tags: []
     notebook: >
       Charring the tip of a hardwood stick drives water out of the outer layer and hardens it.
       Scrape off the soft charcoal and you have a point that won't mush on the first stone.
-      Digging sticks are among the oldest tools humans have; some groups still use them.
 
-  - id: ground_stone_axes
-    name: Ground-stone axes
-    stage: 1
-    kind: upgrade
-    critical_path: false
-    problem: "Flint flakes chip and snag on hardwood; felling a single oak takes a crew all day."
-    requires:
-      nodes: [digging_sticks]
-      resources: {blades: 500}
-      labor_person_days: 60000
-    unlocks:
-      jobs: [grind_axes]          # 1 axe per 4 worker-days of grinding (estimate)
-      effects: ["gather_wood with an axe: 60 kg/day instead of 40"]
-    reads_state: []
-    writes_state: []
-    pages_bundle: primitive_technology
-    without_pages: "About 2x labor; first axes break often"
-    fallback: "Keep using flint flakes"
-    energy_effect: "None directly; more wood makes more fuel possible"
-    numbers_status: "Estimate. Experimental archaeology reports hours to days per ground axe depending on stone; rate here is a game value."
-    sources: []
-    tags: [labor_sink]
-    notebook: >
-      A flaked flint edge is sharp but brittle, and it shatters when it hits wood at an angle.
-      Grinding a tough, fine-grained stone like basalt or greenstone against sandstone with water
-      and sand makes a blunter, stronger edge that survives thousands of blows. Grinding is slow,
-      but it turns idle hands into a tool that clears forest. Neolithic farmers cleared much of
-      Europe with ground axes.
-
+  # ---- Beat 2: clay and fire -------------------------------------------------------------------------
   - id: pit_kiln
     name: Pit kiln
     stage: 1
+    beat: 2
     kind: project
     critical_path: true
     problem: "Clay pots dry and crack, and one rain turns them back to mud."
     requires:
       nodes: [digging_sticks]
+      state: ["clay_kg > 300"]
       resources: {wood_kg: 5000, clay_kg: 4000}
       labor_person_days: 400000
     unlocks:
       jobs: [fire_pottery]        # 12 kg clay + 24 kg wood -> 2 pots per worker-day
-    reads_state: []
-    writes_state: []
+      effects: ["Firing is the first fuel-for-work; the energy slide rule starts to move"]
     pages_bundle: primitive_technology
-    without_pages: "1.5x labor; a third of early firings crack"
-    fallback: "Sun-dried vessels for dry storage only"
-    energy_effect: "Wood burned in firing counts at 15 MJ/kg"
-    numbers_status: "Dehydroxylation of clay minerals above roughly 500-600 C is standard ceramics; rates are estimates"
+    without_pages: "Different route: a third of early firings crack until the crew learns to dry pots a week first (~4 months)"
+    numbers_status: "Dehydroxylation above ~500-600 C is standard ceramics; rates are estimates"
     sources: ["https://en.wikipedia.org/wiki/Pottery"]
-    tags: [prototype]
+    tags: []
     notebook: >
-      Clay is made of tiny flat mineral crystals with water bound into their structure. Drying
-      removes the water between the crystals, but the bound water only leaves above roughly
-      500 to 600 C. Once it's gone the change is permanent: the pot is now ceramic and won't
-      soften in water again. A pit kiln is just a hole that holds the heat in.
+      Clay crystals hold water in their structure. Drying removes the water between them; only
+      above roughly 500 C does the bound water leave, and that change is permanent. The pot is now
+      ceramic and won't soften again.
 
-  - id: covered_stores
-    name: Covered stores
-    stage: 1
-    kind: project
-    critical_path: false
-    problem: "Wood piled in the open rots and charcoal soaks up rain; a share of every stockpile is wasted each week."
-    requires:
-      nodes: [pit_kiln]
-      state: ["any_stockpile_kg > 20000"]
-      resources: {wood_kg: 8000, clay_kg: 6000}
-      labor_person_days: 250000
-    unlocks:
-      effects:
-        - "Introduces storage: open-air spoilage (1%/day wood, charcoal, clay; 0 for metal) applies above store capacity"
-        - "Each store holds 50 t; more can be built as a repeatable project"
-    reads_state: []
-    writes_state: [storage_capacity_t]
-    pages_bundle: none
-    without_pages: "No penalty; obvious"
-    fallback: "Accept spoilage"
-    energy_effect: "None"
-    numbers_status: "Game mechanic addressing the 'stockpiles balloon' open problem; spoilage rates are estimates"
-    sources: []
-    tags: [economy_rule]
-    notebook: >
-      Wood rots because fungi digest its cellulose, and fungi need moisture above roughly 20%.
-      Keep wood dry and off the ground and it lasts for years. Charcoal doesn't rot, but it soaks
-      up water like a sponge and then burns cooler and smokier. A roof is one of the oldest
-      industrial investments.
-
+  # ---- Beat 3: charcoal ---------------------------------------------------------------------------------
   - id: charcoal_clamps
     name: Charcoal clamps
     stage: 1
+    beat: 3
     kind: project
     critical_path: true
-    problem: "Copper melts at 1,085 C, and an open wood fire rarely gets past about 900 C."
+    problem: "Copper melts at 1,085 C, and an open wood fire rarely gets past 900 C."
     requires:
       nodes: [pit_kiln]
       resources: {wood_kg: 20000, clay_kg: 30000}
       labor_person_days: 600000
     unlocks:
       jobs: [burn_charcoal]       # 100 kg wood -> 20 kg charcoal per worker-day
+      effects: ["Introduces the forest bar: charcoal eats wood five to one"]
     reads_state: [forest_cover]
     writes_state: [forest_cover]
     pages_bundle: metallurgy_1
-    without_pages: "Rediscovered by trial; about 3x the labor, 12% yield at first rising to 20%"
-    fallback: "Pit charcoal in covered trenches; smaller batches"
-    energy_effect: "Charcoal used in smelting counts about 75 MJ/kg including wood lost in the clamp (29 MJ/kg charcoal + ~46 MJ wood lost)"
-    numbers_status: "Yield 20-30% by mass and 27-33 MJ/kg heating value are sourced; labor is an estimate"
-    sources:
-      - "https://energypedia.info/wiki/Charcoal_Production"
-      - "https://en.wikipedia.org/wiki/Copper"
-    tags: [prototype]
+    without_pages: "Different route: yield starts at 12% and rises to 20% over ten burns as the crew learns to seal the clamp"
+    numbers_status: "Yield 20-30% and 27-33 MJ/kg are sourced; labor is an estimate"
+    sources: ["https://energypedia.info/wiki/Charcoal_Production"]
+    tags: []
     notebook: >
       Pile wood, seal it under earth and clay, and let it smolder with little air. Water and
-      volatile gases cook off, leaving nearly pure carbon at about a fifth of the original weight.
-      Burned with a strong draft, charcoal can pass 1,200 C because it has no water to boil off
-      and no smoky gases carrying heat away.
+      volatile gases cook off, leaving nearly pure carbon at a fifth of the weight. With a strong
+      draft, charcoal passes 1,200 C because nothing is left to boil off.
 
-  - id: apprentice_system
-    name: Apprenticeship
-    stage: 1
-    kind: upgrade
-    critical_path: false
-    problem: "Only the drafted specialists do skilled work at full speed; everyone else fumbles at half speed."
-    requires:
-      nodes: [charcoal_clamps]
-      labor_person_days: 100000
-    unlocks:
-      jobs: [teach]               # 1 teacher trains 5 apprentices; 60 days per specialty (estimate)
-      effects: ["Introduces trained specialists per job; untrained workers in skilled jobs work at 50%"]
-    reads_state: [draft_roster]
-    writes_state: [trained_smiths, trained_miners]
-    pages_bundle: none
-    without_pages: "None"
-    fallback: "Learning by doing: untrained workers become trained after 300 worker-days in the job"
-    energy_effect: "None"
-    numbers_status: "Game mechanic; durations are estimates"
-    sources: []
-    tags: [economy_rule]
-    notebook: >
-      Because your colonists never age, knowledge never dies with them, and anyone can learn a
-      second or third trade. Real crafts spread the same way: a master shows a few apprentices,
-      who become masters themselves. Doubling your smiths every two months is the only kind of
-      exponential growth this colony gets.
-
+  # ---- Beat 4: ore --------------------------------------------------------------------------------------
   - id: trail_green_stones
     name: Trail to the green stones
     stage: 1
+    beat: 4
     kind: project
     critical_path: true
     problem: "Your survey pages mark a malachite outcrop three days' walk east, and there is no path through the scrub."
@@ -224,291 +171,246 @@ nodes:
       resources: {blades: 3000}
       labor_person_days: 1200000
     milestones:
-      - at: 0.5
-        id: native_copper_find
-        effect: "Crews find native copper nuggets in a streambed. Unlocks job hammer_native_copper (small, finite supply: 300 kg)"
+      - {at: 0.4, id: native_copper_find, effect: "Native copper nuggets in a streambed: job hammer_native_copper, finite 300 kg. First metal tools"}
+      - {at: 0.8, id: sledges, effect: "Sledges and a graded path: ore haul labor halved"}
     unlocks:
-      jobs: [mine_malachite]      # 15 kg ore per worker-day with a tool
+      jobs: [mine_malachite]      # 15 kg/day with a tool
+      effects: ["Introduces the outcrop bar (finite ore)"]
     reads_state: [bundles_taken]
-    writes_state: [has_copper_ore]
+    writes_state: [has_copper_ore, malachite_left_kg, haul_distance_days]
     pages_bundle: geological_survey
-    without_pages: "Prospecting parties search; adds a random-free but slow 200,000 person-day survey before the trail"
-    fallback: "Native copper only (finite)"
-    energy_effect: "None"
-    numbers_status: "Native copper and malachite at Cayonu near Ergani (eastern Anatolia) are sourced; distances and labor are estimates"
-    sources:
-      - "https://en.wikipedia.org/wiki/%C3%87ay%C3%B6n%C3%BC"
-    tags: [prototype, labor_sink, fixes_lull]
-    notebook: >
-      Malachite is copper carbonate, which is why it's green. Near the surface, copper sulfide
-      ores weather into bright carbonates and oxides, and sometimes into lumps of pure metal
-      called native copper. At Cayonu, near today's Ergani copper mines, people were hammering
-      native copper and malachite into beads and awls more than 9,000 years ago, long before
-      anyone smelted.
-
-  - id: ore_road
-    name: Paved ore road
-    stage: 1
-    kind: project
-    critical_path: false
-    problem: "Porters spend three days walking for every day of mining, so most of the miners' output sits at the outcrop."
-    requires:
-      nodes: [trail_green_stones]
-      resources: {blades: 5000, wood_kg: 20000}
-      labor_person_days: 2000000
-    unlocks:
-      effects: ["Ore haulage labor halved; introduces haul_workers as a visible cost of distance"]
-    reads_state: [has_copper_ore]
-    writes_state: [haul_distance_days]
-    pages_bundle: none
-    without_pages: "No penalty"
-    fallback: "Keep hauling on foot"
-    energy_effect: "None"
-    numbers_status: "Estimate"
-    sources: []
+    without_pages: "Different route: prospecting parties (200,000 person-days) find the outcrop by following green staining in streambeds; the trail then follows"
+    numbers_status: "Native copper and malachite near Cayonu/Ergani are sourced; distances and labor are estimates"
+    sources: ["https://en.wikipedia.org/wiki/%C3%87ay%C3%B6n%C3%BC"]
     tags: [labor_sink]
     notebook: >
-      Carrying is the hidden cost of every early industry. A porter carrying 25 kg who walks three
-      days out and three days back moves less than 5 kg of ore a day. Roads don't make people
-      stronger; they let them walk faster, carry more on sledges, and waste less effort on bad
-      footing. Most of the labor in pre-industrial mining went into moving things.
+      Malachite is copper carbonate, which is why it's green. Near the surface, copper sulfides
+      weather into bright carbonates and sometimes lumps of pure metal. At Cayonu, near today's
+      Ergani mines, people hammered native copper into beads and awls 9,000 years ago.
 
+  # ---- Beat 5: smelting -----------------------------------------------------------------------------------
   - id: crucibles_blowpipes
     name: Crucibles and blowpipes
     stage: 1
-    kind: project
+    beat: 5
+    kind: workshop
+    workshop: furnace_workshop
     critical_path: true
     problem: "You have ore and charcoal, but nothing survives the heat and no fire burns hot enough without forced air."
     requires:
       nodes: [trail_green_stones]
+      state: ["ore_kg > 150"]
       resources: {pots: 400, charcoal_kg: 2000}
       labor_person_days: 800000
     unlocks:
-      jobs: [smelt_copper]        # 2.5 kg ore + 5 kg charcoal + 0.05 pot -> 0.5 kg copper
+      jobs: [smelt_copper]        # per campaign: ore + charcoal -> copper, 20% yield baseline
+      effects: ["Opens the furnace workshop with two dials: air supply, charcoal per kg ore"]
     reads_state: [trained_smiths]
     writes_state: [has_copper]
     pages_bundle: metallurgy_1
-    without_pages: "2x labor; yield starts at half"
-    fallback: "None needed; blowpipes are simple"
-    energy_effect: "Smelting charcoal counts at 75 MJ/kg"
-    numbers_status: "Reduction chemistry is standard; rates are prototype estimates"
+    without_pages: "Different route: dials start wrong and the notebook is blank; the first campaigns fail visibly (too little air, too little fuel) until the player finds the window"
+    numbers_status: "Reduction chemistry standard; rates are prototype estimates"
     sources: []
-    tags: [prototype]
+    tags: [substantive]
     notebook: >
-      Hot charcoal with limited air makes carbon monoxide, and carbon monoxide pulls oxygen out of
-      copper minerals, leaving metal behind. The trick is a fire hot enough and starved enough of
-      air at the same time. Blowing through reed pipes into a small crucible does both, slowly.
-      Egyptian tomb paintings show teams of blowpipe workers around a single fire.
+      Hot charcoal with limited air makes carbon monoxide, which pulls oxygen out of copper
+      minerals and leaves metal. The trick is a fire hot enough and starved enough at once.
+      Blowing through reed pipes into a small crucible does both, slowly.
 
+  - id: ore_roasting
+    name: Ore roasting
+    stage: 1
+    beat: 5
+    kind: project
+    critical_path: false
+    problem: "The green crust is running out; below it the ore is dark and brassy, and it won't smelt."
+    requires:
+      nodes: [crucibles_blowpipes]
+      state: ["malachite_left_kg < 20000"]
+      resources: {wood_kg: 30000}
+      labor_person_days: 500000
+    unlocks:
+      jobs: [roast_sulfide_ore]   # 20 kg ore + 30 kg wood -> 16 kg roasted ore
+      effects: ["Sulfide ore replaces the depleted carbonate; the outcrop bar is replaced by a deep deposit. Fumes: forest_cover -3 near the heaps"]
+    reads_state: [malachite_left_kg]
+    writes_state: [ore_type, forest_cover]
+    pages_bundle: metallurgy_1
+    without_pages: "Different route: 3 failed campaigns on raw sulfide, then the notebook's hint; roasting found by accident from ore left in a kiln"
+    numbers_status: "Chemistry standard; quantities are estimates"
+    sources: []
+    tags: [substantive]
+    notebook: >
+      Deeper copper ores are sulfides. Heat them in open air and the sulfur burns off as choking
+      sulfur dioxide, leaving oxides that smelt like malachite. The fumes that stripped hillsides
+      bare near historic smelters are the raw material for sulfuric acid, much later.
+
+  # ---- Beat 6: casting -----------------------------------------------------------------------------------------
   - id: stone_molds
     name: Stone molds
     stage: 1
+    beat: 6
     kind: project
     critical_path: true
     problem: "Flint is sharp but brittle, and crews go through blades faster than knappers can make them."
     requires:
       nodes: [crucibles_blowpipes]
+      state: ["copper_kg > 40"]
       resources: {copper_kg: 200}
       labor_person_days: 1000000
     unlocks:
       jobs: [cast_copper_tools]   # 1 kg copper per tool; 4 tools per worker-day
-    reads_state: []
-    writes_state: []
+      effects: ["Tool mix: knappers vs casters; copper tools last 10x flint"]
+    writes_state: [metal_tools]
     pages_bundle: metallurgy_1
     without_pages: "1.5x labor"
-    fallback: "Hammer copper cold into shape (slower, work-hardened)"
-    energy_effect: "None directly"
-    numbers_status: "Copper tool lasting 10x a flint blade is a game estimate"
+    numbers_status: "Copper lasting 10x flint is a game estimate"
     sources: []
-    tags: [prototype]
+    tags: [substantive]
     notebook: >
-      Copper isn't sharper than flint. Its advantage is that it bends instead of shattering, can
-      be resharpened, and can be melted and recast when it wears out. Hammering copper also
-      hardens it, because the blows tangle the metal's crystal structure. A carved stone mold
-      lets one smith pour the same shape again and again.
+      Copper isn't sharper than flint. It bends instead of shattering, can be resharpened, and can
+      be melted and recast when worn out. Hammering also hardens it by tangling the crystal
+      structure. A carved stone mold lets one smith pour the same shape again and again.
 
+  # ---- Beat 7: scale ------------------------------------------------------------------------------------------------
   - id: wind_furnaces
     name: Wind-draft furnaces on the ridge
     stage: 1
-    kind: upgrade
-    critical_path: false
+    beat: 7
+    kind: decision_option
     route: [A_wind]
+    critical_path: false
     problem: "Blowpipe crews are exhausted, and each crucible yields only a little copper."
     requires:
       nodes: [crucibles_blowpipes]
+      state: ["campaigns_run > 5"]
       resources: {clay_kg: 60000, copper_kg: 100}
-      labor_person_days: 2400000
+      labor_person_days: 2000000
     unlocks:
-      effects: ["smelt_copper output x3; only on ridge sites; output drops 60% in calm weeks (seasonal, deterministic)"]
-    reads_state: []
+      effects: ["air_supply: wind_site. 3x output per campaign, ridge only; output drops 60% in the fixed calm season. Stage 2 iron must then be smelted on the ridge or bellows built"]
     writes_state: [has_wind_furnaces]
     pages_bundle: metallurgy_1
-    without_pages: "Still possible; 1.5x labor"
-    fallback: "Stay with blowpipes"
-    energy_effect: "Burns 3x the charcoal per smelter; large visible surge"
-    numbers_status: "Monsoon-driven wind furnaces at Samanalawewa, Sri Lanka (iron and steel, from about the 7th century AD) are sourced; the multiplier is an estimate"
-    sources:
-      - "https://www.nature.com/articles/379060a0"
-    tags: [prototype, labor_sink]
+    without_pages: "1.5x labor"
+    numbers_status: "Monsoon wind furnaces at Samanalawewa, Sri Lanka (7th c. AD) are sourced; multiplier is an estimate"
+    sources: ["https://www.nature.com/articles/379060a0"]
+    tags: [substantive, labor_sink]
     notebook: >
-      A furnace on a hillside facing the prevailing wind lets the wind do the blowing. Wind
-      rushing over the front of the furnace also creates low pressure that draws air through.
-      Archaeologists found a line of furnaces like this at Samanalawewa in Sri Lanka, placed to
-      catch the monsoon, and they reached temperatures hot enough to make high-carbon steel.
+      A furnace on a hillside facing the prevailing wind lets the wind do the blowing. At
+      Samanalawewa in Sri Lanka, a line of such furnaces caught the monsoon and reached
+      temperatures hot enough to make steel.
 
   - id: pot_bellows
     name: Pot bellows
     stage: 1
-    kind: upgrade
-    critical_path: false
+    beat: 7
+    kind: decision_option
     route: [B_bellows]
-    problem: "Blowpipes can't move enough air for a bigger furnace, and a human breath is mostly carbon dioxide and water."
+    critical_path: false
+    problem: "Blowpipes can't move enough air for a bigger furnace, and breath is mostly carbon dioxide."
     requires:
       nodes: [crucibles_blowpipes]
+      state: ["campaigns_run > 5"]
       resources: {pots: 300, wood_kg: 5000}
       labor_person_days: 900000
     unlocks:
-      jobs: [hunt_for_hides]      # 0.2 hides per worker-day (estimate); introduces hides as bellows upkeep
-      effects: ["smelt_copper output x2 anywhere; unlocks larger furnaces (needed for iron in Stage 2)"]
-    reads_state: []
+      jobs: [hunt_for_hides]      # 0.2 hides per worker-day (estimate); leather diaphragms wear out
+      effects: ["air_supply: bellows_crews. 2x output anywhere; portable to the iron site in Stage 2"]
     writes_state: [has_bellows]
     pages_bundle: metallurgy_1
     without_pages: "1.5x labor"
-    fallback: "Wind furnaces on ridges"
-    energy_effect: "Burns 2x charcoal per smelter"
-    numbers_status: "Pot bellows are attested in Egyptian tomb paintings (c. 1450 BCE, Rekhmire); output multiplier is an estimate"
+    numbers_status: "Pot bellows attested in Egyptian tomb paintings c. 1450 BCE; multiplier is an estimate"
     sources: ["https://en.wikipedia.org/wiki/Bellows"]
-    tags: []
+    tags: [substantive]
     notebook: >
-      A pot bellows is a clay bowl with a loose hide stretched over it and a pipe out the side.
-      A worker stands on two of them, lifting one foot to let air in and stepping down to push it
-      out. Unlike breath, the air is full of oxygen. Moving more air through the charcoal is the
-      single biggest lever on furnace temperature.
+      A clay bowl with a loose hide over it and a pipe out the side. A worker stands on two,
+      lifting one foot to let air in and stepping down to push it out. Moving more oxygen through
+      the charcoal is the single biggest lever on furnace temperature.
 
-  - id: ore_roasting
-    name: Ore roasting
-    stage: 1
-    kind: project
-    critical_path: false
-    problem: "The green crust at the outcrop is running out; below it the ore is dark and brassy, and it won't smelt."
-    requires:
-      nodes: [crucibles_blowpipes]
-      state: ["malachite_mined_kg > 40000"]
-      resources: {wood_kg: 30000}
-      labor_person_days: 500000
-    unlocks:
-      jobs: [roast_sulfide_ore]   # 20 kg ore + 30 kg wood -> 16 kg roasted ore
-      effects: ["Replaces depleted malachite with sulfide ore; more ore per miner"]
-    reads_state: [malachite_mined_kg]
-    writes_state: [ore_type]
-    pages_bundle: metallurgy_1
-    without_pages: "3x labor to discover; fumes kill vegetation near the roasting heaps"
-    fallback: "Search for new carbonate outcrops (200,000 person-days survey)"
-    energy_effect: "Roasting wood counts at 15 MJ/kg"
-    numbers_status: "Chemistry standard; quantities are estimates"
-    sources: []
-    tags: []
-    notebook: >
-      Deeper copper ores like chalcopyrite are sulfides, copper and iron bound to sulfur. Heat
-      them in open air and the sulfur burns off as choking sulfur dioxide, leaving oxides that
-      smelt like malachite. The same fumes that stripped hillsides bare near historic smelters
-      are the raw material for sulfuric acid, which your chemists will want much later.
-
+  # ---- Beat 8: alloys and the gate ---------------------------------------------------------------------------------
   - id: arsenical_copper
     name: Arsenical copper
     stage: 1
-    kind: upgrade
-    critical_path: false
+    beat: 8
+    kind: decision_option
     route: [C_arsenic]
+    critical_path: false
     problem: "Copper tools dull and bend within weeks, and toolmakers can't keep up."
     requires:
       nodes: [stone_molds]
+      state: ["tool_wear < 0.9"]
       resources: {copper_kg: 300}
-      labor_person_days: 700000
+      labor_person_days: 600000
     unlocks:
       jobs: [mine_arsenical_ore]
-      effects: ["Cast tools last 1.6x copper tools"]
-    reads_state: []
-    writes_state: [arsenic_exposure]
+      effects: ["Tools last 1.6x copper. Scar: arsenic_exposure rises per campaign; at fixed thresholds smelters die"]
+    writes_state: [arsenic_exposure, metal_tools]
     pages_bundle: metallurgy_1
-    without_pages: "Discovered by accident from certain ores after ~1 year of smelting"
-    fallback: "Work-harden copper by hammering"
-    energy_effect: "Same as copper"
-    numbers_status: "Arsenical bronze (0.5-10% As) preceding tin bronze in Anatolia is sourced; lifetime multiplier is an estimate"
+    without_pages: "Different route: discovered by accident from arsenic-bearing ore after ~1 year of smelting; the game then names it"
+    numbers_status: "Arsenical bronze preceding tin bronze in Anatolia is sourced; lifetime is an estimate"
     sources: ["https://en.wikipedia.org/wiki/Arsenical_bronze"]
-    tags: [scar]
+    tags: [substantive, scar]
     notebook: >
-      Some copper ores contain arsenic, and a few percent of arsenic makes copper noticeably
-      harder and easier to cast. For more than a thousand years this was the Near East's main
-      alloy. The price is the smelters' health: arsenic comes off as a toxic vapor. Your
-      colonists don't age, but arsenic can still kill them, so this route leaves a scar.
+      A few percent of arsenic makes copper harder and easier to cast; for a thousand years it was
+      the Near East's main alloy. The price is the smelters' health: arsenic comes off as a toxic
+      vapor. Your colonists don't age, but arsenic can still kill them.
 
   - id: tin_survey_kestel
     name: Expedition to the Taurus tin
     stage: 1
+    beat: 8
     kind: project
-    critical_path: false
     route: [D_tin]
+    critical_path: false
     problem: "Bronze needs tin, which is rare; the nearest known source is in the Taurus mountains, weeks away."
     requires:
-      nodes: [trail_green_stones]
+      nodes: [stone_molds]
+      state: ["bundles_taken has geological_survey"]
       resources: {blades: 6000, pots: 500}
       labor_person_days: 2500000
     milestones:
-      - at: 0.5
-        id: camp_halfway
-        effect: "A supply camp opens; haulers start earning 'trained_miners' experience"
+      - {at: 0.5, id: camp_halfway, effect: "A supply camp opens; haulers count as trained_miners"}
     unlocks:
       jobs: [mine_cassiterite, smelt_tin]
-    reads_state: [bundles_taken]
-    writes_state: [has_tin_source]
+    writes_state: [has_tin_source, trained_miners]
     pages_bundle: geological_survey
-    without_pages: "Unavailable: without the survey there is no reason to go. Arsenical copper is the substitute."
-    fallback: "Arsenical copper"
-    energy_effect: "Tin smelting is small"
-    numbers_status: "Kestel mine and Goltepe tin processing (c. 3rd millennium BCE, near Nigde) are sourced; distance and labor are estimates"
-    sources:
-      - "https://en.wikipedia.org/wiki/Kestel_(archaeological_site)"
-      - "https://www.science.org/doi/10.1126/science.244.4901.200"
-    tags: [labor_sink]
+    without_pages: "Unavailable: without the survey there's no reason to go. Arsenical copper is the substitute"
+    numbers_status: "Kestel mine and Goltepe (c. 2600 BCE, near Nigde) are sourced; distance and labor are estimates"
+    sources: ["https://en.wikipedia.org/wiki/Kestel_(archaeological_site)"]
+    tags: [substantive, labor_sink]
     notebook: >
-      Tin ore, cassiterite, is heavy, dark and easy to miss. For a long time archaeologists
-      assumed Bronze Age Anatolia imported all its tin, until a mine at Kestel in the Taurus
-      mountains and a processing town at nearby Goltepe turned up in the late 1980s. Crucibles
-      there still hold traces of tin smelting from about 2600 BCE.
+      Tin ore, cassiterite, is heavy, dark and easy to miss. Archaeologists assumed Bronze Age
+      Anatolia imported all its tin until a mine at Kestel and a processing town at Goltepe turned
+      up in the late 1980s, with crucibles still holding tin slag.
 
   - id: tin_bronze
     name: Tin bronze
     stage: 1
-    kind: upgrade
-    critical_path: false
+    beat: 8
+    kind: decision_option
     route: [D_tin]
-    problem: "Copper tools wear out fast, and pure copper casts poorly, full of bubbles."
+    critical_path: false
+    problem: "Pure copper casts poorly, full of bubbles, and wears fast."
     requires:
-      nodes: [tin_survey_kestel, stone_molds]
+      nodes: [tin_survey_kestel]
       resources: {copper_kg: 500, tin_kg: 60}
-      labor_person_days: 600000
+      labor_person_days: 500000
     unlocks:
       jobs: [cast_bronze_tools]   # 0.9 kg copper + 0.1 kg tin per tool
-      effects: ["Bronze tools last 2x copper tools; casting yield +20%"]
-    reads_state: [has_tin_source]
-    writes_state: [has_bronze]
+      effects: ["Tools last 2x copper; casting yield +20%. Bronze stays the bearing metal through Stage 3"]
+    writes_state: [has_bronze, metal_tools]
     pages_bundle: metallurgy_1
-    without_pages: "1.5x labor"
-    fallback: "Arsenical copper"
-    energy_effect: "Melting at ~950 C instead of 1,085 C uses slightly less charcoal"
-    numbers_status: "Tin bronze melting point about 950 C, and ~10% tin, are sourced; lifetime is an estimate"
+    without_pages: "Different route: the right tin fraction is found by campaigns (too little: soft; too much: brittle), about 5 casts"
+    numbers_status: "~10% tin and ~950 C melting are sourced; lifetime is an estimate"
     sources: ["https://en.wikipedia.org/wiki/Bronze"]
-    tags: []
+    tags: [substantive]
     notebook: >
-      Add about one part tin to nine parts copper and the tin atoms, which are bigger than copper
-      atoms, jam the planes of the crystal so they can't slide easily. The metal gets harder,
-      melts about 130 C lower, and flows into molds more cleanly. That combination is why an
-      entire age is named after this alloy.
+      Add one part tin to nine parts copper and the larger tin atoms jam the crystal planes so
+      they can't slide. The metal gets harder, melts 130 C lower, and flows cleanly into molds.
+      An entire age is named after it.
 
   - id: gate_reliable_smelting
     name: "Gate: reliable smelting"
     stage: 1
+    beat: 8
     kind: gate
     critical_path: true
     problem: "Metal tools are made faster than they wear out, and the colony burns fuel for real work at scale."
@@ -519,8 +421,6 @@ nodes:
     unlocks:
       effects: ["Stage 2 opens: iron"]
     reads_state: [has_bellows, has_wind_furnaces, has_bronze, arsenic_exposure, forest_cover]
-    writes_state: []
     notebook: >
-      Every route through this stage ends the same way: your colony makes metal tools faster than
-      they wear out. What you carry into Stage 2 differs. Bellows move with you; ridges don't.
-      Bronze tools last; arsenic leaves a mark.
+      Every route ends the same way: tools made faster than they wear out. What you carry forward
+      differs. Bellows move with you; ridges don't. Bronze lasts; arsenic leaves a mark.

@@ -1,648 +1,594 @@
-# Stage 5: Precision and propulsion
-# Electronics, instruments, gyroscopes, propellants, and the first booster-class engine.
-# Target: ~90 min of play, ~12 in-game years.
+# Stage 5: Precision and propulsion. Bearings, electronics, guidance, a booster engine, and the ground to fire it from.
+# ~90 min, ~25 in-game years. Heartbeat: test-stand time and liquid oxygen.
 
 stage: 5
 name: Precision and propulsion
 opening_problem: "You can make liquid oxygen by the ton, but nobody here has ever built a machine that burns it on purpose."
+heartbeat: stand_time
 gate:
   id: gate_engine
   name: A booster-class engine fires
   condition:
-    energy_w_per_person: 3500     # proposed, weighted
-    state: ["engine_static_fire_s >= 60", "engine_thrust_kn >= 250"]
+    energy_w_per_person: 3500
+    state: ["engine_static_fire_s >= 60", "engine_thrust_kn >= 250", "has_launch_pad == true"]
   routes: [A_steam_turbopump, B_gas_generator, T_pressure_fed_booster]
+
+pressures:
+  - id: stand_time
+    name: Test stand
+    drives: stand_days_balance
+    heartbeat: true
+    rises_with: ["every static fire takes stand days and burns propellant; designs queue for the stand"]
+    red_when: "queue exceeds a year"
+    effect_when_red: "Engine designs wait untested; the player chooses which fires first or builds a second stand"
+    answers: [test_stand, instrumentation]
+    introduced_in_beat: 4
+  - id: lox_supply
+    name: Liquid oxygen
+    drives: lox_balance
+    rises_with: ["each static fire burns tons; production is the Stage 4 plant"]
+    red_when: "stock < next test's need"
+    effect_when_red: "Tests wait for oxygen"
+    answers: [lox_plant_scaleup]
+    introduced_in_beat: 4
+  - id: power_balance
+    name: Power
+    drives: power_balance_kw
+    rises_with: ["oxygen plant, arc furnaces, aluminum, machine shop"]
+    red_when: "load exceeds generation"
+    effect_when_red: "Brownout; oxygen output falls first"
+    answers: [power_station_expansion]
+    introduced_in_beat: 1
+
+workshops:
+  - id: rocket_engine_workshop
+    name: Rocket engine workshop
+    opens_with: first_liquid_rocket
+    loop: "Design an engine, queue it for the stand, fire, read chamber pressure trace, wall temperature, thrust, and the flaw list. Fix, redesign, refire. 20-40 firings per stage."
+    dials:
+      - {id: mixture_ratio, name: "Oxidizer : fuel", range: [1.0, 3.0], added_by: first_liquid_rocket,
+         effect: "Too fuel-rich: low performance, sooty. Too oxidizer-rich: burns through the wall. The optimum for alcohol/LOX is about 1.3-1.5, for kerosene about 2.3 (estimates for play)",
+         basis: "Stoichiometry and flame temperature; engines run fuel-rich for cooling"}
+      - {id: chamber_pressure, name: "Chamber pressure (bar)", range: [5, 60], added_by: first_liquid_rocket,
+         effect: "Higher pressure: more thrust per kg of engine and better Isp, but the feed system must beat it. Pressure-fed caps at ~20; turbopumps go higher",
+         basis: "V-2 ran at 15 bar ([enginehistory.org](https://www.enginehistory.org/Rockets/RPE02/RPE02-2.shtml))"}
+      - {id: cooling, name: "Cooling", options: [none, film, regenerative], added_by: regenerative_cooling,
+         effect: "None: seconds. Film (extra fuel along the wall): a minute, at an Isp cost. Regenerative (fuel through wall channels): indefinite",
+         basis: "V-2 used both film and regenerative cooling"}
+      - {id: injector, name: "Injector", options: [showerhead, impinging, impinging_baffled], added_by: injector_design,
+         effect: "Showerhead: rough burning, instability likely. Impinging jets: fine mist, higher pressure possible. Baffles: fix combustion instability once seen",
+         basis: "F-1 baffles ([NASA](https://www.nasa.gov/history/solving-combustion-instability-and-saving-americas-first-trips-to-the-moon))"}
+      - {id: feed, name: "Feed system", options: [pressure_fed, peroxide_turbopump, gas_generator_turbopump], added_by: pressure_fed_booster_engine,
+         effect: "Pressure-fed: simple, tanks must beat chamber pressure (heavy on a booster, fine on a lander). Turbopumps: light tanks, a precision machine that runs cryogenic on one side and hot on the other",
+         basis: "V-2 peroxide turbopump; F-1 gas generator; Apollo LM descent engine pressure-fed"}
+      - {id: nozzle, name: "Nozzle expansion", range: [4, 40], added_by: instrumentation,
+         effect: "Sea-level engines want a short nozzle; vacuum stages want a long one. The screen shows Isp at sea level and in vacuum",
+         basis: "Overexpansion and flow separation at sea level"}
+    outputs: [thrust_kn, isp_sl_s, isp_vac_s, burn_time_s, flaws_found]
 
 nodes:
 
-  - id: black_powder_rockets
-    name: Black-powder rockets
-    stage: 5
-    kind: decision_option
-    critical_path: false
-    problem: "Your colonists want to know if the old war rockets in the history pages could simply be made bigger."
-    requires:
-      nodes: [gate_liquid_oxygen, niter_beds]
-      resources: {black_powder_kg: 500, iron_kg: 500}
-      labor_person_days: 150000
-    unlocks:
-      effects: ["Flies a few kilometers. Workshop preview shows the rocket equation: at an exhaust speed of ~0.8 km/s, orbit needs a mass ratio in the tens of thousands. Hard wall."]
-    reads_state: [has_nitrate]
-    writes_state: []
-    pages_bundle: none
-    without_pages: "Same"
-    fallback: "Liquid engines"
-    energy_effect: "None"
-    numbers_status: "Black powder specific impulse roughly 80 s is a commonly cited figure (treat as estimate); the mass-ratio arithmetic is exact"
-    sources: ["https://en.wikipedia.org/wiki/Tsiolkovsky_rocket_equation"]
-    tags: [trap, hard_wall_explained, quick_win]
-    trap_lesson: "Δv = v_e ln(m_full/m_empty). With v_e ≈ 0.8 km/s, reaching ~9.4 km/s needs m_full/m_empty = e^(9.4/0.8) ≈ 130,000. No structure is that light."
-    notebook: >
-      A rocket's speed gain depends on its exhaust speed and the logarithm of its full-to-empty
-      mass ratio. Black powder's exhaust leaves at under a kilometer per second. To reach orbit
-      you'd need a rocket that is almost entirely propellant, with a shell weighing less than a
-      hundred-thousandth of the total. Physics, not craftsmanship, says no. This is why the
-      Stage 4 chemistry mattered.
-
+  # ---- Beat 1: bearings and grinding ------------------------------------------------------------------------------------------
   - id: precision_grinding
     name: Precision grinding and ball bearings
     stage: 5
+    beat: 1
     kind: project
     critical_path: true
-    problem: "Shafts spinning thousands of times a minute seize in plain bearings, and cutting tools can't finish hardened steel."
+    problem: "Shafts at thousands of rpm seize in plain bearings, and cutting tools can't finish hardened steel."
     requires:
-      nodes: [gate_liquid_oxygen, alloy_steels, electric_motors]
+      nodes: [gate_liquid_oxygen, alloy_steels]
       resources: {alloy_steel_kg: 5000, steel_kg: 10000}
-      labor_person_days: 2000000
+      labor_person_days: 1800000
     unlocks:
       jobs: [grind_bearings]
-      effects: ["Hardened, ground parts to ~0.01 mm; ball bearings for gyroscopes and turbopumps"]
-    reads_state: [tolerance_mm, machinists_trained]
-    writes_state: [tolerance_mm, has_ball_bearings]
+      effects: ["Machine shop: gauging to 0.01 mm; bearings dial: hardened_steel (ball bearings). Gyros, turbines and turbopumps read bearing_quality"]
+    reads_state: [tolerance_mm, bearing_quality]
+    writes_state: [tolerance_mm, bearing_quality]
     pages_bundle: machine_tools
     without_pages: "3x labor"
-    fallback: "Bronze plain bearings with oil (limits speed; turbopump nodes cost more)"
-    energy_effect: "Mechanical"
     numbers_status: "Estimate"
     sources: ["https://en.wikipedia.org/wiki/Ball_bearing"]
     tags: [skill_builder, labor_sink]
     notebook: >
-      A grinding wheel is a cutting tool with millions of tiny, hard teeth, and it can shape steel
-      that's already been hardened. That matters because hardening warps a part, so the final
-      size has to come after. Balls ground round to a thousandth of a millimeter let shafts spin
-      fast with almost no friction.
+      A grinding wheel is millions of tiny hard teeth, and it can shape steel that's already been
+      hardened, which matters because hardening warps a part. Balls ground round to a hundredth of a
+      millimeter let shafts spin fast with almost no friction.
 
-  - id: vacuum_tubes
-    name: Vacuum tubes
+  # ---- Beat 2: electronics ------------------------------------------------------------------------------------------------------
+  - id: electronics_lab
+    name: Vacuum tubes and radio
     stage: 5
-    kind: project
-    critical_path: true
-    problem: "Signals on long wires fade to nothing, and a relay can switch a signal but can't strengthen a faint one."
-    requires:
-      nodes: [vacuum_pumps, glassworks]
-      resources: {glass_kg: 500, tungsten_kg: 5, copper_kg: 200}
-      labor_person_days: 800000
-    unlocks:
-      jobs: [make_tubes]
-    reads_state: [has_high_vacuum, glassblowers_trained]
-    writes_state: [has_tubes]
-    pages_bundle: vacuum_tubes_radio
-    without_pages: "4x labor; the control grid is the non-obvious step"
-    fallback: "Spark-gap radio and relays (no amplification; guidance and telemetry much weaker)"
-    energy_effect: "Small"
-    numbers_status: "De Forest's triode (1906) is sourced"
-    sources: ["https://en.wikipedia.org/wiki/Triode"]
-    tags: []
-    notebook: >
-      A hot filament in a vacuum boils off electrons, which fly to a positive plate. Put a wire
-      mesh grid in between, and a tiny voltage on the grid controls a large current to the plate.
-      That is amplification. Lee de Forest's 1906 triode was the first practical electronic
-      amplifier, and it made long-distance radio possible.
-
-  - id: radio
-    name: Radio transmitters and receivers
-    stage: 5
+    beat: 2
     kind: project
     critical_path: true
     problem: "Once a rocket leaves the ground, you won't know what it's doing or why it failed."
     requires:
-      nodes: [vacuum_tubes]
-      resources: {copper_kg: 1000, steel_kg: 1000}
-      labor_person_days: 1000000
+      nodes: [vacuum_and_dewar]
+      resources: {glass_kg: 500, copper_kg: 1000, tungsten_kg: 5}
+      labor_person_days: 1800000
+    milestones:
+      - {at: 0.3, id: diode, effect: "A hot filament in a vacuum passes current one way"}
+      - {at: 0.6, id: triode, effect: "A grid between filament and plate: amplification"}
+      - {at: 1.0, id: radio, effect: "Tuned circuits and amplifiers: radio links and Doppler tracking"}
     unlocks:
-      effects: ["Radio links; prerequisite for telemetry, radio guidance and tracking"]
-    reads_state: [has_tubes]
-    writes_state: [has_radio]
+      jobs: [make_tubes]
+      effects: ["Radio; prerequisite for telemetry, guidance and the radar altimeter. Tungsten filaments if found, carbon otherwise (shorter life)"]
+    reads_state: [has_high_vacuum, glassblowers_trained, mineral_sites]
+    writes_state: [has_tubes, has_radio]
     pages_bundle: vacuum_tubes_radio
-    without_pages: "3x labor"
-    fallback: "Visual tracking and recovered instruments only"
-    energy_effect: "Small"
-    numbers_status: "Estimate"
-    sources: ["https://en.wikipedia.org/wiki/Radio"]
-    tags: []
+    without_pages: "Different route: the grid (triode) isn't offered until the diode has been in use for two years; 3x labor"
+    numbers_status: "De Forest 1906 sourced"
+    sources: ["https://en.wikipedia.org/wiki/Triode"]
+    tags: [research_loop]
     notebook: >
-      A current oscillating back and forth in an antenna sends out an electromagnetic wave at the
-      same frequency. A tuned circuit in a receiver responds strongly to just that frequency, and
-      tubes amplify the whisper it picks up. Vary the wave's strength or frequency and you can
-      send voices, numbers or commands.
+      A hot filament boils off electrons that fly to a positive plate. A wire mesh between them lets a
+      tiny voltage control a large current: amplification. De Forest's 1906 triode made long-distance
+      radio possible.
 
   - id: instrumentation
-    name: Pressure gauges, strain gauges and telemetry
+    name: Instrumentation and telemetry
     stage: 5
+    beat: 2
     kind: project
     critical_path: true
-    problem: "Engines on test blow up in a fraction of a second, and nobody can see what happened first."
+    problem: "Engines on test will blow up in a fraction of a second, and nobody will see what happened first."
     requires:
-      nodes: [radio]
+      nodes: [electronics_lab, measurement]
       resources: {copper_kg: 500, glass_kg: 200}
-      labor_person_days: 900000
+      labor_person_days: 800000
     unlocks:
-      effects: ["Fast recording of chamber pressure, vibration and temperature; each test reveals flaws more often (see failure-modes.md)"]
-    reads_state: [has_radio]
+      effects: ["Pressure and strain gauges recorded fast, radioed from flight. Each test reveals flaws more often (instrumentation_level). Adds the nozzle dial"]
     writes_state: [instrumentation_level]
     pages_bundle: liquid_rocket_engines
     without_pages: "2x labor"
-    fallback: "Visual observation and post-mortems (tests reveal flaws at half the rate)"
-    energy_effect: "None"
-    numbers_status: "Game rule: instrumentation raises flaw discovery chance; values in failure-modes.md are estimates"
+    numbers_status: "Game rule; see failure-modes.md"
     sources: []
-    tags: []
+    tags: [substantive]
     notebook: >
-      A strain gauge is a thin wire glued to a part: when the part stretches, the wire stretches,
-      and its resistance changes. Pressure pushing on a thin diaphragm can be read the same way.
-      Recorded on a fast oscillograph or radioed from a rocket, these signals show what happened
-      in the milliseconds before a failure.
+      A strain gauge is a thin wire glued to a part: when the part stretches, its resistance
+      changes. Recorded on a fast oscillograph or radioed from a rocket, these signals show the
+      milliseconds before a failure.
 
-  - id: human_computers
-    name: Computing office
-    stage: 5
-    kind: project
-    critical_path: false
-    problem: "Every trajectory, nozzle and orbit needs thousands of hours of arithmetic, and your engineers are doing it themselves."
-    requires:
-      nodes: [gate_liquid_oxygen]
-      resources: {paper_kg: 2000}
-      labor_person_days: 300000
-    unlocks:
-      jobs: [compute]             # large labor sink; output: calc_hours
-      effects: ["Mechanical calculators and slide rules; trajectory tables speed Stage 6 design and cut test flights needed"]
-    reads_state: [bundles_taken]
-    writes_state: [calc_hours]
-    pages_bundle: orbital_mechanics
-    without_pages: "Tables must be computed from scratch; needs 3x calc_hours"
-    fallback: "Engineers compute by hand (slows design)"
-    energy_effect: "None"
-    numbers_status: "Human computers at NACA, Peenemunde and elsewhere are documented; rates are estimates"
-    sources: ["https://en.wikipedia.org/wiki/Computer_(occupation)"]
-    tags: [labor_sink]
-    notebook: >
-      Before electronic computers, a computer was a person. Rooms of them, working in parallel
-      from carefully planned worksheets, integrated trajectories step by step. It's a real way to
-      turn a thousand idle people into progress, and one reason the orbital mechanics pages are
-      so valuable: they're answers someone already computed.
-
+  # ---- Beat 3: gyros and control ---------------------------------------------------------------------------------------------------
   - id: gyroscopes
-    name: Gyroscopes
+    name: Gyroscopes and thrust vector control
     stage: 5
+    beat: 3
     kind: project
     critical_path: true
-    problem: "A rocket climbing through wind tips over within seconds unless something senses which way is up."
+    problem: "A rocket climbing through wind tips over within seconds unless something senses which way is up and pushes back."
     requires:
-      nodes: [precision_grinding, electric_motors]
-      resources: {alloy_steel_kg: 300, copper_kg: 200}
-      labor_person_days: 1200000
+      nodes: [precision_grinding]
+      resources: {alloy_steel_kg: 300, copper_kg: 200, graphite_kg: 500}
+      labor_person_days: 1500000
+    milestones:
+      - {at: 0.6, id: jet_vanes, effect: "Graphite vanes in the exhaust steer the rocket at liftoff, when fins do nothing"}
     unlocks:
-      effects: ["Attitude reference for autopilots; with an integrating accelerometer, velocity cutoff"]
-    reads_state: [has_ball_bearings, tolerance_mm]
-    writes_state: [has_gyros, guidance_quality]
+      effects: ["Attitude reference and steering. guidance_quality from bearing_quality and tolerance_mm"]
+    reads_state: [bearing_quality, tolerance_mm]
+    writes_state: [has_gyros, has_tvc, guidance_quality]
     pages_bundle: guidance
     without_pages: "3x labor; drift is large until balancing is learned"
-    fallback: "Fin stabilization only (fine for sounding rockets, useless for orbit)"
-    energy_effect: "None"
-    numbers_status: "The V-2's LEV-3 system of two gyroscopes and a PIGA or radio cutoff is sourced"
-    sources: ["https://en.wikipedia.org/wiki/PIGA_accelerometer"]
+    numbers_status: "V-2 LEV-3 and graphite jet vanes sourced"
+    sources: ["https://en.wikipedia.org/wiki/PIGA_accelerometer", "https://en.wikipedia.org/wiki/V-2_rocket"]
     tags: [skill_builder]
     notebook: >
-      A fast-spinning wheel resists being tilted, so its axis keeps pointing the same way while
-      the rocket turns around it. Measure the angle between rocket and gyroscope and you know the
-      rocket's attitude. The V-2 used two gyroscopes to steer and an integrating accelerometer to
-      cut the engine at the right speed. Any drift in the bearings becomes a steering error.
+      A fast-spinning wheel keeps its axis pointing the same way while the rocket turns around it;
+      measure the angle and you know the attitude. The V-2 steered with graphite vanes in its exhaust.
+      Any drift in the gyro's bearings becomes a steering error.
 
+  # ---- Beat 4: the test stand and the first engine -------------------------------------------------------------------------------------
   - id: test_stand
     name: Engine test stand
     stage: 5
+    beat: 4
     kind: project
     critical_path: true
     problem: "You have to fire engines somewhere they can explode without killing anyone, while measuring every second."
     requires:
-      nodes: [gate_liquid_oxygen, welding, portland_cement]
+      nodes: [portland_cement, welding]
       resources: {steel_kg: 30000, cement_kg: 200000}
-      labor_person_days: 3000000
+      labor_person_days: 2500000
     unlocks:
-      effects: ["Static fires; load cells measure thrust; bunker protects the crew"]
-    reads_state: [instrumentation_level]
-    writes_state: [has_test_stand]
+      effects: ["Introduces the stand-time and oxygen bars. Repeatable: a second stand doubles throughput"]
+    writes_state: [has_test_stand, stand_days_balance]
     pages_bundle: liquid_rocket_engines
     without_pages: "1.5x labor"
-    fallback: "Open-field tests (deaths possible on failures)"
-    energy_effect: "None"
     numbers_status: "Estimate"
     sources: []
-    tags: [labor_sink]
+    tags: [labor_sink, repeatable]
     notebook: >
       A test stand holds an engine down while it pushes as hard as it would in flight. A thick
-      concrete bunker, a long propellant feed line, and a flame deflector keep the crew safe from
-      the failures that will come. Every major rocket program lived on its test stands; most
-      problems were found there, not in flight.
+      bunker and a long propellant line keep the crew safe from the failures that will come. Most
+      rocket problems were found on stands, not in flight.
 
-  - id: small_liquid_rocket
-    name: First liquid-fueled rocket
+  - id: first_liquid_rocket
+    name: First liquid-fueled engine
     stage: 5
-    kind: project
+    beat: 4
+    kind: workshop
+    workshop: rocket_engine_workshop
     critical_path: true
-    problem: "Nobody on your team has ever lit an engine that burns liquid oxygen, and every textbook warning is abstract."
+    problem: "Nobody on your team has ever lit an engine that burns liquid oxygen."
     requires:
       nodes: [test_stand]
-      any_of: [[oil_refining], [fuel_alcohol]]
+      any_of: [[oil], [fuel_alcohol]]
       resources: {steel_kg: 500, copper_kg: 100, lox_kg: 2000}
-      labor_person_days: 400000
+      labor_person_days: 300000
     unlocks:
-      effects: ["Pressure-fed learning engine; trains rocket engineers; reveals the need for cooling and good injection"]
+      effects: ["Opens the rocket engine workshop with mixture ratio and chamber pressure. Pressure-fed, uncooled, showerhead: it runs for seconds and burns through. Trains rocket engineers"]
     reads_state: [draft_roster]
     writes_state: [rocket_engineers_trained]
     pages_bundle: liquid_rocket_engines
-    without_pages: "2x labor; several burnt-through chambers"
-    fallback: "None"
-    energy_effect: "None"
-    numbers_status: "Goddard's 1926 flight (2.5 s, 12.5 m altitude, LOX and gasoline) is sourced"
+    without_pages: "Different route: the mixture dial starts at stoichiometric and the first chambers melt; the notebook fills after the third burn-through"
+    numbers_status: "Goddard 1926: 2.5 s, 12.5 m, LOX and gasoline (sourced)"
     sources: ["https://www.nasa.gov/history/95-years-ago-goddards-first-liquid-fueled-rocket/"]
-    tags: [skill_builder]
+    tags: [substantive, skill_builder]
     notebook: >
-      Robert Goddard's first liquid-fueled rocket flew on March 16, 1926, for two and a half
-      seconds and reached about 12 meters. Pressurized gas pushed gasoline and liquid oxygen into
-      a small chamber at the top of a frame of pipes. It was unimpressive to watch. It proved that
-      liquid propellants could be pumped, mixed and burned under control.
+      Goddard's first liquid rocket flew on March 16, 1926, for two and a half seconds and about 12
+      meters. It was unimpressive to watch. It proved liquid propellants could be pumped, mixed and
+      burned under control.
 
   - id: fuel_alcohol
     name: Fuel alcohol
     stage: 5
+    beat: 4
     kind: project
     critical_path: false
-    problem: "Your engines need tons of fuel, and without oil wells the only liquid fuel you can make in bulk is alcohol."
+    problem: "Engines need tons of fuel, and without oil the only liquid fuel you can make in bulk is alcohol."
     requires:
-      nodes: [gate_liquid_oxygen, glassworks]
+      nodes: [glassworks]
+      state: ["NOT has_kerosene"]
       resources: {steel_kg: 8000, copper_kg: 4000}
-      labor_person_days: 2000000
+      labor_person_days: 1500000
     unlocks:
-      jobs: [farm_fuel_crops, ferment_and_distill]   # big labor sink: fields plus stills
-      effects: ["75% ethanol fuel (V-2 style); ~280 s in the workshop's simplified model"]
+      jobs: [farm_fuel_crops, ferment_and_distill]
+      effects: ["75% ethanol (V-2 style; workshop Isp 280). A standing farming labor sink; cropland reads forest_cover"]
     reads_state: [forest_cover]
     writes_state: [has_ethanol, cropland_ha]
     pages_bundle: industrial_chemistry
     without_pages: "1.5x labor"
-    fallback: "Kerosene from oil_refining"
-    energy_effect: "Distillation heat counts"
-    numbers_status: "V-2 fuel of 75% ethanol and 25% water is sourced; crop yields are estimates"
+    numbers_status: "V-2 fuel of 75% ethanol sourced; crop yields are estimates"
     sources: ["https://www.enginehistory.org/Rockets/RPE02/RPE02-2.shtml"]
-    tags: [labor_sink]
+    tags: [substantive, labor_sink]
     notebook: >
-      Yeast turns sugar into ethanol and carbon dioxide, and distillation concentrates it. The
-      V-2 burned 75% ethanol mixed with water, which ran cooler and spared the chamber walls, at
-      the cost of some performance. A V-2 needed about four tons of alcohol, and much of it came
-      from potatoes. Your colonists don't need to farm to eat, but they may need to farm to fly.
+      Yeast turns sugar into ethanol; distillation concentrates it. The V-2 burned 75% ethanol with
+      water, which ran cooler and spared the chamber, at some cost in performance. Much of it came
+      from potatoes.
 
-  - id: injector_design
-    name: Impinging injectors
+  # ---- Beat 5: keeping the engine alive ---------------------------------------------------------------------------------------------
+  - id: regenerative_cooling
+    name: Cooling the chamber
     stage: 5
+    beat: 5
     kind: project
     critical_path: true
-    problem: "Fuel and oxygen pour into the chamber in streams, burn unevenly, and scorch holes in the walls."
+    problem: "Chamber walls melt within seconds; the flame is hotter than any metal."
     requires:
-      nodes: [small_liquid_rocket, precision_grinding]
-      resources: {alloy_steel_kg: 500, copper_kg: 500}
+      nodes: [first_liquid_rocket]
+      state: ["engine_static_fire_s > 0"]
+      resources: {copper_kg: 2000, alloy_steel_kg: 1000}
       labor_person_days: 1200000
     unlocks:
-      effects: ["Fine atomization and even mixing; higher chamber pressure; fewer hot spots"]
-    reads_state: [rocket_engineers_trained, instrumentation_level]
-    writes_state: [injector_quality]
-    pages_bundle: liquid_rocket_engines
-    without_pages: "3x labor"
-    fallback: "Showerhead injectors (lower performance, more instability)"
-    energy_effect: "None"
-    numbers_status: "Estimate"
-    sources: ["https://en.wikipedia.org/wiki/Rocket_engine_nozzle"]
-    tags: []
-    notebook: >
-      A drop of liquid can only burn from its surface, so the finer the spray, the faster and
-      more completely it burns. An impinging injector aims jets of fuel and oxidizer at each other
-      so they shatter into mist on contact. The injector plate sets how evenly the chamber burns,
-      and uneven burning is where instability starts.
-
-  - id: regenerative_cooling
-    name: Regenerative cooling
-    stage: 5
-    kind: project
-    critical_path: true
-    problem: "Chamber walls melt within seconds; your flame is hotter than any metal can survive."
-    requires:
-      nodes: [small_liquid_rocket, welding]
-      resources: {copper_kg: 2000, alloy_steel_kg: 1000}
-      labor_person_days: 1500000
-    unlocks:
-      effects: ["Fuel flows through channels in the chamber wall before injection; engines can run for minutes"]
+      effects: ["Adds the cooling dial: film, then regenerative"]
     reads_state: [welders_trained]
     writes_state: [has_regen_cooling]
     pages_bundle: liquid_rocket_engines
-    without_pages: "3x labor"
-    fallback: "Ablative or film cooling (short burns only; fine for landers, weak for boosters)"
-    energy_effect: "None"
-    numbers_status: "Regenerative cooling on the V-2 and later engines is sourced"
+    without_pages: "Different route: film cooling only for two years of burns; channels appear after the film-cooled engine's Isp penalty is shown"
+    numbers_status: "Regenerative cooling on the V-2 and later engines sourced"
     sources: ["https://en.wikipedia.org/wiki/Regenerative_cooling_(rocketry)"]
-    tags: []
+    tags: [substantive]
     notebook: >
-      Combustion gases in a rocket chamber reach around 3,000 C, far above the melting point of
-      steel or copper. Running the fuel through channels in the walls before it's injected cools
-      the metal and warms the fuel, which then burns a little better. Water in the V-2's alcohol
-      helped too, by lowering the flame temperature.
+      Combustion gases reach about 3,000 C, above the melting point of steel or copper. Running the
+      fuel through channels in the wall before injecting it cools the metal and warms the fuel, which
+      then burns a little better.
 
-  - id: hydrogen_peroxide
-    name: Concentrated hydrogen peroxide
+  - id: injector_design
+    name: Injectors
     stage: 5
+    beat: 5
     kind: project
-    critical_path: false
-    route: [A_steam_turbopump]
-    problem: "A turbopump needs a gas to drive its turbine, and burning the propellants in a separate chamber is a whole new engine."
+    critical_path: true
+    problem: "Fuel and oxygen pour in as streams, burn unevenly, and the pressure trace shows the chamber ringing like a bell."
     requires:
-      nodes: [chlor_alkali, sulfuric_acid, hall_heroult]
-      resources: {platinum_kg: 1, glass_kg: 1000, aluminum_kg: 2000}
-      labor_person_days: 1200000
+      nodes: [regenerative_cooling, precision_grinding]
+      resources: {alloy_steel_kg: 500, copper_kg: 500}
+      labor_person_days: 1000000
     unlocks:
-      jobs: [make_peroxide]
-      effects: ["~80% hydrogen peroxide; decomposed over permanganate it makes hot steam to drive a turbine"]
-    reads_state: [has_caustic, has_aluminum]
-    writes_state: [has_peroxide]
-    pages_bundle: industrial_chemistry
-    without_pages: "4x labor; concentrated peroxide decomposes explosively when contaminated"
-    fallback: "Gas-generator turbopump"
-    energy_effect: "Electrolysis load"
-    numbers_status: "V-2 turbopump driven by peroxide-permanganate steam is sourced; electrolytic persulfate route to peroxide is standard history"
-    sources:
-      - "https://airandspace.si.edu/collection-objects/turbopump-steam-generator-and-frame-v-2-rocket-engine/nasm_A19600013000"
-      - "https://en.wikipedia.org/wiki/Hydrogen_peroxide"
-    tags: []
-    notebook: >
-      Hydrogen peroxide is water with an extra oxygen atom it would rather not keep. Pour it over
-      potassium permanganate and it breaks down violently into steam and oxygen, hot enough to
-      spin a turbine. The V-2's turbopump ran this way. Peroxide was made by electrolyzing sulfuric
-      acid solutions, and at high concentration a speck of dirt can set it off.
-
-  - id: steam_turbopump
-    name: Peroxide-steam turbopump
-    stage: 5
-    kind: decision_option
-    critical_path: false
-    route: [A_steam_turbopump]
-    problem: "Pushing propellant with tank pressure means booster tanks as thick as boilers."
-    requires:
-      nodes: [hydrogen_peroxide, precision_grinding, steam_turbine]
-      resources: {alloy_steel_kg: 3000, steel_kg: 1000}
-      labor_person_days: 2500000
-    unlocks:
-      effects: ["Turbopump feed; light, low-pressure tanks; engine chamber pressure ~15 bar class"]
-    reads_state: [has_ball_bearings, has_peroxide]
-    writes_state: [feed_system, turbopump_quality]
+      effects: ["Adds the injector dial. Impinging jets: fine mixing, higher chamber pressure. Baffles remove combustion_instability once instrumentation has shown it"]
+    reads_state: [instrumentation_level]
+    writes_state: [injector_quality]
     pages_bundle: liquid_rocket_engines
     without_pages: "3x labor"
-    fallback: "Gas-generator or pressure-fed"
-    energy_effect: "None"
-    numbers_status: "V-2 values: 15 bar chamber, ~200 s sea level, 239 s vacuum (sourced)"
-    sources: ["https://www.enginehistory.org/Rockets/RPE02/RPE02-2.shtml"]
-    tags: []
+    numbers_status: "Estimate"
+    sources: ["https://www.nasa.gov/history/solving-combustion-instability-and-saving-americas-first-trips-to-the-moon"]
+    tags: [substantive]
     notebook: >
-      A turbopump is a turbine on the same shaft as two centrifugal pumps, one for fuel, one for
-      oxidizer. It lets tanks stay thin and light while the engine gets propellant at high
-      pressure. The V-2's pump delivered over a hundred kilograms of propellant a second, driven by
-      peroxide steam. It's a machine that has to run cryogenic on one side and hot on the other.
+      A drop can only burn from its surface, so the finer the spray the faster it burns. An impinging
+      injector aims jets at each other so they shatter into mist. Uneven burning is where combustion
+      instability starts; the F-1's engineers cured it with baffles after 2,000 tests.
+
+  # ---- Beat 6: the feed system ---------------------------------------------------------------------------------------------------------
+  - id: pressure_fed_booster_engine
+    name: Pressure-fed booster
+    stage: 5
+    beat: 6
+    kind: decision_option
+    route: [T_pressure_fed_booster]
+    critical_path: true
+    problem: "Turbopumps look like years of machining; the pressure-fed engine already works on the stand."
+    requires:
+      nodes: [injector_design]
+      resources: {steel_kg: 20000}
+      labor_person_days: 1000000
+    unlocks:
+      effects: ["Adds the feed dial (pressure_fed). Scales to a booster and passes the gate. In the rocket workshop a pressure-fed first stage adds ~0.08 structural fraction and costs ~25 s Isp"]
+    writes_state: [feed_system]
+    pages_bundle: liquid_rocket_engines
+    without_pages: "Same"
+    numbers_status: "Pressure-fed upper stages and landers are attested; no pressure-fed booster has reached orbit. Penalties are workshop simplifications"
+    sources: ["https://en.wikipedia.org/wiki/Pressure-fed_engine"]
+    tags: [trap, substantive]
+    trap_lesson: "Tank pressure must exceed chamber pressure; a booster's huge tanks then need boiler-thick walls, and the structural mass eats the Δv. Fine for a lander, ruinous for a first stage."
+    notebook: >
+      Pressure-fed engines are simple: gas in the tanks pushes propellant into the chamber, no pumps
+      to fail. The Apollo lunar module's descent engine was one. But tank wall thickness grows with
+      pressure times diameter, and a big first stage lifts a lot of steel for nothing.
+
+  - id: hydrogen_peroxide
+    name: Peroxide-steam turbopump
+    stage: 5
+    beat: 6
+    kind: decision_option
+    route: [A_steam_turbopump]
+    critical_path: false
+    problem: "Pushing propellant with tank pressure means booster tanks as thick as boilers."
+    requires:
+      nodes: [pressure_fed_booster_engine, chlor_alkali, steam_turbine]
+      resources: {alloy_steel_kg: 3000, glass_kg: 1000, steel_kg: 1000}
+      labor_person_days: 2500000
+    milestones:
+      - {at: 0.5, id: peroxide_plant, effect: "~80% hydrogen peroxide by electrolysis; decomposed over permanganate it makes hot steam"}
+    unlocks:
+      effects: ["feed: peroxide_turbopump. Light tanks; chamber pressure to ~25 bar. A standing peroxide hazard"]
+    reads_state: [bearing_quality, has_caustic]
+    writes_state: [feed_system, turbopump_quality, has_peroxide]
+    pages_bundle: liquid_rocket_engines
+    without_pages: "4x labor; concentrated peroxide decomposes explosively when contaminated"
+    numbers_status: "V-2 peroxide-permanganate turbopump sourced"
+    sources: ["https://airandspace.si.edu/collection-objects/turbopump-steam-generator-and-frame-v-2-rocket-engine/nasm_A19600013000"]
+    tags: [substantive]
+    notebook: >
+      A turbopump is a turbine on the same shaft as two pumps. The V-2's ran on steam from hydrogen
+      peroxide poured over permanganate and delivered over a hundred kilograms of propellant a
+      second. It runs cryogenic on one side and hot on the other.
 
   - id: gas_generator_turbopump
     name: Gas-generator turbopump
     stage: 5
+    beat: 6
     kind: decision_option
-    critical_path: false
     route: [B_gas_generator]
+    critical_path: false
     problem: "Carrying a third propellant just to drive the pump costs mass and a whole chemical plant."
     requires:
-      nodes: [precision_grinding, steam_turbine, injector_design, alloy_steels]
+      nodes: [pressure_fed_booster_engine, steam_turbine]
+      state: ["has_alloy_steel == true", "bearing_quality >= 3"]
       resources: {alloy_steel_kg: 4000}
       labor_person_days: 3500000
     unlocks:
-      effects: ["Turbine driven by a small fuel-rich burn of the main propellants; no peroxide plant; higher chamber pressure possible"]
-    reads_state: [has_ball_bearings, has_alloy_steel]
+      effects: ["feed: gas_generator_turbopump. Turbine driven by a fuel-rich burn of the main propellants; chamber pressure to 60 bar. Best booster in the workshop"]
+    reads_state: [bearing_quality, has_alloy_steel]
     writes_state: [feed_system, turbopump_quality]
     pages_bundle: liquid_rocket_engines
     without_pages: "4x labor; turbine blades burn until the mixture is run fuel-rich"
-    fallback: "Peroxide-steam turbopump"
-    energy_effect: "None"
-    numbers_status: "Gas-generator cycle used on engines like the F-1 and H-1 is sourced"
+    numbers_status: "Gas-generator cycle (F-1, H-1) sourced"
     sources: ["https://en.wikipedia.org/wiki/Gas-generator_cycle"]
-    tags: [skill_builder]
+    tags: [substantive, accelerant, skill_builder]
     notebook: >
-      Burn a little of the main fuel and oxidizer in a small chamber, run very fuel-rich so the
-      gas is cool enough for turbine blades, and use that gas to drive the pump. It removes the
-      peroxide system entirely. The exhaust is thrown away, a small loss. Most American engines of
-      the 1950s and 1960s, including the F-1, worked this way.
+      Burn a little of the main propellants in a small chamber, run it fuel-rich so the gas is cool
+      enough for turbine blades, and drive the pump with it. No peroxide plant; a small loss out the
+      exhaust. Most American engines of the 1960s worked this way.
 
-  - id: pressure_fed_booster_engine
-    name: Pressure-fed booster engine
-    stage: 5
-    kind: decision_option
-    critical_path: false
-    route: [T_pressure_fed_booster]
-    problem: "Turbopumps look like years of machining; pressure-fed engines already work on the test stand."
-    requires:
-      nodes: [regenerative_cooling, injector_design]
-      resources: {steel_kg: 20000}
-      labor_person_days: 1200000
-    unlocks:
-      effects: ["Passes this gate quickly. In the workshop, a pressure-fed first stage needs tanks that hold more than chamber pressure, adding ~0.08 to structural fraction and costing ~25 s of Isp (workshop model)"]
-    reads_state: []
-    writes_state: [feed_system]
-    pages_bundle: liquid_rocket_engines
-    without_pages: "Same"
-    fallback: "Build a turbopump in Stage 6 (costs time then)"
-    energy_effect: "None"
-    numbers_status: "Pressure-fed upper stages and landers are well attested; no pressure-fed booster is known to have reached orbit (Sea Dragon was a study). Penalty values are workshop simplifications."
-    sources:
-      - "https://en.wikipedia.org/wiki/Pressure-fed_engine"
-      - "https://en.wikipedia.org/wiki/Sea_Dragon_(rocket)"
-    tags: [trap]
-    trap_lesson: "Tank pressure must exceed chamber pressure. A booster's huge tanks then need walls like a boiler's, and the structural mass eats the Δv. Fine for a lander, ruinous for a first stage."
-    notebook: >
-      A pressure-fed engine is beautifully simple: high-pressure gas in the tanks pushes propellant
-      into the chamber, with no pumps to fail. The Apollo lunar module's descent engine was
-      pressure-fed. But the tank has to hold more pressure than the combustion chamber, and a
-      tank's wall thickness grows with pressure times diameter. For a big first stage, that's a
-      lot of steel lifted for nothing.
-
-  - id: thrust_vector_control
-    name: Jet vanes and gimbals
-    stage: 5
-    kind: project
-    critical_path: true
-    problem: "Fins do nothing at liftoff, when the rocket is slowest and most likely to tip."
-    requires:
-      nodes: [gyroscopes, regenerative_cooling]
-      resources: {graphite_kg: 500, steel_kg: 2000}
-      labor_person_days: 800000
-    unlocks:
-      effects: ["Steering by deflecting the exhaust; required for guided flight"]
-    reads_state: [has_gyros]
-    writes_state: [has_tvc]
-    pages_bundle: guidance
-    without_pages: "2x labor"
-    fallback: "Large fins plus a launch tower (poor control, lower payload)"
-    energy_effect: "None"
-    numbers_status: "V-2 graphite jet vanes are sourced"
-    sources: ["https://en.wikipedia.org/wiki/V-2_rocket"]
-    tags: []
-    notebook: >
-      At liftoff there's no airflow over the fins, so steering has to come from the exhaust itself.
-      The V-2 put four graphite vanes in its exhaust stream; tilting them pushed the tail sideways.
-      Graphite survives the heat because it doesn't melt, it slowly burns away. Later rockets
-      swiveled the whole engine on a gimbal instead.
-
-  - id: weld_radiography
-    name: X-ray weld inspection
-    stage: 5
-    kind: upgrade
-    critical_path: false
-    problem: "A weld that looks perfect can hide a crack inside, and you only find it when a tank splits."
-    requires:
-      nodes: [vacuum_tubes, welding]
-      resources: {tungsten_kg: 2, glass_kg: 50, copper_kg: 200}
-      labor_person_days: 400000
-    unlocks:
-      effects: ["Reveals hidden weld flaws before flight; see failure mode tank_weld_crack"]
-    reads_state: [has_tubes, welders_trained]
-    writes_state: [has_weld_xray]
-    pages_bundle: vacuum_tubes_radio
-    without_pages: "2x labor"
-    fallback: "Proof-pressure testing (finds flaws by breaking tanks)"
-    energy_effect: "Small"
-    numbers_status: "Industrial radiography dates from the 1920s-30s; treat as estimate"
-    sources: ["https://en.wikipedia.org/wiki/Industrial_radiography"]
-    tags: []
-    notebook: >
-      X-rays pass through metal but are absorbed a little more where it's thicker, so a void or
-      crack inside a weld shows up as a darker line on film. X-ray tubes are vacuum tubes that fire
-      electrons into a tungsten target. Inspecting welds without cutting them open made thin-walled
-      pressure vessels trustworthy.
-
-  - id: wind_tunnel
-    name: Supersonic wind tunnel
-    stage: 5
-    kind: upgrade
-    critical_path: false
-    problem: "Your first guided test rocket tumbles just after it passes the speed of sound."
-    requires:
-      nodes: [compressors, instrumentation]
-      resources: {steel_kg: 15000}
-      labor_person_days: 1500000
-    unlocks:
-      effects: ["Fin and nose shapes tested before flight; removes the aero_instability flaw from designs"]
-    reads_state: [max_pressure_atm]
-    writes_state: [has_wind_tunnel]
-    pages_bundle: guidance
-    without_pages: "2x labor"
-    fallback: "Learn by losing test rockets"
-    energy_effect: "Compressor load"
-    numbers_status: "Peenemunde's supersonic tunnel for the V-2 is documented; treat details as estimate"
-    sources: ["https://en.wikipedia.org/wiki/Wind_tunnel"]
-    tags: []
-    notebook: >
-      Above the speed of sound, air can't get out of the way in time, and shock waves form. The
-      point where aerodynamic forces push on a rocket shifts as it crosses Mach 1, and a rocket
-      that was stable can suddenly want to flip. A supersonic tunnel blows air past a model so you
-      can find that out on the ground.
-
-  - id: sounding_rocket
-    name: Guided test rocket
-    stage: 5
-    kind: project
-    critical_path: false
-    problem: "Engines work on the stand, but you haven't flown guidance, cutoff and telemetry together."
-    requires:
-      nodes: [thrust_vector_control, instrumentation, regenerative_cooling]
-      resources: {steel_kg: 5500, lox_kg: 10000}
-      labor_person_days: 1500000
-    unlocks:
-      effects: ["Flight data; each flight can reveal one flight-only flaw (pogo, aero instability, guidance drift)"]
-    reads_state: [guidance_quality, has_wind_tunnel]
-    writes_state: [flight_tests]
-    pages_bundle: guidance
-    without_pages: "More failed flights"
-    fallback: "None"
-    energy_effect: "None"
-    numbers_status: "Estimate"
-    sources: []
-    tags: [repeatable]
-    notebook: >
-      A rocket on a test stand never feels the air, never flexes in flight, never sloshes its
-      propellant. Some problems only appear when everything happens at once. Every rocket program
-      built small or early versions and flew them, expecting to lose some, because losing them was
-      how you learned.
-
+  # ---- Beat 7: propellants and the ground --------------------------------------------------------------------------------------------------
   - id: hypergolic_propellants
-    name: Storable hypergolic propellants
+    name: Storable propellants
     stage: 5
+    beat: 7
     kind: project
     critical_path: false
-    problem: "Liquid oxygen boils away within days, and a lander must restart its engine reliably after coasting to the Moon."
+    problem: "Liquid oxygen boils away within days, and a lander must restart its engine after coasting to the Moon."
     requires:
-      nodes: [ostwald_nitric, coal_gas_tar]
-      resources: {steel_kg: 3000}
-      labor_person_days: 1200000
+      nodes: [sulfuric_acid, coal_seam_choice]
+      any_of: [[niter_beds], [nitrogen_fixation]]
+      resources: {steel_kg: 3000, glass_kg: 500}
+      labor_person_days: 1500000
     unlocks:
-      effects: ["Nitric acid with an amine fuel ignites on contact: no igniter, no boil-off. Lander engine option"]
-    reads_state: [has_nitric_acid, has_coal_tar]
+      effects: ["Nitric acid with a coal-tar amine ignites on contact: no igniter, no boil-off. Lander engine option. Nitrate supply caps production"]
+    reads_state: [nitrate_source]
     writes_state: [has_hypergolics]
     pages_bundle: industrial_chemistry
     without_pages: "3x labor; dangerous"
-    fallback: "LOX lander with igniter and insulated tanks (restart flaw more likely; boil-off limits coast)"
-    energy_effect: "None"
-    numbers_status: "Luna 9's KTDU-5A retrorocket used nitric acid and an amine fuel (sourced)"
-    sources: ["https://en.wikipedia.org/wiki/Luna_9", "https://www.drewexmachina.com/2016/02/03/luna-9-the-first-lunar-landing/"]
-    tags: []
+    numbers_status: "Luna 9's KTDU-5A used nitric acid and an amine fuel (sourced)"
+    sources: ["https://en.wikipedia.org/wiki/Luna_9"]
+    tags: [substantive, accelerant]
     notebook: >
-      Some fuel and oxidizer pairs burst into flame the moment they touch. Concentrated nitric acid
-      with certain amines, derived from coal tar, is one such pair, and both stay liquid at ordinary
-      temperatures. That makes an engine that can sit for days and still start every time. The
-      Soviet Luna 9 lander used nitric acid and an amine fuel to make the first soft landing on the
-      Moon in 1966. The propellants are corrosive and highly toxic.
+      Some fuel and oxidizer pairs burst into flame on contact. Nitric acid with certain amines from
+      coal tar is one, and both stay liquid at room temperature, so an engine can sit for days and
+      start every time. Luna 9 landed on them in 1966. Both are corrosive and highly toxic.
+
+  - id: nitrogen_fixation
+    name: Fixed nitrogen at scale
+    stage: 5
+    beat: 7
+    kind: decision_option
+    critical_path: false
+    problem: "Niter beds make a trickle; nitric acid by the ton needs nitrogen pulled from the air."
+    requires:
+      nodes: [compressors, chlor_alkali]
+      state: ["has_nitrate == true"]
+      resources: {alloy_steel_kg: 10000, steel_kg: 5000}
+      labor_person_days: 3000000
+    unlocks:
+      effects: ["Choose: arc process (Birkeland-Eyde, electricity-hungry, simple) or ammonia synthesis (Haber-Bosch, 200 atm, catalyst search; needs the industrial chemistry pages). Ostwald nitric acid follows; platinum if found, cobalt oxide otherwise"]
+    reads_state: [hydro_kw, power_balance_kw, max_pressure_atm, bundles_taken, mineral_sites]
+    writes_state: [nitrate_source, has_nitric_acid]
+    pages_bundle: industrial_chemistry
+    without_pages: "Different route: Haber-Bosch is unavailable (the catalyst search took years of systematic work); the arc process is the only option"
+    numbers_status: "Birkeland-Eyde 1903, Haber 1909, Oppau 1913, Ostwald 1902 sourced"
+    sources: ["https://en.wikipedia.org/wiki/Haber_process", "https://en.wikipedia.org/wiki/Birkeland%E2%80%93Eyde_process"]
+    tags: [substantive, accelerant, labor_sink]
+    notebook: >
+      Air is four-fifths nitrogen, held by one of chemistry's strongest bonds. Lightning breaks it,
+      and so does an electric arc, wastefully. Haber and Bosch instead combined nitrogen with hydrogen
+      over an iron catalyst at 200 atmospheres, and the Oppau plant started in 1913.
 
   - id: solid_motors
     name: Composite solid motors
     stage: 5
+    beat: 7
     kind: project
     critical_path: false
-    problem: "You need small, reliable thrusters for separating stages and settling propellant, and liquid engines are overkill."
+    problem: "You need small, reliable thrusters for separating stages and settling propellant."
     requires:
-      nodes: [chlor_alkali, hall_heroult]
-      resources: {aluminum_kg: 500, rubber_substitute_kg: 500}
-      labor_person_days: 1500000
+      nodes: [chlor_alkali]
+      any_of: [[aluminum], [niter_beds]]
+      resources: {steel_kg: 500}
+      labor_person_days: 1200000
     unlocks:
-      effects: ["Perchlorate composite motors: separation, ullage and retro motors. Optional all-solid stages in the workshop (Isp ~240-250 s class)"]
-    reads_state: [has_caustic, has_aluminum]
+      effects: ["Separation, ullage and escape motors. Without aluminum and perchlorate: black-powder charges (adds separation_recontact risk)"]
+    reads_state: [has_aluminum, has_caustic]
     writes_state: [has_solids]
     pages_bundle: industrial_chemistry
-    without_pages: "4x labor; perchlorate made by electrolysis of chlorate"
-    fallback: "Black-powder separation charges and springs"
-    energy_effect: "Electrolysis load"
-    numbers_status: "Scout, an all-solid launcher, reached orbit in the early 1960s with stages of ~236-256 s Isp (sourced). Binder chemistry here is uncertain; see open questions."
-    sources: ["https://en.wikipedia.org/wiki/RM-90_Blue_Scout_II", "https://en.wikipedia.org/wiki/Solid-propellant_rocket"]
-    tags: []
+    without_pages: "4x labor"
+    numbers_status: "Scout reached orbit on solids (1960s) sourced; binder chemistry uncertain here"
+    sources: ["https://en.wikipedia.org/wiki/Solid-propellant_rocket"]
+    tags: [accelerant]
     notebook: >
-      A composite solid propellant is an oxidizer salt, ammonium perchlorate, mixed with aluminum
-      powder and held together by a rubbery fuel binder. Once lit, it can't be throttled or shut
-      off, but it can sit in storage for years and still work. Small solids separate stages and
-      settle liquid propellant before an engine restarts. America's Scout rocket reached orbit
-      on solids alone.
+      An oxidizer salt, aluminum powder and a rubbery binder. Once lit it can't be stopped, but it can
+      sit for years and still work. Small solids separate stages and settle propellant before a restart.
+
+  - id: launch_complex
+    name: Launch complex and oxygen plant
+    stage: 5
+    beat: 7
+    kind: project
+    critical_path: true
+    problem: "A fueled rocket weighs hundreds of tons, needs tons of liquid oxygen in its last hours, and would destroy the test stand when it lights."
+    requires:
+      nodes: [test_stand, air_separation]
+      state: ["engine_thrust_kn > 50"]
+      resources: {steel_kg: 400000, cement_kg: 3000000}
+      labor_person_days: 10000000
+    milestones:
+      - {at: 0.3, id: lox_plant_scaleup, effect: "Oxygen plant x10 (repeatable later as its own project)"}
+      - {at: 0.6, id: pad_and_trench, effect: "Pad and flame trench"}
+      - {at: 1.0, id: assembly_and_blockhouse, effect: "Assembly building, loading lines, blockhouse"}
+    unlocks:
+      effects: ["The biggest project in the game; runs alongside engine development so the stage never idles"]
+    reads_state: [rail_km, lox_kg_per_day, has_cement]
+    writes_state: [has_launch_pad, lox_kg_per_day]
+    pages_bundle: none
+    without_pages: "No penalty"
+    numbers_status: "Estimate; real pads used thousands of tons of steel and concrete"
+    sources: []
+    tags: [labor_sink]
+    notebook: >
+      Liquid oxygen boils at -183 C, so a rocket is loaded in its final hours while vapor pours off
+      the tanks. The exhaust at ignition would dig a crater, so it's turned sideways down a concrete
+      trench. Launch complexes are the largest structures a space program builds.
+
+  - id: lox_plant_scaleup
+    name: Oxygen plant expansion
+    stage: 5
+    beat: 7
+    kind: project
+    critical_path: false
+    problem: "Every static fire burns tons of liquid oxygen, and a launch will need hundreds."
+    requires:
+      nodes: [launch_complex]
+      state: ["lox_balance < 0"]
+      resources: {steel_kg: 60000, copper_kg: 20000}
+      labor_person_days: 2500000
+    unlocks:
+      effects: ["lox_kg_per_day x2 per build (repeatable). Power load rises with it"]
+    reads_state: [cryo_process, power_balance_kw]
+    writes_state: [lox_kg_per_day, power_balance_kw]
+    pages_bundle: none
+    without_pages: "No penalty"
+    numbers_status: "Estimate"
+    sources: []
+    tags: [repeatable, labor_sink]
+    notebook: >
+      A kerosene rocket burns more than two kilograms of oxygen per kilogram of fuel. The oxygen is
+      free; separating it takes electricity. Launch sites grew their own oxygen plants.
+
+  - id: tracking_network
+    name: Tracking stations
+    stage: 5
+    beat: 7
+    kind: project
+    critical_path: true
+    problem: "After the engines stop, nobody knows where the vehicle is or whether it's on course."
+    requires:
+      nodes: [electronics_lab]
+      resources: {steel_kg: 30000, copper_kg: 5000}
+      labor_person_days: 2000000
+    unlocks:
+      effects: ["Dish antennas and Doppler ranging; trajectory determination with the computing office. Required for guidance choices in Stage 6"]
+    reads_state: [has_radio]
+    writes_state: [has_tracking]
+    pages_bundle: orbital_mechanics
+    without_pages: "Needs 2x calc_hours to reduce tracking data"
+    numbers_status: "Estimate; one site sees the Moon only part of each day"
+    sources: []
+    tags: [labor_sink]
+    notebook: >
+      A dish measures direction; the Doppler shift of the signal measures speed toward or away. Hours
+      of that and a room of computers can fit an orbit. Without it a lunar mission flies blind after
+      the last burn.
+
+  - id: human_computers
+    name: Computing office
+    stage: 5
+    beat: 7
+    kind: project
+    critical_path: false
+    problem: "Every trajectory, nozzle and orbit needs thousands of hours of arithmetic, and the engineers are doing it themselves."
+    requires:
+      nodes: [instrumentation]
+      resources: {paper_kg: 2000}
+      labor_person_days: 300000
+    unlocks:
+      jobs: [compute]
+      effects: ["calc_hours accumulate; Stage 6 design, tracking and trajectory work spend them. Orbital mechanics pages replace most of it"]
+    reads_state: [bundles_taken]
+    writes_state: [calc_hours]
+    pages_bundle: orbital_mechanics
+    without_pages: "Tables computed from scratch: 3x calc_hours"
+    numbers_status: "Estimate"
+    sources: ["https://en.wikipedia.org/wiki/Computer_(occupation)"]
+    tags: [labor_sink, accelerant]
+    notebook: >
+      Before electronic computers, a computer was a person. Rooms of them integrated trajectories step
+      by step from planned worksheets. It's a real way to turn idle people into progress, and one
+      reason the orbital mechanics pages are worth their weight.
 
   - id: gate_engine
     name: "Gate: a booster-class engine"
     stage: 5
+    beat: 8
     kind: gate
     critical_path: true
-    problem: "An engine big enough for a first stage runs for a full minute on the test stand."
+    problem: "An engine big enough for a first stage runs for a full minute on the stand, and there's a pad to fly it from."
     requires:
-      nodes: [regenerative_cooling, injector_design, test_stand, gyroscopes, instrumentation]
-      any_of: [[steam_turbopump], [gas_generator_turbopump], [pressure_fed_booster_engine]]
-      state: ["energy_w_per_person >= 3500", "engine_static_fire_s >= 60", "engine_thrust_kn >= 250"]
+      nodes: [injector_design, gyroscopes, instrumentation, launch_complex, tracking_network]
+      any_of: [[pressure_fed_booster_engine], [hydrogen_peroxide], [gas_generator_turbopump]]
+      state: ["energy_w_per_person >= 3500", "engine_static_fire_s >= 60", "engine_thrust_kn >= 250", "has_launch_pad == true"]
     unlocks:
-      effects: ["Stage 6 opens: the rocket workshop"]
-    reads_state: [feed_system, turbopump_quality, injector_quality, has_hypergolics, has_ethanol, has_kerosene]
-    writes_state: []
+      effects: ["Stage 6 opens: the rocket"]
+    reads_state: [feed_system, turbopump_quality, injector_quality, has_hypergolics, has_ethanol, has_kerosene, has_aluminum, has_solids]
     notebook: >
-      You have an engine comparable to the V-2's. The V-2 never reached orbit, but everything that
-      did in the next fifteen years grew from engines like it. What's left is to build them in
-      stages, point them, keep a person alive on top, and land.
+      You have an engine comparable to the V-2's, and somewhere to fly it. The V-2 never reached
+      orbit, but everything that did in the next fifteen years grew from engines like it.

@@ -1,673 +1,525 @@
-# Stage 4: Electricity and chemistry
-# Grid power, electrochemistry, aluminum, alloy steel, oil, fixed nitrogen, liquid air.
-# Target: ~90 min of play, ~12 in-game years.
+# Stage 4: Electricity and chemistry. A grid, electrochemistry, compressed gas, liquid oxygen.
+# ~90 min, ~25 in-game years. Heartbeat: kilowatts.
 
 stage: 4
 name: Electricity and chemistry
 opening_problem: "You can make current, but only next to the engine that makes it, and your chemists still can't make most of what a rocket is built from."
+heartbeat: power_balance
 gate:
   id: gate_liquid_oxygen
   name: Liquid oxygen on tap
   condition:
-    energy_w_per_person: 2500     # proposed, weighted watts (see energy.md)
+    energy_w_per_person: 2500
     state: ["lox_kg_per_day >= 500"]
   routes: [A_linde, B_claude, T_cascade]
 
+pressures:
+  - id: power_balance
+    name: Power
+    drives: power_balance_kw
+    heartbeat: true
+    rises_with: ["every motor, arc furnace, electrolysis cell, compressor and lamp draws kilowatts; the player chooses what runs"]
+    red_when: "load exceeds generation"
+    effect_when_red: "Brownout: every electrical load runs at the available fraction; the arc furnace freezes its charge"
+    answers: [distribution_grid, steam_turbine, water_turbine, power_station_expansion]
+    introduced_in_beat: 1
+  - id: alkali_acid_demand
+    name: Chemicals
+    drives: chemical_balance
+    rises_with: ["glass, soap-free cleaning, alumina, caustic for scrubbers all want alkali; every process wants acid"]
+    red_when: "demand exceeds supply for 30 days"
+    effect_when_red: "Glass and chemistry jobs stall"
+    answers: [soda_ash, chlor_alkali, sulfuric_acid]
+    introduced_in_beat: 3
+  - id: fuel_balance
+    name: Fuel
+    drives: fuel_balance
+    rises_with: ["boilers for the power station and steam heat for chemistry"]
+    red_when: "fuel use exceeds production"
+    effect_when_red: "Power station output falls; brownout follows"
+    answers: [coal_mining, hot_blast, steam_turbine, water_turbine]
+    introduced_in_beat: 1
+
+workshops:
+  - id: engine_workshop
+    extends: true
+    dials:
+      - {id: transmission, name: "Transmission", options: [dc_local, ac_transformed], added_by: distribution_grid,
+         effect: "DC: a kilometer before losses bite. AC with transformers: the whole colony. Line loss shown as a percentage",
+         basis: "Loss ∝ I²R; transformers trade current for voltage"}
+      - {id: prime_mover, name: "Prime mover", options: [piston, turbine, water_turbine], added_by: steam_turbine,
+         effect: "Turbine: about twice the electricity per ton of coal, needs steel_quality 2+ and good bearings. Water turbine: no fuel, river sites only",
+         basis: "Parsons 1884"}
+  - id: liquefier_workshop
+    name: Liquefier workshop
+    opens_with: cascade_liquefier
+    loop: "Design a cold plant: pressure, exchanger, expansion method, column. Outputs liters per day, kW per kg, purity. Runs for in-game days before the first drop; the player watches the temperature fall."
+    dials:
+      - {id: method, name: "Method", options: [cascade, throttle_regenerative, expansion_engine], added_by: cascade_liquefier,
+         effect: "Cascade: liters a day, laboratory only. Throttle with regenerative exchange (Linde): continuous, simple, ~1 kWh/kg (estimate). Expansion engine (Claude): about half the energy, needs a cold precision piston",
+         basis: "Pictet/Cailletet 1877; Hampson and Linde 1895; Claude 1902"}
+      - {id: pressure, name: "Compressor pressure (atm)", range: [20, 200], added_by: compressors,
+         effect: "Higher pressure: more cooling per pass, more compressor power, thicker vessels (steel_quality read)",
+         basis: "Joule-Thomson cooling per bar is small; regenerative exchange multiplies it"}
+      - {id: exchanger_length, name: "Heat exchanger", range: [1, 10], added_by: linde_liquefier,
+         effect: "Longer counterflow: each pass starts colder. Too short never reaches -190 C; the screen shows the asymptote",
+         basis: "Hampson-Linde cycle ([Wikipedia](https://en.wikipedia.org/wiki/Hampson%E2%80%93Linde_cycle))"}
+      - {id: column, name: "Rectifying column trays", range: [0, 40], added_by: air_separation,
+         effect: "Zero trays: liquid air, 21% oxygen. Each tray separates a little more: 30+ trays give 99% oxygen",
+         basis: "Oxygen boils at -183 C, nitrogen at -196 C"}
+    outputs: [liters_per_day, kwh_per_kg, purity_pct, days_to_first_drop]
+
 nodes:
 
+  # ---- Beat 1: the grid ---------------------------------------------------------------------------------------------
   - id: distribution_grid
-    name: Distribution lines and transformers
+    name: Transmission and transformers
     stage: 4
-    kind: project
+    beat: 1
+    kind: workshop
+    workshop: engine_workshop
     critical_path: true
     problem: "Every workshop needs its own engine and dynamo, because current can't travel far from the machine that makes it."
     requires:
       nodes: [gate_generator]
       resources: {copper_kg: 30000, iron_kg: 15000, glass_kg: 2000}
-      labor_person_days: 3000000
+      labor_person_days: 2500000
     unlocks:
-      effects: ["Alternating current with transformers; power stations can serve the whole colony"]
-    reads_state: [has_insulated_wire]
-    writes_state: [grid_kw, has_ac]
+      effects: ["Engine workshop gains transmission dials: voltage, AC/DC. Power stations can serve the whole colony. Introduces the power balance bar: generation vs the loads you switch on"]
+    reads_state: [has_insulated_wire, dynamo_output_kw]
+    writes_state: [grid_kw, has_ac, power_balance_kw]
     pages_bundle: electricity
-    without_pages: "DC only (short range), 2x labor"
-    fallback: "Local DC dynamos at each works"
-    energy_effect: "Electricity weighted x2.5"
-    numbers_status: "Transformer principle and 1880s AC systems are sourced; material quantities are estimates"
+    without_pages: "Different route: DC only at first (range a kilometer); the transformer appears after a year of line losses shown on the screen"
+    numbers_status: "Transformer principle and 1880s AC systems sourced; quantities are estimates"
     sources: ["https://en.wikipedia.org/wiki/Transformer"]
-    tags: [labor_sink]
+    tags: [substantive, labor_sink]
     notebook: >
-      Power lost as heat in a wire goes up with the square of the current. A transformer, two
-      coils on one iron core, can raise voltage and lower current by the same factor, so the
-      same power travels through a thin wire with a hundredth of the loss. It only works with
-      alternating current, which is why AC won the grid in the 1890s.
-
-  - id: electric_motors
-    name: Electric motors
-    stage: 4
-    kind: upgrade
-    critical_path: false
-    problem: "Line shafting wastes a third of an engine's power in belts and bearings, and every machine stops when one belt breaks."
-    requires:
-      nodes: [distribution_grid]
-      resources: {copper_kg: 8000, iron_kg: 8000}
-      labor_person_days: 1000000
-    unlocks:
-      effects: ["Machine-shop output +50%; machines can be placed freely; small precise drives for later lathes and pumps"]
-    reads_state: [grid_kw]
-    writes_state: [machine_shop_capacity]
-    pages_bundle: electricity
-    without_pages: "1.5x labor"
-    fallback: "Line shafting"
-    energy_effect: "Electricity use rises"
-    numbers_status: "Estimate"
-    sources: ["https://en.wikipedia.org/wiki/Electric_motor"]
-    tags: []
-    notebook: >
-      A motor is a dynamo run backwards: current in a coil inside a magnetic field feels a force
-      and turns. Giving each machine its own motor let factories rearrange around the work
-      instead of the shafting. It took decades for factory owners to realize the real gain was
-      the layout, not the motor.
+      Power lost in a wire rises with the square of the current. A transformer, two coils on one
+      iron core, raises voltage and lowers current by the same factor, so the same power crosses a
+      thin wire with a hundredth of the loss. It only works with alternating current.
 
   - id: steam_turbine
     name: Steam turbine
     stage: 4
+    beat: 1
     kind: upgrade
     critical_path: false
-    problem: "Piston engines shake and wear at the high speeds generators want, and your power station is growing out of its building."
+    problem: "Piston engines shake and wear at generator speeds, and the power station is out of room."
     requires:
       nodes: [distribution_grid, open_hearth]
+      state: ["power_balance_kw < 0"]
       resources: {steel_kg: 20000, copper_kg: 3000}
-      labor_person_days: 2500000
+      labor_person_days: 2000000
     unlocks:
-      effects: ["Power station efficiency roughly doubles; large, smooth output"]
-    reads_state: [steel_quality, machine_shop_capacity]
+      effects: ["Power station efficiency about doubles; large smooth output. Reads bearing_quality"]
+    reads_state: [steel_quality, bearing_quality]
     writes_state: [power_station_efficiency]
     pages_bundle: steam_engines
     without_pages: "3x labor; blades fail until balancing is learned"
-    fallback: "Large reciprocating engines"
-    energy_effect: "More electricity per ton of coal"
-    numbers_status: "Parsons' turbine (1884) is sourced; efficiency gain is an estimate"
+    numbers_status: "Parsons 1884 sourced; gain is an estimate"
     sources: ["https://en.wikipedia.org/wiki/Steam_turbine"]
-    tags: []
+    tags: [accelerant, substantive]
     notebook: >
-      Instead of pushing a piston, steam in a turbine expands through rings of blades like wind
-      through a windmill, many stages in a row. Charles Parsons built one in 1884 that drove a
-      dynamo directly at 18,000 rpm. Turbines are smoother and can be built far larger. A
-      turbopump in Stage 5 is the same idea, shrunk and driven much harder.
+      Steam in a turbine expands through rings of blades like wind through a windmill, many stages
+      in a row. Parsons' 1884 machine drove a dynamo at 18,000 rpm. A turbopump in Stage 5 is the
+      same idea, shrunk and driven much harder.
 
-  - id: chlor_alkali
-    name: Brine electrolysis
+  - id: power_station_expansion
+    name: Power station expansion
     stage: 4
+    beat: 1
     kind: project
     critical_path: false
-    problem: "You need caustic soda, chlorine and hydrogen, and chemistry alone makes them slowly and dirtily."
+    problem: "Every new load you switch on browns out the last one."
     requires:
-      nodes: [distribution_grid, soda_ash]
-      resources: {salt_kg: 30000, iron_kg: 5000, graphite_kg: 1000}
-      labor_person_days: 1200000
+      nodes: [distribution_grid]
+      state: ["power_balance_kw < 0"]
+      resources: {iron_kg: 20000, copper_kg: 5000}
+      labor_person_days: 800000
     unlocks:
-      jobs: [electrolyze_brine, make_polysulfide_rubber]   # rubber substitute from chlorine chemistry (see open questions)
-      effects: ["Caustic soda (for alumina refining and CO2 scrubbers), chlorine, hydrogen"]
-    reads_state: [grid_kw]
-    writes_state: [has_caustic, has_hydrogen]
-    pages_bundle: industrial_chemistry
-    without_pages: "2x labor"
-    fallback: "Causticize soda ash with lime (older route, no chlorine)"
-    energy_effect: "Electricity-heavy"
-    numbers_status: "Castner-Kellner cell (1890s) is sourced"
-    sources: ["https://en.wikipedia.org/wiki/Chloralkali_process"]
-    tags: []
+      effects: ["+250 kW generation per build (repeatable). Fuel use rises accordingly; hydro sites give it free"]
+    reads_state: [hydro_kw, fuel_balance]
+    writes_state: [grid_kw, power_balance_kw]
+    pages_bundle: none
+    without_pages: "No penalty"
+    numbers_status: "Game values"
+    sources: []
+    tags: [repeatable]
     notebook: >
-      Pass current through salt water and it splits: chlorine gas at one electrode, hydrogen and
-      sodium hydroxide at the other. Electricity does the work that used to take acids and
-      furnaces. Caustic soda will dissolve alumina from bauxite, and later a related chemical
-      will scrub carbon dioxide from the pilot's air.
+      Generation has to match load moment to moment; there's no stockpile of electricity. A power
+      station is a promise of fuel burned continuously, which is why hydro sites are worth a fight.
 
-  - id: arc_furnace_carbide
+  # ---- Beat 2: electricity as heat ------------------------------------------------------------------------------------
+  - id: arc_furnace
     name: Electric arc furnace
     stage: 4
+    beat: 2
     kind: project
     critical_path: true
-    problem: "Some metals and compounds need temperatures no fuel flame reaches, like chromium alloys and calcium carbide."
+    problem: "Some metals and compounds need temperatures no fuel flame reaches."
     requires:
       nodes: [distribution_grid]
       resources: {graphite_kg: 5000, steel_kg: 10000, clay_kg: 20000}
-      labor_person_days: 1500000
+      labor_person_days: 1200000
     unlocks:
       jobs: [run_arc_furnace]
-      effects: ["Ferroalloys (ferrochrome, ferrosilicon); calcium carbide for acetylene; electric steel"]
-    reads_state: [grid_kw]
+      effects: ["Electric steel; calcium carbide (acetylene for welding); ferroalloys if the ores are found. A 500 kW load"]
+    reads_state: [grid_kw, mineral_sites]
     writes_state: [has_arc_furnace, has_carbide]
     pages_bundle: metallurgy_2
     without_pages: "2x labor"
-    fallback: "Crucible alloying in fuel furnaces (limited alloys)"
-    energy_effect: "One of the largest electrical loads in the colony"
-    numbers_status: "Moissan and Willson's carbide work (1892) and Heroult's arc steel furnace (1900) are sourced"
+    numbers_status: "Moissan/Willson carbide 1892, Heroult 1900 sourced"
     sources: ["https://en.wikipedia.org/wiki/Electric_arc_furnace"]
-    tags: [new_energy_form]
+    tags: []
     notebook: >
-      An electric arc between carbon electrodes reaches thousands of degrees, hotter than any
-      combustion flame, with no fuel gases to contaminate the charge. Lime and coke in an arc
-      furnace make calcium carbide, which fizzes into acetylene gas in water. Chromium and other
-      alloying metals are smelted the same way.
+      An arc between carbon electrodes reaches thousands of degrees with no fuel gases to
+      contaminate the charge. Lime and coke in an arc furnace make calcium carbide, which fizzes
+      into acetylene in water.
 
   - id: alloy_steels
     name: Alloy and tool steels
     stage: 4
-    kind: upgrade
-    critical_path: true
-    problem: "Your cutting tools soften at red heat, and turbine parts creep and crack when hot."
+    beat: 2
+    kind: decision_option
+    critical_path: false
+    problem: "Cutting tools soften at red heat, and turbine parts creep and crack when hot."
     requires:
-      nodes: [arc_furnace_carbide, open_hearth]
-      resources: {chromium_ore_kg: 10000, nickel_ore_kg: 3000, tungsten_ore_kg: 1000}
-      labor_person_days: 1500000
+      nodes: [arc_furnace]
+      state: ["mineral_sites has chromite OR mineral_sites has tungsten OR mineral_sites has nickel"]
+      resources: {chromium_ore_kg: 10000}
+      labor_person_days: 1200000
     unlocks:
-      jobs: [make_alloy_steel, refine_tungsten]
-      effects: ["High-speed tool steel: machining x3; stainless and heat-resistant steels for turbines, injectors and valves"]
-    reads_state: [bundles_taken]
-    writes_state: [has_alloy_steel, machine_shop_capacity]
+      jobs: [make_alloy_steel]
+      effects: ["Choose what to alloy for, given the ores found: tool steel (shop hours x2), stainless (acid plant life), heat-resistant (turbines, later injectors). Each is a separate small project"]
+    reads_state: [mineral_sites]
+    writes_state: [has_alloy_steel, shop_hours_balance]
     pages_bundle: metallurgy_2
     without_pages: "3x labor; many trial heats"
-    fallback: "Carbon steel only (slower machining; turbopumps later need heavier parts)"
-    energy_effect: "Arc furnace electricity"
-    numbers_status: "Taylor-White high-speed steel (1900) and stainless steel (1910s) are sourced. Guleman (Elazig), in eastern Anatolia, yields very high-grade chromite (sourced)."
-    sources:
-      - "https://en.wikipedia.org/wiki/High-speed_steel"
-      - "https://en.wikipedia.org/wiki/Stainless_steel"
-      - "https://en.wikipedia.org/wiki/Guleman_mine"
-    tags: []
+    numbers_status: "High-speed steel 1900, stainless 1910s sourced"
+    sources: ["https://en.wikipedia.org/wiki/High-speed_steel"]
+    tags: [substantive, accelerant]
     notebook: >
-      Carbon steel loses its hardness when it gets hot, so a lathe cutting fast literally burns
-      its tool soft. Adding tungsten and chromium gives steel carbides that stay hard at red
-      heat. Frederick Taylor and Maunsel White's high-speed steel of 1900 tripled cutting speeds
-      overnight. Add enough chromium and steel stops rusting; add nickel and it stays tough cold.
-
-  - id: bayer_alumina
-    name: Alumina refining
-    stage: 4
-    kind: project
-    critical_path: false
-    problem: "Bauxite is full of iron and silica, and aluminum smelting needs almost pure alumina."
-    requires:
-      nodes: [chlor_alkali]
-      resources: {bauxite_kg: 50000, steel_kg: 10000}
-      labor_person_days: 1200000
-    unlocks:
-      jobs: [refine_alumina, synthesize_cryolite]   # ~2 kg alumina per kg aluminum (stoichiometric 1.89); cryolite from fluorite via HF
-    reads_state: [has_caustic, bundles_taken]
-    writes_state: [has_alumina]
-    pages_bundle: industrial_chemistry
-    without_pages: "3x labor"
-    fallback: "Le Chatelier process with soda ash (dirtier, costlier)"
-    energy_effect: "Steam heat for digestion counts"
-    numbers_status: "Bayer process (1888) is sourced; large bauxite reserves at Seydisehir (Konya) in the Taurus are sourced"
-    sources: ["https://en.wikipedia.org/wiki/Bayer_process", "https://en.wikipedia.org/wiki/Seydi%C5%9Fehir_mine"]
-    tags: []
-    notebook: >
-      Hot caustic soda dissolves the aluminum oxide in bauxite but leaves iron oxide behind as a
-      red mud. Cool the solution and seed it, and pure aluminum hydroxide crystallizes out, which
-      is then baked into alumina. Karl Josef Bayer worked it out in 1888, two years after the
-      smelting process it feeds.
-
-  - id: hall_heroult
-    name: Aluminum smelting
-    stage: 4
-    kind: project
-    critical_path: false
-    problem: "Steel tanks are too heavy for anything that has to fly, and aluminum can't be made with carbon in a furnace."
-    requires:
-      nodes: [bayer_alumina, distribution_grid]
-      resources: {graphite_kg: 10000, cryolite_kg: 5000, steel_kg: 10000}
-      labor_person_days: 2000000
-    unlocks:
-      jobs: [smelt_aluminum]      # ~15-20 kWh/kg; early plants much worse (estimate)
-    reads_state: [grid_kw, has_alumina]
-    writes_state: [has_aluminum]
-    pages_bundle: industrial_chemistry
-    without_pages: "4x labor; finding a solvent for alumina is the non-obvious step"
-    fallback: "Steel tanks for every stage (the rocket workshop shows the mass penalty)"
-    energy_effect: "Very large electrical load: 1 t/day of aluminum at 20 kWh/kg is ~830 kW, ~200 weighted W per person"
-    numbers_status: "Hall-Heroult (1886); theoretical 6.23 kWh/kg; ~15 kWh/kg in 2003 (sourced). Early figures higher (estimate). Natural cryolite came from Greenland; synthetic cryolite needs fluorite and HF (see open questions)."
-    sources: ["https://en.wikipedia.org/wiki/Hall%E2%80%93H%C3%A9roult_process"]
-    tags: []
-    notebook: >
-      Aluminum holds its oxygen too tightly for carbon to steal it at any practical temperature.
-      Charles Hall and Paul Heroult both found in 1886 that alumina dissolves in molten cryolite
-      at about 960 C, and a strong current then splits it. Before that, aluminum was a precious
-      metal. It still takes many times more electricity per kilogram than steel takes in coal.
-
-  - id: duralumin
-    name: Age-hardened aluminum alloy
-    stage: 4
-    kind: upgrade
-    critical_path: false
-    problem: "Pure aluminum is light but soft; your tank walls would have to be thick enough to cancel the weight saving."
-    requires:
-      nodes: [hall_heroult]
-      resources: {aluminum_kg: 5000, copper_kg: 300}
-      labor_person_days: 700000
-    unlocks:
-      effects: ["Strong light alloy; unlocks aluminum tank option (structural fraction 0.09) in the rocket workshop"]
-    reads_state: [has_aluminum]
-    writes_state: [has_duralumin]
-    pages_bundle: metallurgy_2
-    without_pages: "Found by accident (as it historically was), after ~2 years; 2x labor"
-    fallback: "Steel tanks"
-    energy_effect: "None"
-    numbers_status: "Wilm's discovery of age hardening (1906) is sourced"
-    sources: ["https://en.wikipedia.org/wiki/Duralumin"]
-    tags: []
-    notebook: >
-      Alfred Wilm quenched an aluminum-copper alloy in 1906, tested it, and found it unimpressive.
-      Days later it was much stronger. Tiny clusters of copper atoms had formed inside the
-      aluminum crystals at room temperature, pinning them against slipping. Airships and then
-      airplanes were built from it, and so were rocket tanks.
-
-  - id: oil_drilling
-    name: Cable-tool oil wells
-    stage: 4
-    kind: project
-    critical_path: false
-    problem: "Your chemists want a liquid fuel that doesn't need farmland, and the survey marks oil seeps to the southeast."
-    requires:
-      nodes: [gate_generator, open_hearth]
-      resources: {steel_kg: 30000, wood_kg: 50000}
-      labor_person_days: 2500000
-    unlocks:
-      jobs: [pump_crude]
-    reads_state: [bundles_taken, has_locomotive]
-    writes_state: [has_crude]
-    pages_bundle: geological_survey
-    without_pages: "Hand-dug pits at seeps (tiny yield)"
-    fallback: "Fuel alcohol from crops (Stage 5 labor sink); shale oil"
-    energy_effect: "Oil burned for work counts at ~42-45 MJ/kg"
-    numbers_status: "Oil fields exist in southeastern Turkey (Batman/Raman) and at Baku; depths and rates are estimates"
-    sources: ["https://en.wikipedia.org/wiki/Petroleum_industry_in_Azerbaijan"]
-    tags: [labor_sink, new_energy_source]
-    notebook: >
-      A cable-tool rig lifts a heavy iron bit and drops it, over and over, pounding a hole down
-      through rock while water and a bailer carry the chips out. Wells a few hundred meters deep
-      reached oil in Baku and Pennsylvania in the mid-1800s. Oil is roughly half again as
-      energy-dense per kilogram as coal, and it flows.
-
-  - id: oil_refining
-    name: Fractional distillation of crude
-    stage: 4
-    kind: project
-    critical_path: false
-    problem: "Crude oil is a black tar-like mix; burned raw, it clogs burners and leaves soot."
-    requires:
-      nodes: [oil_drilling, glassworks]
-      resources: {steel_kg: 15000}
-      labor_person_days: 1200000
-    unlocks:
-      jobs: [refine_crude]
-      effects: ["Kerosene (rocket fuel option later), lubricating oil, fuel oil"]
-    reads_state: [has_crude]
-    writes_state: [has_kerosene]
-    pages_bundle: industrial_chemistry
-    without_pages: "2x labor; poor cuts at first"
-    fallback: "Alcohol"
-    energy_effect: "Refinery heat counts"
-    numbers_status: "Estimate"
-    sources: ["https://en.wikipedia.org/wiki/Fractional_distillation"]
-    tags: []
-    notebook: >
-      Crude oil is a mixture of hydrocarbons with chains of different lengths, and longer chains
-      boil at higher temperatures. Heat it in a still and collect what condenses at each
-      temperature: light gasoline, then kerosene, then heavier oils. Kerosene became the rocket
-      fuel of choice because it's dense and handles easily. Refined carefully, it's RP-1.
-
-  - id: compressors
-    name: Multistage gas compressors
-    stage: 4
-    kind: project
-    critical_path: true
-    problem: "You can't hold gas at hundreds of atmospheres; single-stage pumps overheat and leak."
-    requires:
-      nodes: [open_hearth, measurement_standards, electric_motors, alloy_steels]
-      resources: {steel_kg: 15000, alloy_steel_kg: 1000}
-      labor_person_days: 1500000
-    unlocks:
-      effects: ["Compressed gases up to ~200 atm with intercooling; prerequisite for liquid air and ammonia synthesis"]
-    reads_state: [steel_quality, tolerance_mm]
-    writes_state: [max_pressure_atm]
-    pages_bundle: cryogenics
-    without_pages: "2x labor"
-    fallback: "Low-pressure only"
-    energy_effect: "Electric motor load"
-    numbers_status: "Estimate"
-    sources: ["https://en.wikipedia.org/wiki/Gas_compressor"]
-    tags: []
-    notebook: >
-      Squeezing a gas heats it, and hot gas is harder to squeeze. Multistage compressors compress
-      a little, cool the gas in a water-jacketed pipe, then compress again. The pistons need
-      precise fits and the cylinders thick steel walls. Your machinists' skill from the boring
-      mill onward pays off here.
-
-  - id: dewar_flasks
-    name: Vacuum-insulated flasks
-    stage: 4
-    kind: project
-    critical_path: true
-    problem: "Anything colder than ice boils away within minutes in an ordinary container."
-    requires:
-      nodes: [glassworks, vacuum_pumps]
-      resources: {glass_kg: 1000, silver_kg: 20}
-      labor_person_days: 300000
-    unlocks:
-      effects: ["Store and move cryogenic liquids; required for liquid air, liquid oxygen and later propellant loading"]
-    reads_state: [glassblowers_trained]
-    writes_state: [has_dewar]
-    pages_bundle: cryogenics
-    without_pages: "2x labor"
-    fallback: "Straw- and felt-packed containers (heavy losses)"
-    energy_effect: "None"
-    numbers_status: "Dewar's vacuum flask (1892) is sourced"
-    sources: ["https://en.wikipedia.org/wiki/Vacuum_flask"]
-    tags: []
-    notebook: >
-      Heat moves by conduction, convection and radiation. A vacuum between two glass walls stops
-      the first two, and silvering the walls reflects most of the third. James Dewar built one in
-      1892 to keep his liquefied gases. Scale the same idea up in steel and you get the insulated
-      tanks that hold propellant on the launch pad.
-
-  - id: vacuum_pumps
-    name: Mercury vacuum pumps and lamps
-    stage: 4
-    kind: project
-    critical_path: true
-    problem: "Arc lamps are too harsh and hungry for indoor light, and nobody can pump air out of glass well enough to protect a hot filament."
-    requires:
-      nodes: [glassworks, distribution_grid]
-      resources: {mercury_kg: 200, glass_kg: 500}
-      labor_person_days: 500000
-    unlocks:
-      effects: ["High vacuum in glass; incandescent lamps; foundation for vacuum tubes and Dewar flasks"]
-    reads_state: [glassblowers_trained]
-    writes_state: [has_high_vacuum]
-    pages_bundle: vacuum_tubes_radio
-    without_pages: "2x labor"
-    fallback: "Piston vacuum pumps (poorer vacuum; lamps burn out fast)"
-    energy_effect: "Electric lighting load"
-    numbers_status: "Sprengel pump (1865) and its use by Swan and Edison are sourced"
-    sources: ["https://en.wikipedia.org/wiki/Sprengel_pump"]
-    tags: []
-    notebook: >
-      Hermann Sprengel's 1865 pump lets drops of mercury fall down a narrow glass tube, and each
-      drop traps a little pocket of air and carries it away. It's slow but reaches a far better
-      vacuum than piston pumps. Swan and Edison used it for their lamps, because a glowing carbon
-      filament burns up instantly if any oxygen remains.
-
-  - id: niter_to_fixation
-    name: Fixed nitrogen
-    stage: 4
-    kind: hub
-    critical_path: false
-    problem: "Nitric acid, explosives and later rocket oxidizers all need fixed nitrogen, and your niter beds make a trickle."
-    requires:
-      nodes: [compressors]
-      any_of: [[haber_bosch], [birkeland_eyde], [niter_beds]]
-    unlocks:
-      effects: ["Summary node: the nitrogen supply sets how much nitric acid and ammonium nitrate you can make"]
-    reads_state: [nitrate_source]
-    writes_state: [nitrate_capacity]
-    pages_bundle: industrial_chemistry
-    without_pages: "See options"
-    fallback: "Niter beds (slow)"
-    energy_effect: "See options"
-    numbers_status: "See options"
-    sources: []
-    tags: [hub]
-    notebook: >
-      Air is almost 80% nitrogen, but the two atoms in a nitrogen molecule are held by a triple
-      bond, one of the strongest in chemistry. Life and industry both need that nitrogen split
-      and bonded to something else. Before 1900 nearly all fixed nitrogen came from rot, bird
-      droppings, and Chilean saltpeter.
-
-  - id: haber_bosch
-    name: Ammonia synthesis
-    stage: 4
-    kind: project
-    critical_path: false
-    problem: "Niter beds can't supply the nitric acid your chemists will need by the ton."
-    requires:
-      nodes: [compressors, chlor_alkali]
-      resources: {alloy_steel_kg: 20000, iron_kg: 5000}
-      labor_person_days: 3500000
-    unlocks:
-      jobs: [synthesize_ammonia]
-    reads_state: [max_pressure_atm, has_hydrogen]
-    writes_state: [nitrate_source, has_ammonia]
-    pages_bundle: industrial_chemistry
-    without_pages: "Effectively unavailable: catalyst and conditions took years of systematic search. Use niter beds or the arc process."
-    fallback: "Birkeland-Eyde arc (electricity-hungry) or niter beds (slow)"
-    energy_effect: "Hydrogen production and compression are large loads"
-    numbers_status: "Haber's 1909 demonstration and BASF's Oppau plant (1913) are sourced"
-    sources: ["https://en.wikipedia.org/wiki/Haber_process"]
-    tags: [labor_sink]
-    notebook: >
-      Fritz Haber showed in 1909 that nitrogen and hydrogen combine over an iron catalyst at a few
-      hundred degrees and about 200 atmospheres. Carl Bosch spent four years turning that into
-      a plant, discovering along the way that hot hydrogen at high pressure soaks into steel and
-      makes it brittle. The Oppau works started in 1913. It is the process the notebook warns you
-      not to forget.
-
-  - id: birkeland_eyde
-    name: Electric arc nitrogen fixation
-    stage: 4
-    kind: project
-    critical_path: false
-    problem: "You have cheap hydroelectric power but not the high-pressure chemistry for ammonia."
-    requires:
-      nodes: [distribution_grid]
-      resources: {copper_kg: 5000, steel_kg: 5000}
-      labor_person_days: 1200000
-    unlocks:
-      jobs: [arc_fix_nitrogen]
-    reads_state: [hydro_kw, grid_kw]
-    writes_state: [nitrate_source]
-    pages_bundle: industrial_chemistry
-    without_pages: "2x labor; it's an obvious experiment once you have big arcs"
-    fallback: "Niter beds"
-    energy_effect: "Very electricity-hungry; big watt surge for modest output"
-    numbers_status: "Birkeland-Eyde process (1903, Norway) is sourced; it was far less energy-efficient than Haber-Bosch"
-    sources: ["https://en.wikipedia.org/wiki/Birkeland%E2%80%93Eyde_process"]
-    tags: []
-    notebook: >
-      Lightning fixes nitrogen by heating air so hot that nitrogen and oxygen combine. Kristian
-      Birkeland and Sam Eyde spread an electric arc into a flat disk of flame with magnets and
-      blew air through it, then absorbed the nitrogen oxides in water to make nitric acid. It
-      worked in Norway, where hydroelectric power was cheap, and lost to Haber-Bosch everywhere
-      else.
-
-  - id: ostwald_nitric
-    name: Nitric acid from ammonia
-    stage: 4
-    kind: upgrade
-    critical_path: false
-    problem: "You have ammonia but need nitric acid for oxidizers and explosives."
-    requires:
-      nodes: [haber_bosch]
-      resources: {platinum_kg: 5, steel_kg: 5000}
-      labor_person_days: 600000
-    unlocks:
-      jobs: [make_nitric_acid]
-    reads_state: [has_ammonia]
-    writes_state: [has_nitric_acid]
-    pages_bundle: industrial_chemistry
-    without_pages: "2x labor"
-    fallback: "Nitric acid from saltpeter and sulfuric acid (small scale)"
-    energy_effect: "Exothermic; small"
-    numbers_status: "Ostwald process (patented 1902) is sourced. Platinum is scarce; see open questions."
-    sources: ["https://en.wikipedia.org/wiki/Ostwald_process"]
-    tags: []
-    notebook: >
-      Burn ammonia with air over a hot platinum gauze for a fraction of a second, and instead of
-      nitrogen and water you get nitric oxide. Cool it, let it pick up more oxygen, and dissolve
-      it in water: nitric acid. Wilhelm Ostwald worked it out in 1902. Concentrated nitric acid is
-      also a rocket oxidizer, one that stays liquid at room temperature.
+      Carbon steel loses its hardness when hot, so a lathe cutting fast burns its own tool soft.
+      Tungsten and chromium give steel carbides that stay hard at red heat. Enough chromium and it
+      stops rusting; nickel keeps it tough when cold.
 
   - id: welding
-    name: Gas and arc welding
+    name: Welding
     stage: 4
+    beat: 2
     kind: project
     critical_path: true
     problem: "Riveted seams leak under pressure and add weight; thin tanks and pipes need continuous joints."
     requires:
-      nodes: [arc_furnace_carbide, distribution_grid]
+      nodes: [arc_furnace]
       resources: {steel_kg: 3000, copper_kg: 1000}
-      labor_person_days: 800000
+      labor_person_days: 700000
     unlocks:
       jobs: [weld]
-      effects: ["Arc welding now; oxy-acetylene once oxygen is available (electrolysis or liquid air); thin-wall tanks and pressure pipework"]
-    reads_state: [has_carbide, has_lox]
+      effects: ["Arc welding now; oxy-acetylene once oxygen is available. Thin-wall tanks and pressure pipework. Trains welders; weld flaws in Stage 5-6 read welders_trained"]
+    reads_state: [has_carbide]
     writes_state: [welders_trained]
     pages_bundle: machine_tools
     without_pages: "2x labor; porous welds until fluxes are right"
-    fallback: "Riveting and brazing (heavier, leakier)"
-    energy_effect: "Small"
-    numbers_status: "Oxy-acetylene welding (c. 1903) and early arc welding are sourced"
+    numbers_status: "Early arc welding and oxy-acetylene (c. 1903) sourced"
     sources: ["https://en.wikipedia.org/wiki/Oxy-fuel_welding_and_cutting"]
     tags: [skill_builder]
     notebook: >
-      Acetylene burned with pure oxygen makes a flame over 3,000 C, hot enough to melt steel along
-      a narrow seam. An electric arc does the same with a coated rod. A weld joins metal into one
-      piece, so a tank can be thinner and lighter. Welding thin sheet well is a skill; so is
-      finding the flaw hidden inside a weld.
+      A weld joins metal into one piece, so a tank can be thinner and lighter than a riveted one.
+      Welding thin sheet well is a skill, and so is finding the flaw hidden inside a weld.
 
-  - id: linde_liquefier
-    name: Regenerative air liquefier
+  # ---- Beat 3: alkali and acid at scale ---------------------------------------------------------------------------------
+  - id: soda_ash
+    name: Soda ash
     stage: 4
+    beat: 3
     kind: decision_option
-    critical_path: true
-    route: [A_linde]
-    problem: "Your oxidizer has to be liquid oxygen, but air won't liquefy until about -190 C and nothing you have gets close."
+    critical_path: false
+    problem: "Glass and chemistry need alkali by the ton, and burning plants for potash eats forest."
     requires:
-      nodes: [compressors, dewar_flasks]
-      resources: {copper_kg: 3000, steel_kg: 8000}
-      labor_person_days: 1500000
+      nodes: [sulfuric_acid]
+      state: ["chemical_balance < 0"]
+      resources: {salt_kg: 20000, lime_kg: 10000}
+      labor_person_days: 800000
     unlocks:
-      jobs: [liquefy_air]
-      effects: ["Continuous liquid air; simple, no moving parts in the cold; energy-hungry"]
-    reads_state: [max_pressure_atm, has_dewar]
-    writes_state: [has_liquid_air, cryo_process]
+      jobs: [make_soda_ash]
+      effects: ["Leblanc now (fuel-hungry, HCl fumes: scar hcl_pollution) or Solvay if coke-oven ammonia is captured (clean, needs coal_seam_choice). The choice is shown with both costs"]
+    reads_state: [has_coke]
+    writes_state: [has_soda_ash, hcl_pollution]
+    pages_bundle: industrial_chemistry
+    without_pages: "Leblanc only, 2x labor"
+    numbers_status: "Leblanc and Solvay (1861) sourced"
+    sources: ["https://en.wikipedia.org/wiki/Solvay_process"]
+    tags: [substantive, scar]
+    notebook: >
+      Leblanc turns salt into soda with acid, coal and limestone, and belches hydrochloric acid that
+      killed fields around 19th-century works. Solvay's process uses brine, limestone and ammonia
+      it recovers and reuses. Leblanc now and Solvay later leaves a scar but gets glass moving sooner.
+
+  - id: chlor_alkali
+    name: Brine electrolysis
+    stage: 4
+    beat: 3
+    kind: project
+    critical_path: false
+    problem: "You need caustic soda, chlorine and hydrogen, and chemistry alone makes them slowly and dirtily."
+    requires:
+      nodes: [distribution_grid]
+      state: ["chemical_balance < 0 OR power_balance_kw > 200"]
+      resources: {salt_kg: 30000, iron_kg: 5000, graphite_kg: 1000}
+      labor_person_days: 1000000
+    unlocks:
+      jobs: [electrolyze_brine]
+      effects: ["Caustic (alumina refining, CO2 scrubbers), chlorine, hydrogen. A 300 kW load"]
+    reads_state: [grid_kw]
+    writes_state: [has_caustic, has_hydrogen]
+    pages_bundle: industrial_chemistry
+    without_pages: "2x labor"
+    numbers_status: "Castner-Kellner (1890s) sourced"
+    sources: ["https://en.wikipedia.org/wiki/Chloralkali_process"]
+    tags: [accelerant]
+    notebook: >
+      Pass current through salt water and it splits: chlorine at one electrode, hydrogen and sodium
+      hydroxide at the other. Electricity does the work that used to take acids and furnaces.
+
+  # ---- Beat 4: the cold problem ----------------------------------------------------------------------------------------
+  - id: compressors
+    name: Multistage compressors
+    stage: 4
+    beat: 4
+    kind: project
+    critical_path: true
+    problem: "You can't hold gas at a hundred atmospheres; single-stage pumps overheat and leak."
+    requires:
+      nodes: [welding, bearings_lubrication]
+      state: ["tolerance_mm <= 0.1"]
+      resources: {steel_kg: 15000}
+      labor_person_days: 1200000
+    unlocks:
+      effects: ["Compressed gas to ~200 atm with intercooling. Adds the pressure dial to the liquefier workshop. A 200 kW load"]
+    reads_state: [steel_quality, tolerance_mm]
+    writes_state: [max_pressure_atm]
     pages_bundle: cryogenics
-    without_pages: "3x labor; the regenerative counterflow trick is the key idea"
-    fallback: "Cascade liquefaction (small batches)"
-    energy_effect: "Compressor load; roughly 1 kWh per kg liquid air in an early plant (estimate)"
-    numbers_status: "Hampson and Linde patents (1895) and Linde's ~3 L/h first yield are sourced; energy per kg is an estimate"
-    sources:
-      - "https://en.wikipedia.org/wiki/Hampson%E2%80%93Linde_cycle"
-      - "https://en.wikipedia.org/wiki/Carl_von_Linde"
+    without_pages: "2x labor"
+    numbers_status: "Estimate"
+    sources: ["https://en.wikipedia.org/wiki/Gas_compressor"]
     tags: []
     notebook: >
-      Compressed air cools slightly when it expands through a valve, the Joule-Thomson effect.
-      Linde's trick was to send that slightly cooled air back past the incoming high-pressure air,
-      so each round starts colder than the last. After a few days, air drips out as a pale blue
-      liquid. Linde's first machine made about three liters an hour in 1895.
+      Squeezing a gas heats it, and hot gas is harder to squeeze. Multistage compressors compress a
+      little, cool the gas in a water jacket, then compress again. The pistons need the machine
+      shop's best fit and the cylinders thick steel.
+
+  - id: vacuum_and_dewar
+    name: High vacuum and insulated flasks
+    stage: 4
+    beat: 4
+    kind: project
+    critical_path: true
+    problem: "Anything colder than ice boils away in minutes in an ordinary container, and no pump gets the air out of glass."
+    requires:
+      nodes: [glassworks, distribution_grid]
+      resources: {mercury_kg: 200, glass_kg: 1000, silver_kg: 20}
+      labor_person_days: 700000
+    milestones:
+      - {at: 0.5, id: mercury_pump, effect: "Sprengel pumps: high vacuum in glass; incandescent lamps as a side effect"}
+    unlocks:
+      effects: ["Dewar flasks: store and move cryogenic liquids. High vacuum also underlies Stage 5 vacuum tubes"]
+    reads_state: [glassblowers_trained]
+    writes_state: [has_high_vacuum, has_dewar]
+    pages_bundle: cryogenics
+    without_pages: "2x labor"
+    numbers_status: "Sprengel 1865, Dewar 1892 sourced"
+    sources: ["https://en.wikipedia.org/wiki/Vacuum_flask", "https://en.wikipedia.org/wiki/Sprengel_pump"]
+    tags: []
+    notebook: >
+      Heat moves by conduction, convection and radiation. A vacuum between two glass walls stops the
+      first two and silvering reflects most of the third. Sprengel's mercury-drop pump made the vacuum;
+      Dewar built the flask in 1892 to keep his liquefied gases.
+
+  # ---- Beat 5: the liquefier -----------------------------------------------------------------------------------------------
+  - id: cascade_liquefier
+    name: Cascade liquefaction
+    stage: 4
+    beat: 5
+    kind: workshop
+    workshop: liquefier_workshop
+    route: [T_cascade]
+    critical_path: true
+    problem: "Air won't liquefy until about -190 C, and nothing you have gets close."
+    requires:
+      nodes: [compressors, vacuum_and_dewar]
+      resources: {steel_kg: 3000, copper_kg: 1000}
+      labor_person_days: 600000
+    unlocks:
+      effects: ["Opens the liquefier workshop with the method dial set to cascade: a few liters a day, proving it can be done. The screen shows why it can't scale"]
+    writes_state: [has_liquid_air, cryo_process]
+    pages_bundle: cryogenics
+    without_pages: "Same"
+    numbers_status: "Pictet and Cailletet 1877 sourced; the scale cap is a simplification"
+    sources: ["https://en.wikipedia.org/wiki/Liquid_oxygen"]
+    tags: [trap, substantive]
+    trap_lesson: "A cascade chills each gas with the one liquefied before it: a chain of fragile stages, each capping the next. It proved oxygen could be liquefied; it never made tons."
+    notebook: >
+      In 1877 Pictet and Cailletet each liquefied a few drops of oxygen by cooling it step by step
+      with other liquefied gases. Industrial liquid air waited eighteen years for a process that
+      fed on its own cold.
+
+  - id: linde_liquefier
+    name: Regenerative liquefier
+    stage: 4
+    beat: 5
+    kind: decision_option
+    route: [A_linde]
+    critical_path: true
+    problem: "Throttling compressed air cools it only slightly. Unless the cold is kept and reused, it never adds up."
+    requires:
+      nodes: [cascade_liquefier]
+      resources: {copper_kg: 3000, steel_kg: 8000}
+      labor_person_days: 1200000
+    unlocks:
+      effects: ["method: throttle_regenerative; adds the exchanger_length dial. Continuous liquid air, no moving parts in the cold, ~1 kWh/kg (estimate)"]
+    reads_state: [max_pressure_atm]
+    writes_state: [has_liquid_air, cryo_process]
+    pages_bundle: cryogenics
+    without_pages: "Different route: the exchanger dial starts at 1 and the plant visibly stalls above -100 C; the counterflow idea is offered after 2 failed runs"
+    numbers_status: "Hampson and Linde 1895; Linde's ~3 L/h first yield sourced; energy per kg is an estimate"
+    sources: ["https://en.wikipedia.org/wiki/Hampson%E2%80%93Linde_cycle"]
+    tags: [substantive]
+    notebook: >
+      Compressed air cools slightly when it expands through a valve. Linde's trick was to send that
+      slightly cooled air back past the incoming air, so each round starts colder than the last.
+      After days, air drips out as a pale blue liquid.
 
   - id: claude_expander
     name: Expansion-engine liquefier
     stage: 4
+    beat: 5
     kind: decision_option
-    critical_path: false
     route: [B_claude]
+    critical_path: false
     problem: "Throttling through a valve wastes most of the cooling that compressed air could give."
     requires:
-      nodes: [compressors, dewar_flasks, alloy_steels]
+      nodes: [cascade_liquefier, alloy_steels]
+      state: ["tolerance_mm <= 0.05"]
       resources: {alloy_steel_kg: 4000, copper_kg: 3000}
-      labor_person_days: 2500000
+      labor_person_days: 2000000
     unlocks:
-      jobs: [liquefy_air]
-      effects: ["Liquid air at roughly half the energy of the Linde route; needs a precise cold piston or turbine"]
-    reads_state: [tolerance_mm, machinists_trained]
-    writes_state: [has_liquid_air, cryo_process]
+      effects: ["method: expansion_engine. About half the kWh/kg of Linde; needs a precise cold piston and lubricants that don't freeze. Trains machinists"]
+    reads_state: [tolerance_mm, bearing_quality]
+    writes_state: [has_liquid_air, cryo_process, machinists_trained]
     pages_bundle: cryogenics
     without_pages: "4x labor; cold lubrication fails repeatedly"
-    fallback: "Linde"
-    energy_effect: "Less electricity per kg than Linde"
-    numbers_status: "Georges Claude's expansion engine process (1902) is sourced; efficiency ratio is an estimate"
+    numbers_status: "Claude 1902 sourced; efficiency ratio is an estimate"
     sources: ["https://en.wikipedia.org/wiki/Georges_Claude"]
-    tags: [skill_builder]
+    tags: [substantive, accelerant, skill_builder]
     notebook: >
       Gas that expands while pushing a piston does work, and that work comes out of its heat, so
-      it cools far more than gas expanding through a valve. Georges Claude built an expansion
-      engine that ran at around -140 C in 1902, which meant finding lubricants that didn't freeze.
-      Modern plants use tiny turbines instead of pistons.
-
-  - id: cascade_liquefier
-    name: Cascade liquefaction
-    stage: 4
-    kind: decision_option
-    critical_path: false
-    route: [T_cascade]
-    problem: "You want liquid oxygen without building a high-pressure regenerative plant."
-    requires:
-      nodes: [compressors, dewar_flasks]
-      resources: {steel_kg: 3000, copper_kg: 1000}
-      labor_person_days: 700000
-    unlocks:
-      effects: ["Liquid oxygen in laboratory batches of liters per day; can't reach the gate's 500 kg/day without dozens of plants"]
-    reads_state: []
-    writes_state: [has_liquid_air]
-    pages_bundle: cryogenics
-    without_pages: "Same"
-    fallback: "Linde or Claude"
-    energy_effect: "Small"
-    numbers_status: "Cascade methods (Pictet, Cailletet 1877; Kamerlingh Onnes) are sourced; the scale cap is a game simplification"
-    sources: ["https://en.wikipedia.org/wiki/Liquid_oxygen"]
-    tags: [trap]
-    trap_lesson: "A cascade chills each gas with the one liquefied before it. It proved oxygen could be liquefied in 1877, but it's a laboratory method that doesn't scale to tons."
-    notebook: >
-      In 1877 Raoul Pictet and Louis Cailletet each liquefied a few drops of oxygen by cooling it
-      step by step with other liquefied gases. It proved the point and won them fame, but a
-      cascade is a chain of fragile stages, and each one limits the next. Industrial liquid air
-      waited another 18 years for a process that fed on its own cold.
+      it cools far more than gas expanding through a valve. Claude's engine ran at around -140 C
+      in 1902, which meant finding lubricants that didn't freeze.
 
   - id: air_separation
     name: Rectifying column
     stage: 4
+    beat: 5
     kind: project
     critical_path: true
     problem: "Liquid air is four-fifths nitrogen, and a rocket burning it would lose most of its punch."
     requires:
       any_of: [[linde_liquefier], [claude_expander]]
       resources: {copper_kg: 5000, steel_kg: 5000}
-      labor_person_days: 1200000
+      labor_person_days: 1000000
     unlocks:
       jobs: [separate_oxygen]
-      effects: ["Liquid oxygen above 99% purity; liquid nitrogen as by-product (useful for chilling and purging)"]
-    reads_state: [has_liquid_air, cryo_process]
+      effects: ["Adds the column dial. Liquid oxygen above 99%; liquid nitrogen as by-product. lox_kg_per_day is now a number on screen"]
+    reads_state: [cryo_process]
     writes_state: [lox_kg_per_day, has_lox]
     pages_bundle: cryogenics
-    without_pages: "3x labor"
-    fallback: "Let liquid air boil partly away (nitrogen boils first); poor purity"
-    energy_effect: "Part of the liquefaction load"
-    numbers_status: "Linde's rectification column (1902); oxygen boils at -183 C and nitrogen at -196 C (sourced)"
-    sources: ["https://en.wikipedia.org/wiki/Air_separation", "https://en.wikipedia.org/wiki/Liquid_oxygen"]
-    tags: []
+    without_pages: "Different route: partial boil-off separation (poor purity) until the column is found from watching which gas boils first"
+    numbers_status: "Linde's column 1902; boiling points sourced"
+    sources: ["https://en.wikipedia.org/wiki/Air_separation"]
+    tags: [substantive]
     notebook: >
       Nitrogen boils at -196 C and oxygen at -183 C, a small gap but enough. In a tall column,
-      rising vapor and falling liquid pass over and over each other on trays. At each tray a
-      little more nitrogen escapes upward and a little more oxygen runs down. The bottom collects
-      nearly pure liquid oxygen, pale blue and faintly magnetic.
+      rising vapor and falling liquid pass over each other on trays; at each tray a little more
+      nitrogen escapes upward and a little more oxygen runs down.
+
+  # ---- Beat 6: the light metal (optional) -------------------------------------------------------------------------------------
+  - id: aluminum
+    name: Aluminum
+    stage: 4
+    beat: 6
+    kind: project
+    critical_path: false
+    problem: "A preview of the rocket workshop shows a steel vehicle nearly twice the mass of an aluminum one."
+    requires:
+      nodes: [chlor_alkali, arc_furnace]
+      state: ["mineral_sites has bauxite", "power_balance_kw > 500"]
+      resources: {bauxite_kg: 50000, graphite_kg: 10000, steel_kg: 10000}
+      labor_person_days: 3000000
+    milestones:
+      - {at: 0.4, id: bayer_alumina, effect: "Caustic digestion of bauxite: pure alumina"}
+      - {at: 0.7, id: cryolite, effect: "Synthetic cryolite from fluorite and acid: the solvent for alumina"}
+      - {at: 1.0, id: hall_heroult, effect: "Molten-salt electrolysis: aluminum at ~20 kWh/kg (estimate). An 800 kW load per ton/day"}
+    unlocks:
+      jobs: [smelt_aluminum]
+      effects: ["Later: age-hardened alloy (duralumin) as a small follow-on project unlocks aluminum tanks (structural fraction 0.09 vs 0.14) in the rocket workshop"]
+    reads_state: [grid_kw, mineral_sites, has_caustic]
+    writes_state: [has_aluminum, has_duralumin]
+    pages_bundle: industrial_chemistry
+    without_pages: "4x labor; finding a solvent for alumina is the non-obvious step"
+    numbers_status: "Bayer 1888, Hall-Heroult 1886, theoretical 6.23 kWh/kg, ~15 in 2003 sourced; early figure is an estimate. Cryolite must be synthetic here"
+    sources: ["https://en.wikipedia.org/wiki/Hall%E2%80%93H%C3%A9roult_process", "https://en.wikipedia.org/wiki/Seydi%C5%9Fehir_mine"]
+    tags: [substantive, accelerant, labor_sink]
+    notebook: >
+      Aluminum holds its oxygen too tightly for carbon to steal it. Hall and Heroult both found in
+      1886 that alumina dissolves in molten cryolite at about 960 C and a strong current then splits
+      it. It takes many times more electricity per kilogram than steel takes in coal.
+
+  # ---- Beat 7: liquid fuel (optional) ----------------------------------------------------------------------------------------------
+  - id: oil
+    name: Oil wells and refinery
+    stage: 4
+    beat: 7
+    kind: project
+    critical_path: false
+    problem: "Your chemists want a liquid fuel that doesn't need farmland, and the survey marks oil seeps to the southeast."
+    requires:
+      nodes: [open_hearth]
+      state: ["mineral_sites has oil_seeps", "rail_km > 0"]
+      resources: {steel_kg: 40000, wood_kg: 50000}
+      labor_person_days: 3000000
+    milestones:
+      - {at: 0.5, id: first_well, effect: "Cable-tool rig strikes oil: crude for burning"}
+      - {at: 1.0, id: refinery, effect: "Fractional distillation: kerosene, lubricating oil, fuel oil"}
+    unlocks:
+      jobs: [pump_crude, refine_crude]
+      effects: ["Kerosene: the denser rocket fuel option (workshop Isp 310 vs 280). Mineral oil improves bearing_quality"]
+    reads_state: [mineral_sites, rail_km]
+    writes_state: [has_kerosene, bearing_quality]
+    pages_bundle: geological_survey
+    without_pages: "Hand-dug pits at seeps (tiny yield) until drilling is learned, 2x labor"
+    numbers_status: "Oil at Batman (SE Turkey) and Baku; depths and rates are estimates"
+    sources: ["https://en.wikipedia.org/wiki/Petroleum_industry_in_Azerbaijan"]
+    tags: [substantive, accelerant, labor_sink]
+    notebook: >
+      A cable-tool rig lifts a heavy bit and drops it, pounding a hole through rock. Crude is a
+      mixture of hydrocarbon chains; heat it and collect what condenses at each temperature:
+      gasoline, then kerosene, then heavier oils. Kerosene became the rocket fuel of choice because
+      it's dense and easy to handle.
 
   - id: gate_liquid_oxygen
     name: "Gate: liquid oxygen on tap"
     stage: 4
+    beat: 8
     kind: gate
     critical_path: true
     problem: "The colony makes liquid oxygen in bulk, every day."
     requires:
-      nodes: [air_separation, welding, alloy_steels]
+      nodes: [air_separation, welding]
       state: ["energy_w_per_person >= 2500", "lox_kg_per_day >= 500"]
     unlocks:
       effects: ["Stage 5 opens: precision and propulsion"]
-    reads_state: [has_aluminum, has_kerosene, nitrate_source, cryo_process]
-    writes_state: []
+    reads_state: [has_aluminum, has_kerosene, cryo_process, has_alloy_steel, power_balance_kw]
     notebook: >
-      A rocket is mostly oxidizer by mass, and now you can make it. Liquid oxygen is also the first
-      product your colony makes that only exists because of electricity. Everything from here is
-      about burning it fast, hot and without the engine destroying itself.
+      A rocket is mostly oxidizer by mass, and now you can make it. Everything from here is about
+      burning it fast, hot, and without the engine destroying itself.

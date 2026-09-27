@@ -7,29 +7,23 @@ Two kinds of teaching failure:
 - **Traps** are visible options that look reasonable, can be built, and fail for a real reason the
   game shows. They cost time, never the run.
 
-## How the test campaign should work (proposal)
+## How the test campaign works
 
-The mockup rolls dice on each test. To respect "minimal randomness, outcomes decided by choices",
-this proposal makes discovery deterministic but hidden:
+Deterministic and legible; the only chance in the game is at launch, and it's shown.
 
-- Each design gets a set of flaws derived from its choices and the colony's state (for example,
-  `injector_quality: 0` guarantees combustion instability; `has_weld_xray: false` adds a weld flaw;
-  `feed_system: pressure` on a booster adds nothing hidden because the penalty is visible in the
-  workshop).
-- Each flaw has an **exposure** count: how many tests of the right kind reveal it. Instrumentation
-  and relevant skills lower it. The count is hidden, but the kind of test that finds it is not: the
-  notebook says "combustion instability shows up in static fires", so a knowledgeable player tests
-  the right way.
-- A clean test tells the player which flaw categories it exercised, so "three clean static fires"
-  genuinely means something about the engine and nothing about staging.
-- At launch, each unfixed flaw has a stated **severity**: *fatal*, *mission loss without death*,
-  or *survivable with margin* (for example, a guidance error that the lander's extra Δv can absorb).
-  Whether a flaw strikes can be deterministic from a run seed, so a replay of the same choices gives
-  the same result.
+- Each design carries a set of flaws derived from its choices and the colony's state: `injector_quality: 0`
+  guarantees `combustion_instability`; hammered plate or `welders_trained < 50` adds `tank_weld_crack`; a LOX
+  lander adds `lox_boiloff` and `engine_restart_failure`; radio command adds `cutoff_signal_delay`; and so on.
+- Each flaw has a hidden **exposure** count: how many tests of the right kind reveal it. Instrumentation
+  and relevant skills lower it. The *kind* of test that finds each category is public (the notebook says
+  "instability shows in static fires"), so a knowledgeable player tests the right way.
+- A clean test reports which categories it exercised, so "three clean static fires" means something about
+  the engine and nothing about staging.
+- At launch each unfixed flaw has a stated severity: **fatal**, **mission loss**, or **survivable with
+  margin** (absorbed if `dv_margin_km_s` and midcourse allow). The outcome is resolved from a run seed, so
+  the same choices give the same result. A pilot's death costs two years and the run continues.
 
-Where randomness is kept at all, it should be only here, and the odds should be shown.
-
-Fix times below are proposals in in-game months, before skill modifiers.
+Fix times are proposals in in-game months before skill modifiers. Implementation: work package H.
 
 ## Hidden flaws
 
@@ -70,9 +64,9 @@ A launch escape system turns booster-phase flaws from *fatal* into *vehicle loss
 | Bessemer with phosphorus ore (`bessemer_converter` when `iron_ore_phosphorus: high`) | 3 | The acid lining can't remove phosphorus, so the steel is cold-short | Steel that cracks in cold weather until the basic lining. [Gilchrist-Thomas process](https://en.wikipedia.org/wiki/Gilchrist%E2%80%93Thomas_process) |
 | `magneto_generator` | 3 | Permanent magnets of the era were weak; output doesn't scale | A generator stuck at a few hundred watts |
 | `cascade_liquefier` | 4 | A laboratory chain of fragile stages, liters per day | LOX output flat far below the gate |
-| `black_powder_rockets` | 5 | Exhaust speed ~0.8 km/s; orbit needs a mass ratio of ~130,000 | The workshop's Δv bar with a black-powder stage |
+| Black-powder stage (rocket workshop what-if) | 6 | Exhaust speed ~0.8 km/s; orbit needs a mass ratio of ~130,000 | The Δv bar with a black-powder stage selected |
 | `pressure_fed_booster_engine` | 5 → 6 | Tank pressure must exceed chamber pressure, so booster tanks are heavy | Passes the Stage 5 gate; in the workshop the first stage's dry mass balloons. [Pressure-fed engine](https://en.wikipedia.org/wiki/Pressure-fed_engine), [Sea Dragon](https://en.wikipedia.org/wiki/Sea_Dragon_(rocket)) |
-| `single_stage_attempt` | 6 | Best mass ratio of a steel stage is ~7; ln(7) × 2.9 km/s ≈ 5.7 km/s | The Δv bar stops short of orbit even with no payload |
+| Single stage (rocket workshop what-if) | 6 | Best mass ratio of a steel stage is ~7; ln(7) × 2.9 km/s ≈ 5.7 km/s | The Δv bar stops short of orbit even with no payload |
 | Steel tanks on every stage (no aluminum) | 6 | Structural fraction 0.14 vs 0.09 | Needs a much larger vehicle; possible, but slower to build and test |
 | LOX lander without insulation | 6 | Boil-off over a three-day coast | Adds `lox_boiloff`; shows the case for storable propellants |
 | No midcourse correction with radio command guidance | 6 | Small cutoff errors grow over 380,000 km | The impactor misses; teaches why Luna 1 missed |

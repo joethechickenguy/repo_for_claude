@@ -1,49 +1,36 @@
-# Resources consumed by node costs, and the job that produces each.
-# The validator checks every `requires.resources` key is listed here, and warns if the node that
-# unlocks the producing job isn't an ancestor of the consuming node (i.e. the player could see a
-# cost they have no way to pay).
-#
-# perishable: spoils in the open above storage capacity (see covered_stores).
+# Resources that node costs consume, and the job that produces each.
+# The validator checks each key is used correctly and that the producing job is unlocked by an
+# ancestor of the consuming node or by an earlier stage. Production is pull-based in the engine
+# (see DESIGN.md); only wood, charcoal and clay spoil in the open.
 
 resources:
   wood_kg:           {produced_by: gather_wood, perishable: true}
   blades:            {produced_by: knap_flint}
-  fiber_kg:          {produced_by: strip_fiber, perishable: true}
   clay_kg:           {produced_by: dig_clay, perishable: true}
   pots:              {produced_by: fire_pottery}
   charcoal_kg:       {produced_by: burn_charcoal, perishable: true}
   copper_kg:         {produced_by: smelt_copper}
-  hides:             {produced_by: hunt_for_hides, perishable: true}
   tin_kg:            {produced_by: smelt_tin}
   stone_kg:          {produced_by: quarry_stone}
   lime_kg:           {produced_by: burn_lime}
-  iron_kg:           {produced_by: smelt_iron_bloom, note: "Later also run_blast_furnace (pig) and fine_pig_iron / puddle_iron (bar). Nodes asking for iron_kg accept any."}
-  coke_kg:           {produced_by: coke_coal}
-  coal_kg:           {produced_by: mine_coal}
-  black_powder_kg:   {produced_by: make_black_powder}
+  iron_kg:           {produced_by: smelt_iron_bloom, note: "Also run_blast_furnace (pig) and fine_pig_iron (bar). Costs accept any."}
+  steel_kg:          {produced_by: blow_steel}
+  alloy_steel_kg:    {produced_by: make_alloy_steel}
+  glass_kg:          {produced_by: make_glass}
+  cement_kg:         {produced_by: make_cement}
+  caustic_kg:        {produced_by: electrolyze_brine}
+  rubber_substitute_kg: {produced_by: electrolyze_brine, note: "Polysulfide rubber from chlorine chemistry; see open questions"}
+  paper_kg:          {produced_by: make_soda_ash, note: "Soda pulping"}
+  lox_kg:            {produced_by: separate_oxygen}
+  # minor minerals: one mining job, one site each
   sand_kg:           {produced_by: mine_mineral}
   salt_kg:           {produced_by: mine_mineral}
   lead_kg:           {produced_by: mine_mineral}
-  sulfur_kg:         {produced_by: mine_mineral, note: "Also recoverable from roasting sulfide ore"}
+  sulfur_kg:         {produced_by: mine_mineral, note: "Also from roasting sulfide copper ore"}
   zinc_kg:           {produced_by: mine_mineral}
-  manganese_ore_kg:  {produced_by: mine_mineral}
-  dolomite_kg:       {produced_by: mine_mineral}
-  graphite_kg:       {produced_by: mine_mineral, note: "Or baked petroleum/coal-tar coke electrodes once refining exists"}
+  graphite_kg:       {produced_by: mine_mineral}
   mercury_kg:        {produced_by: mine_mineral}
-  silver_kg:         {produced_by: mine_mineral, note: "Often a by-product of lead ores"}
+  silver_kg:         {produced_by: mine_mineral}
   chromium_ore_kg:   {produced_by: mine_mineral}
-  nickel_ore_kg:     {produced_by: mine_mineral}
-  tungsten_ore_kg:   {produced_by: mine_mineral}
+  tungsten_kg:       {produced_by: mine_mineral, note: "Carbon filaments if none is found"}
   bauxite_kg:        {produced_by: mine_mineral}
-  platinum_kg:       {produced_by: mine_mineral, note: "Trace amounts only; see open questions"}
-  glass_kg:          {produced_by: make_glass}
-  cement_kg:         {produced_by: make_cement}
-  paper_kg:          {produced_by: make_paper}
-  steel_kg:          {produced_by: blow_steel}
-  caustic_kg:        {produced_by: electrolyze_brine}
-  rubber_substitute_kg: {produced_by: make_polysulfide_rubber}
-  alloy_steel_kg:    {produced_by: make_alloy_steel}
-  tungsten_kg:       {produced_by: refine_tungsten}
-  cryolite_kg:       {produced_by: synthesize_cryolite}
-  aluminum_kg:       {produced_by: smelt_aluminum}
-  lox_kg:            {produced_by: separate_oxygen}

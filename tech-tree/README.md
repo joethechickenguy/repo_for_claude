@@ -1,136 +1,111 @@
-# Tech tree overview
+# Tech tree data
 
-Six stages, each ending at a gate that every run passes. Inside a stage, routes branch; at the gate
-they converge, and what carries forward is state (see [gate-routes.md](gate-routes.md)).
+Content for the design in `../DESIGN.md`, in a form an engine can load. One YAML file per stage in
+`stages/`, plus three shared declarations. `tools/validate_tree.py` checks it and writes
+`generated/`.
 
-## Stage map
+| File | Holds |
+| --- | --- |
+| `stages/stageN-*.yaml` | The stage: gate, pressures, workshops, nodes (beats 1-8) |
+| `state-variables.yaml` | Every variable a node, pressure or gate reads or writes |
+| `page-bundles.yaml` | Draft bundles, page costs, roster synergies |
+| `resources.yaml` | Every resource a node costs and the job that produces it |
+| `energy.md` | Energy accounting rules, gate calibration, per-source watts |
+| `failure-modes.md` | Hidden flaws, test types that reveal them, traps |
+| `open-questions.md` | Unresolved history, physics, and realism-vs-fun conflicts |
+| `generated/` | dependencies.md (beats, pressures, graphs), routes.md, bundles.md, state-index.md, summary.md |
 
-| Stage | Name | Gate | Proposed energy gate | In-game years (target) | Nodes |
-| --- | --- | --- | --- | --- | --- |
-| 0 | Draft | Depart | n/a | 0 | page bundles + roster |
-| 1 | Fire and stone | Reliable smelting: 5,000 metal tools | 250 W | ~4 | 18 |
-| 2 | Iron | A steam engine keeps a mine dry | 600 W | ~12 | 25 |
-| 3 | Steam and steel | A generator delivers 50 kW | 1.5 kW | ~13 | 27 |
-| 4 | Electricity and chemistry | 500 kg/day of liquid oxygen | 2.5 kW | ~12 | 24 |
-| 5 | Precision and propulsion | A 250 kN engine runs 60 s on the stand | 3.5 kW | ~12 | 23 |
-| 6 | The rocket | A living pilot on the Moon | checklist, not watts | ~10 | 22 |
-
-Total: about 63 in-game years, inside the thought experiment's 60-80 year estimate for the
-immortal, no-survival, perfect-coordination scenario. The mockup's stage names (Draft, Fire and
-stone, Iron, Steam, Electricity, Rocket) had five playable stages; this tree splits "Electricity"
-into chemistry/cryogenics (Stage 4) and precision/propulsion (Stage 5) to reach six. Energy gates
-are recalibrated from the prototype's 400 W / 1.5 kW / 4 kW / 8 kW; the reasoning is in
-[energy.md](energy.md).
-
-**Pacing arithmetic.** At 1× speed one real second is one in-game day, so 63 years is about
-6.4 hours at 1×. With players spending much of their time at 5× and some at 20× during long
-projects, and pausing to read and plan, 10 hours for a first run is plausible but must be tuned by
-playtest. A stage of ~12 years gives 10,000 people about 44 million person-days. Summing every
-node in a stage, all routes included, gives 60-130% of the person-days available in that stage; a
-typical run builds 60-70% of the nodes, so projects take roughly half the colony's labor and
-production jobs the rest. Stages 1 and 6 are the most labor-bound and the likeliest to need
-trimming in playtest.
-
-## The minimum industrial path
-
-What a one-way crewed landing actually needs, as a chain of capabilities. Each line is the
-critical path of one stage (the validator prints the node-level version in
-[generated/dependencies.md](generated/dependencies.md)).
-
-1. **Heat and metal.** Pottery (heat-proof vessels) → charcoal (a fuel above 1,085 °C) → copper ore
-   → smelting with forced air → cast tools. Forced air matters most: without bellows or wind
-   furnaces there is no iron.
-2. **Iron and coal.** Bloomery iron → blast furnace (liquid cast iron) → coal as the forest runs out
-   → sand casting of big parts → a steam engine that drains a mine.
-3. **Precision and steel.** Rotative power and shafting → flat surfaces → screw-cutting lathe →
-   gauges → prospecting for minor minerals → glass, cement and sulfuric acid → cheap steel
-   (Bessemer) → wire, insulation, batteries, electromagnets → a self-excited dynamo.
-4. **Electrochemistry and cold.** A grid → the arc furnace and alloy steels → high-pressure
-   compressors → vacuum technique and Dewar flasks → welding → air liquefaction → a rectifying
-   column for pure liquid oxygen.
-5. **Engines and electronics.** Precision grinding and bearings → vacuum tubes and radio →
-   instrumentation → gyroscopes → a test stand → a first small engine → good injectors →
-   regenerative cooling → steering by the exhaust → a booster-class engine.
-6. **Vehicle and mission.** The workshop (rocket equation) → staging → a launch complex and a big
-   oxygen plant → tracking → a pressure capsule and life support → a lander with a radar altimeter
-   → testing → launch.
-
-Not on the minimum path, but usually worth it: aluminum (steel tanks work, at a heavy mass cost),
-kerosene (alcohol works; it needs farmland), hypergolic lander propellants (liquid oxygen landers
-work, with boil-off and restart risk), synthetic ammonia (the arc process or niter beds substitute),
-turbopumps (a pressure-fed booster passes the Stage 5 gate but hurts in the workshop).
-
-## How the pillars show up in the data
-
-- **Realistic, but doable.** Every non-gate node has a `without_pages` line and a `fallback`. Only
-  four hard walls exist, each explained in its notebook: forced air for iron, the ~10 m suction
-  lift, the rocket equation (black-powder rockets, single-stage vehicles), and self-excitation for
-  a generator that scales.
-- **Accurate enough for nerds.** Every node has `numbers_status` saying what is sourced and what
-  is a game estimate, and `sources` with links. Anything tagged "estimate" should be treated as a
-  tuning knob, not a fact.
-- **You learn science by playing.** Traps (`tags: [trap]`) are buildable and fail for a reason the
-  game shows (`trap_lesson`). State checks reward understanding: knowing that sulfur ruins iron
-  makes you pick the low-sulfur seam or plan for manganese.
-- **One thing at a time.** Each node introduces at most one new resource, job or constraint, and
-  appears only when its `problem` is visible (often through a `state` condition in `requires`).
-- **Minimal randomness.** Failure risks are deterministic where possible (boiler explosions tied
-  to plate quality and years at risk; wind furnaces lose output in a fixed calm season). The test
-  campaign is the one place with hidden information; see [failure-modes.md](failure-modes.md).
-
-## Node schema
-
-Every node in `stages/*.yaml` follows the handoff's suggested format, with a few additions.
+## Stage file
 
 ```yaml
-- id: bloomery                 # unique snake_case id
-  name: Bloomery furnace
-  stage: 2
-  kind: project                # project | upgrade | decision_option | gate | hub
-  critical_path: true          # on the minimum path (for decision options: the default route)
-  route: [A_wind]              # optional: which gate routes this node belongs to
-  problem: "One plain sentence the player already feels."
-  requires:
-    nodes: [iron_prospecting]              # all required
-    any_of: [[pot_bellows], [wind_furnaces]]  # at least one group fully built
-    state: ["forest_cover < 60"]           # conditions that make the problem appear
-    resources: {clay_kg: 40000, charcoal_kg: 10000}
-    labor_person_days: 900000              # estimate unless stated
-  milestones:                  # optional: mid-project unlocks to break up long builds
-    - {at: 0.5, id: native_copper_find, effect: "..."}
-  unlocks:
-    jobs: [smelt_iron_bloom]   # comment gives the per-worker-day rate
-    effects: ["..."]
-  reads_state: [iron_ore_grade]
-  writes_state: [has_iron]
-  pages_bundle: metallurgy_1   # or none
-  without_pages: "Slower rediscovery route"
-  fallback: "Historical substitute, or the hard wall and why"
-  energy_effect: "How it moves watts per person"
-  numbers_status: "What's sourced vs estimated"
-  sources: ["https://..."]
-  tags: [labor_sink, trap, scar, skill_builder, new_energy_source, ...]
-  trap_lesson: "For traps: the real reason it fails"
-  notebook: >
-    3 to 6 sentences of real science or history.
+stage: 2
+name: Iron
+opening_problem: "One sentence the player reads on entering."
+heartbeat: fuel_balance            # id of the pressure that's always on screen
+gate:
+  id: gate_steam
+  name: A working steam engine
+  condition: {energy_w_per_person: 600, state: ["mine_drained_by_engine == true"]}
+  routes: [A_newcomen, B_watt, C_high_pressure, T_savery]   # T_ = trap
+
+pressures:                         # bars the simulation moves
+  - id: mine_water
+    name: Water in the mine
+    drives: mine_water_m           # a declared state variable
+    heartbeat: false
+    rises_with: ["what makes it worse"]
+    red_when: "mine_water_m > 0"
+    effect_when_red: "what visibly stops"
+    answers: [node ids]            # nodes that address it
+    introduced_in_beat: 6
+
+workshops:                         # design screens; a base definition once, `extends: true` later
+  - id: engine_workshop
+    name: Engine workshop
+    opens_with: savery_pump        # node whose completion opens the screen
+    loop: "what one iteration is"
+    dials:
+      - {id: boiler_pressure, name: "Boiler pressure (atm)", range: [1, 6], added_by: newcomen_engine,
+         effect: "what the player sees change", basis: "the real equation or history"}
+      - {id: plate, name: "Plate", options: [hammered, rolled], added_by: newcomen_engine, effect: "...", basis: "..."}
+    outputs: [water_lifted_per_day, coal_per_day, safety_margin, years_to_failure]
+    failure_rule: "optional: deterministic failure statement"
+
+nodes:
+  - id: newcomen_engine
+    name: Atmospheric engine
+    stage: 2
+    beat: 7                        # introduction order within the stage
+    kind: workshop                 # project | upgrade | decision_option | workshop | gate | hub
+    workshop: engine_workshop      # for kind: workshop
+    route: [A_newcomen]            # optional; which gate routes it belongs to
+    critical_path: true            # on the minimum path
+    problem: "One plain sentence the player already feels."
+    requires:
+      nodes: [sand_casting]                    # all required
+      any_of: [[pot_bellows], [wind_furnaces]] # one group fully built
+      state: ["pump_workers > 500"]            # conditions; a pressure usually
+      resources: {iron_kg: 20000}
+      labor_person_days: 1500000               # estimate unless stated
+    milestones:                                # optional mid-project unlocks
+      - {at: 0.5, id: some_id, effect: "..."}
+    unlocks:
+      jobs: [tend_engine]                      # per-worker-day rate in a comment
+      effects: ["..."]
+    reads_state: [has_coal]
+    writes_state: [engine_type, mine_drained_by_engine]
+    pages_bundle: steam_engines              # or none
+    without_pages: "How the node differs without the bundle: a different route, not just slower"
+    numbers_status: "What's sourced vs estimated"
+    sources: ["https://..."]
+    tags: [substantive, accelerant, trap, scar, labor_sink, skill_builder, research_loop, repeatable, safety]
+    trap_lesson: "For traps: the real reason it fails"
+    notebook: >
+      2-5 sentences of real science or history.
 ```
 
 Conventions:
 
-- Quantities carry units in the key (`_kg`, `_kw`, `_person_days`). Counts of items have none.
-- `kind: decision_option` marks mutually exclusive-in-spirit choices at a fork. The engine doesn't
-  have to forbid building several; building a second costs time, which is its own lesson.
-- `kind: hub` nodes group alternatives or represent a whole screen (the test campaign).
-- A node's `energy_effect` describes direction and rough size. [energy.md](energy.md) has the
-  accounting rules and per-source watts.
-- Gate nodes list the capability checks in `requires.state`. The engine should show the player
-  which checks are unmet.
-- Resource costs on Stage 6 nodes are for construction and test hardware. The flight vehicle's own
-  tank material and propellant are chosen in the rocket workshop.
+- Quantities carry units in the key (`_kg`, `_kw`, `_km_s`, `_person_days`). Counts have none.
+- `state` conditions are free text the engine parses: `var op value`, `var has member`, `NOT flag`,
+  joined by `AND`/`OR`. Variables must be declared.
+- `substantive` marks decisions that should count toward the "one every few minutes" target; the
+  summary counts them per stage.
+- `accelerant` marks optional nodes that speed the run; `critical_path` marks the minimum path.
+- A `decision_option` is one of several answers at a fork. Building a second is allowed; it costs time.
+- Gates list checks in `requires.state`; the UI shows which are unmet.
 
-## Sources for the tree as a whole
+## Numbers
 
-Node-level links are in each node's `sources`. The handoff's suggested books (Sutton, *Rocket
-Propulsion Elements*; Huzel and Huang; Clark, *Ignition!*; Dartnell, *The Knowledge*) were not
-consulted page by page for this draft; they are the right next step for verifying Stage 5 and 6
-numbers. Energy history figures come from Vaclav Smil's work, cited in [energy.md](energy.md).
+Every `numbers_status` says what is sourced (with a link in `sources`) and what is a game estimate.
+Labor costs and production rates are all estimates: tuning knobs, not facts. Structural fractions and
+Isp in the rocket workshop are play simplifications. Energy figures and their sources are in
+`energy.md`.
+
+## Validate
+
+```sh
+pip install pyyaml
+python3 tools/validate_tree.py          # check and regenerate generated/
+python3 tools/validate_tree.py --check  # check only; exit 1 on errors
+```
