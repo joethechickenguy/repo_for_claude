@@ -172,7 +172,18 @@ controls. Levers: labor costs, rates, pressure slopes, beat thresholds. Record e
 
 Tick when done; add 3-5 lines of what shipped and what was left open.
 
-- [ ] A engine core
+- [x] A engine core
+  - `src/engine` (interface documented in `index.ts`): deterministic day tick, `Clock` (1×/5×/20×,
+    auto-pause on structured `PauseReason`s), typed `StateStore` for every declared variable, jobs
+    with tools/wear, rate/yield/toolLife/training modifiers, people/works/departments staffing with
+    pins and a record per row, pull works capped at demand + claims + buffer, spoilage, training, save/load.
+  - Glue for other packages: the engine implements B's `StateView` and `applyWrites`; `ProjectsSystem`
+    owns B's NodeBook in the save; `EnergySystem` feeds `report.burned` to C's `energyPerPerson`;
+    `contentFromTree` builds the engine input from B's tree plus job rates.
+  - 61 tests: 1,000 days within 10% of the prototype (3 allocations), save/load replays identically,
+    pull never exceeds demand + buffer, headless Stage 1 on the real tree reaches the gate (~3.6 years).
+  - Open: questions 25-30 (job rates, tool lifetimes and spoilage rates exist only as comments or
+    prose, so Stage 1's rates live in a test fixture; works aren't content). Stage 2+ jobs have no rates.
 - [x] B stage loader
   - `npm run content` compiles tech-tree/ (stages, state-variables, resources, draft) into typed
     `src/content/tree.json`; import `tree` and the types from `src/content`. Workshops come with

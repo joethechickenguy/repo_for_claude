@@ -85,3 +85,31 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     a node once visible stays visible; a stage opens when the previous gate node completes; Build
     labor is split evenly over active projects; a gate is re-checked when started (it has no labor,
     so it completes at once). `work-packages.md` names `page-bundles.yaml`, which is `draft.yaml`.
+
+## Engine (package A)
+
+25. **Job rates are comments.** Every rate sits in a comment after `unlocks.jobs` (B keeps it as
+    `Job.rateNote`), and `knap_flint`'s 3 blades/day is only in the prototype. The engine takes
+    structured rates (`inputs`, `outputs`, `burns` per worker-day, `tool`, `labor`); until the YAML
+    has them, `tests/engine/fixtures/stage1.ts` transcribes Stage 1's with a citation per number.
+    Proposed: a `jobs:` map per stage file, e.g. `fire_pottery: {inputs: {clay_kg: 12, wood_kg: 24},
+    outputs: {pots: 2}, burns: {wood_kg: 24}}`, and `build: {labor: build, tool: true}`.
+26. **Tools aren't declared.** Tool lifetimes (flint ~20 worker-days, copper ~200, bronze ~400) and
+    bare-hand speed (a quarter) are prose in the `tool_wear` pressure; copper/bronze/iron tools and
+    axes aren't resources, though `metal_tools` counts them; `ore_kg` is read by a condition but not
+    declared. Reading: tools are resources the engine models (`copper_tools`, `ore_kg` in the
+    fixture), users take the longest-lived first, `metal_tools` is their stock. Proposed:
+    `tool_life_worker_days` and `metal: true` on tool resources in `resources.yaml`, and a
+    `bare_hand_efficiency` number; the engine's defaults (`src/engine/params.ts`) are estimates.
+27. **Spoilage rate.** `resources.yaml` says which resources are perishable, not how fast.
+    Engine estimate: 0.1%/day (half-life ~2 years). Proposed: `spoil_per_day` per resource.
+28. **Pull vs "piles up visibly".** Reading: pull-based capping applies to works whose target is
+    `pull` (works and departments tiers): they fill consumer demand + claims + 2 days of buffer and
+    stop. Jobs the player staffs by hand (people tier) are not capped, so surplus piles up where the
+    stores panel shows it. A queued node's cost counts as demand through `engine.setClaim`.
+29. **Works aren't content.** A works is a facility (`furnace 2: 1 t/day`): an output, a primary
+    job and support jobs. None are defined in the YAML; the engine creates them at runtime
+    (`addWorks`). Stage 3 needs them in content or created by the node that builds the facility.
+30. **Training.** Reading: idle people train in one trade at a time (a count variable named
+    `trained_*` or `*_trained`), one trained person per 365 idle person-days (estimate), sped up by
+    a `training` modifier (teachers). Trained counts don't leave the idle pool.
