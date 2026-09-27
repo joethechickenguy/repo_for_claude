@@ -140,3 +140,4 @@ details p{margin:4px 0 0}
 .choice .opts .proj{margin-bottom:10px}
 .proj .tradeoff{font-size:14px; margin:4px 0}
 .proj.option .tradeoff{border-left:3px solid var(--blue); padding-left:7px}
+.train-info p{margin:0 0 4px}

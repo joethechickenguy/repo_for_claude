@@ -104,6 +104,8 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
   trainLabel.appendChild(trainSel);
   idleBox.append(idleLabel, trainLabel);
   c2.appendChild(idleBox);
+  const trainInfo = el("div", "train-info small muted");
+  c2.appendChild(trainInfo);
   const treeHost = el("div");
   c2.appendChild(treeHost);
   const tree = new PeopleTree(
@@ -473,6 +475,22 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
     tree.update(game.peopleRows());
     const trade = game.engine.trainingTrade() ?? "";
     if (trainSel.value !== trade) trainSel.value = trade;
+    const tr = game.training();
+    trainLabel.hidden = !tr.show;
+    trainInfo.hidden = !tr.show;
+    if (tr.show) {
+      const lines = [
+        fill(S.people.trainingExplain, { days: fmt(tr.personDays), perDay: fmtSmart(tr.idle / tr.personDays), idle: fmt(tr.idle) }),
+      ];
+      const counts = tr.trades.filter((t) => t.trained > 0).map((t) => fill(S.people.trainingCount, { n: fmt(t.trained), label: t.label }));
+      if (counts.length) lines.push(fill(S.people.trainingCounts, { list: counts.join(", ") }));
+      const cur = tr.trades.find((t) => t.id === trade);
+      if (cur) {
+        lines.push(fill(S.people.trainingNext, { label: cur.label, pct: Math.floor(cur.progress * 100) }));
+        if (cur.matters.length) lines.push(fill(S.people.trainingMatters, { label: cur.label[0]!.toUpperCase() + cur.label.slice(1), list: cur.matters.join(", ") }));
+      }
+      setHTML(trainInfo, lines.map((l) => `<p>${esc(l)}</p>`).join(""));
+    }
 
     // Projects, workshops, log
     renderProjects(game.projectCards());

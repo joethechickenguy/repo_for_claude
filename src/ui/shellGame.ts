@@ -124,6 +124,11 @@ export interface GameOptions {
   draft?: DraftOutcome;
 }
 
+/** `trained_smiths` -> "smiths", `electrical_engineers_trained` -> "electrical engineers". */
+export function tradeLabel(id: string): string {
+  return id.replace(/^trained_|_trained$/g, "").replace(/_/g, " ");
+}
+
 /** What needs the player right now, for the banner. */
 export interface PauseView {
   line: string;
@@ -494,9 +499,43 @@ export class Game {
     ];
   }
 
-  /** Trades idle people can train in, with a label from the state variable's description or id. */
+  /** Trades idle people can train in: `trained_smiths` / `machinists_trained` -> "smiths" / "machinists". */
   trades(): { id: string; label: string }[] {
-    return (this.content.trades ?? []).map((id) => ({ id, label: this.tree.stateVariables[id]?.description ?? id.replace(/_/g, " ") }));
+    return (this.content.trades ?? []).map((id) => ({ id, label: tradeLabel(id) }));
+  }
+
+  /**
+   * The training line under the people panel (owner playtest 2026-09-27: "what does 'idle people
+   * train as' mean?"). Shown only when someone is idle or has trained, so it never sits there
+   * unexplained. `perYear` is the engine's own rate; `matters` lists open-stage projects that read
+   * a trade, so the player sees why it's worth picking.
+   */
+  training(): {
+    show: boolean;
+    idle: number;
+    personDays: number;
+    trades: { id: string; label: string; trained: number; progress: number; matters: string[] }[];
+  } {
+    const e = this.engine;
+    const book = this.projects.book;
+    const open = new Set(this.tree.stages.filter((s) => s.stage <= this.stage).map((s) => s.stage));
+    const trades = this.trades().map((t) => {
+      const v = e.get(t.id);
+      const matters = this.tree.nodeOrder
+        .filter((id) => {
+          const n = this.tree.nodes[id]!;
+          return open.has(n.stage) && !book.completed.includes(id) && n.readsState.includes(t.id);
+        })
+        .map((id) => this.tree.nodes[id]!.name);
+      return { ...t, trained: typeof v === "number" ? v : 0, progress: e.trainingProgress(t.id), matters };
+    });
+    const idle = this.idle();
+    return {
+      show: idle > 0 || trades.some((t) => t.trained > 0 || t.progress > 0),
+      idle,
+      personDays: e.params.trainingPersonDaysPerPerson,
+      trades,
+    };
   }
 
   /** Nodes a red bar lists as answers (suggested). */

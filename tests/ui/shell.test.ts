@@ -128,5 +128,29 @@ describe("shell", () => {
     const taken = [...root.querySelectorAll(".proj")].find((p) => p.querySelector("h3")!.textContent === tree.nodes.hafted_blades!.name)!;
     expect(taken.querySelector(".tradeoff")!.textContent).toContain(`Chosen over ${tree.nodes.ground_stone_axes!.name}.`);
   });
+
+  it("training shows only with idle people, says what it does, and counts who trained", async () => {
+    const { root, game } = mount();
+    await frame();
+    // Everyone assigned: nothing to explain, so nothing shows.
+    game.adjust(["gather_wood"], 10000);
+    await frame();
+    game.step();
+    await frame();
+    const info = root.querySelector(".train-info") as HTMLElement;
+    expect(info.hidden).toBe(true);
+    // 3,650 idle for a while in smiths: a trained smith every tenth of a day.
+    game.adjust(["gather_wood"], -3650);
+    const sel = root.querySelector(".idle select") as HTMLSelectElement;
+    expect([...sel.options].map((o) => o.textContent)).toContain("smiths");
+    sel.value = "trained_smiths";
+    sel.dispatchEvent(new Event("change"));
+    for (let d = 0; d < 3; d++) game.step();
+    await frame();
+    expect(info.hidden).toBe(false);
+    expect(info.textContent).toContain("Every 365 idle person-days make one trained worker (10 a day with 3,650 idle now).");
+    expect(info.textContent).toContain("Trained so far: 30 smiths.");
+    expect(info.textContent).toContain(`Smiths matter for: ${tree.nodes.crucibles_blowpipes!.name}`);
+  });
 });
 
