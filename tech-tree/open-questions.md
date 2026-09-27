@@ -170,3 +170,35 @@ The loader takes the simplest reading of each and says so in `npm run content` w
 40. **Newcomen efficiency.** The 4 kW → 2-3 t coal/day example (stage2 L107, L679) needs 0.4-0.5%;
     energy.md §1 also says "about a third of a percent", which would give 3.8 t/day. The model uses
     0.5%, which matches the example and energy.md's own 10 kW → ~6 t/day arithmetic.
+
+## Shell and pressures (packages D, F)
+
+41. **Beat gating reading.** A node of beat N shows only once a node of the nearest *lower beat that
+    has nodes* in the same stage is complete (a stage may skip a beat number); the stage's lowest
+    beat is always open. The gate is applied at reveal (`ProjectsSystem` option `gate`), so a gated
+    node makes no pause and gets no card until its beat opens. A bar's `introduced_in_beat` uses the
+    same test; the heartbeat shows from the stage's start.
+42. **Pressure dynamics aren't in the YAML.** `rises_with` and `effect_when_red` are prose. Reading:
+    optional structured fields per pressure, `model: {per_unit_produced, per_unit_consumed, per_day,
+    min, max}` moving `drives` each day from the day's production, and `red_modifiers: {rate: {job:
+    factor}}` applied while red; a variable's start is its state `default`. Stage 1 has them (all
+    estimates: forest −1 point per 1,700 t cut, +0.01/day; outcrop 80 t). `tool_wear`'s `red_when`
+    is now the expression `tool_wear < 1` (was "tools < tool users"). Stage 2-6 bars whose
+    `red_when` is prose (`fuel_balance`, `shop_hours_balance`, ...) show their value but never go
+    red until G2..G6 give an expression and a model.
+43. **Campaigns before E1.** `wind_furnaces` and `pot_bellows` read `campaigns_run`, which the
+    furnace workshop should count. Until E1, the shell counts every 30 days of copper smelting as
+    one campaign (the stage file's "~30 days" loop; `STANDIN_CAMPAIGN_DAYS`), like A's headless test.
+44. **Node effects written as prose aren't applied.** "Gather wood with an axe: 60 kg/day instead of
+    40" (ground_stone_axes), "air_supply: bellows_crews. 2x output" (pot_bellows, wind_furnaces:
+    E1's dial), "Tools last 1.6x copper" (arsenical_copper), milestone effects (native copper,
+    sledges). They show on the card and in the log but change nothing yet. Proposed: a structured
+    `modifiers:` list on nodes, like `red_modifiers`, applied on completion (G1).
+45. **Controls and their intro text.** A control is a job row, a pressure bar or a workshop. A job's
+    card text is its stage-file `what`/`why` (new, see 25); `why` falls back to the unlocking node's
+    `problem`. A bar's card is its first `rises_with` and its `effect_when_red`; a workshop's is its
+    `loop` and its opening node's `problem`. At most two are introduced per pause; the rest are
+    hidden until the next tick's pause. At Stage 1's start that means gather wood and knap flint on
+    day 0, then Build and the Tools bar the next day.
+46. **Trade names.** Trades (`trained_smiths`, `machinists_trained`, ...) have no display name in
+    `state-variables.yaml`; the training menu shows the description or the id with spaces.

@@ -54,6 +54,7 @@
 export { Engine, EngineError } from "./engine";
 export type { EngineSystem, TickContext, TickListener } from "./engine";
 export { ProjectsSystem, BUILD_POOL } from "./projects";
+export type { ProjectsOptions } from "./projects";
 export { EnergySystem, ENERGY_METRIC, WORK_KW_METRIC, ELECTRICITY_KW_METRIC } from "./energy";
 export { contentFromTree, TRADE_PATTERN } from "./content";
 export type { EngineExtras, TreeContent } from "./content";

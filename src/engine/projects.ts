@@ -20,6 +20,15 @@ import type { JsonValue, PauseReason } from "./types";
 /** Labor pool the Build job feeds (JobDef.labor). */
 export const BUILD_POOL = "build";
 
+/**
+ * Options for the projects system. `gate` (package F's beat gating, added additively): a node whose
+ * requirements hold is revealed only when the gate also passes; until then it stays hidden and makes
+ * no pause. Without a gate every node is revealed as soon as its requirements hold.
+ */
+export interface ProjectsOptions {
+  gate?: (id: string, book: Readonly<NodeBook>) => boolean;
+}
+
 export class ProjectsSystem implements EngineSystem {
   readonly id = "projects";
   private bookValue: NodeBook = emptyBook();
@@ -27,6 +36,7 @@ export class ProjectsSystem implements EngineSystem {
   constructor(
     private readonly tree: Tree,
     private readonly engine: Engine,
+    private readonly options: ProjectsOptions = {},
   ) {}
 
   /** The node part of the save (completed, building, revealed). */
@@ -41,6 +51,15 @@ export class ProjectsSystem implements EngineSystem {
   /** Nodes available or building, in tree order (optionally one stage). */
   visible(stage?: number): string[] {
     return visibleNodes(this.tree, this.engine, this.bookValue, stage);
+  }
+
+  /**
+   * What the projects panel shows: nodes building, or available and revealed (so they passed the
+   * gate, if there is one). Without a gate this equals `visible` after the tick that reveals them.
+   */
+  shown(stage?: number): string[] {
+    const b = this.bookValue;
+    return this.visible(stage).filter((id) => id in b.building || b.revealed.includes(id));
   }
 
   isComplete(id: string): boolean {
@@ -74,8 +93,10 @@ export class ProjectsSystem implements EngineSystem {
       }
     }
     const rev = revealNodes(this.tree, this.engine, this.bookValue);
-    this.bookValue = rev.book;
-    for (const id of rev.revealed) ctx.pause({ kind: "node_revealed", subject: id });
+    const gate = this.options.gate;
+    const fresh = gate ? rev.revealed.filter((id) => gate(id, this.bookValue)) : rev.revealed;
+    if (fresh.length) this.bookValue = { ...this.bookValue, revealed: [...this.bookValue.revealed, ...fresh] };
+    for (const id of fresh) ctx.pause({ kind: "node_revealed", subject: id });
   }
 
   save(): JsonValue {

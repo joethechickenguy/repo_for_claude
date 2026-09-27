@@ -1,0 +1,546 @@
+// The shell's model and controller (package D), DOM-free so tests drive exactly what the page does.
+// It owns one run: the engine, the clock and the systems (energy, campaigns stand-in, projects with
+// F's beat gate, the stage gate, F's pressures and introductions, the log), the player's actions
+// (people ±, pins, start a project, training) and the views every panel draws.
+//
+// All player-facing text comes from content (tree) or ../ui/strings.ts.
+import {
+  currentStage,
+  effectiveLabor,
+  gateStatus,
+  missingResources,
+  openWorkshops,
+  type NodeBook,
+  type Tree,
+} from "../content";
+import {
+  Clock,
+  Engine,
+  EnergySystem,
+  ENERGY_METRIC,
+  loadFromStorage,
+  ProjectsSystem,
+  saveToStorage,
+  type EngineContent,
+  type PauseReason,
+  type SaveGame,
+  type SaveStorage,
+  type TickReport,
+} from "../engine";
+import type { TreeRow } from "./controls/peopleTree";
+import {
+  barViews,
+  introCard,
+  introControls,
+  IntroSystem,
+  INTRO_PAUSE,
+  jobControl,
+  nodeBeatOpen,
+  pressureControl,
+  PressureSystem,
+  workshopControl,
+  type BarView,
+  type IntroCard,
+} from "./pressures";
+import { fuelsFromTree, gameContent } from "./shellContent";
+import { defaultDraftOutcome, type DraftOutcome } from "./shellDraft";
+import { fmt, fmtRound, yearDay } from "./shellFormat";
+import { GATE_PAUSE, GateSystem, LogSystem, StandInCampaigns } from "./shellSystems";
+import { fill, STRINGS } from "./strings";
+
+/** People moved by one ± on a job row (DESIGN.md: "± blocks"; the prototype's block). */
+export const PEOPLE_BLOCK = 100;
+/** A works' target moves by this many units a day per ± (works tier). */
+export const WORKS_TARGET_STEP = 1;
+/** A department's priority moves by one per ± (departments tier). */
+export const DEPARTMENT_PRIORITY_STEP = 1;
+
+/** Slide-rule range, DESIGN.md: "a log slide rule from 100 W to 10 kW". */
+export const METER_MIN_W = 100;
+export const METER_MAX_W = 10000;
+
+export interface StoreRow {
+  id: string;
+  name: string;
+  stock: number;
+  /** Net change over the last day (made − used − worn − spoiled). */
+  rate: number;
+  /** Consumers' full-rate need per day (pull-based demand). */
+  demand: number;
+  /** Waiting in queued projects' claims. */
+  claimed: number;
+}
+
+export interface CostLine {
+  resource: string;
+  name: string;
+  amount: number;
+  have: number;
+}
+
+export interface ProjectCard {
+  id: string;
+  name: string;
+  kind: string;
+  problem: string;
+  why: string;
+  effects: string[];
+  status: "available" | "building";
+  cost: CostLine[];
+  labor: number;
+  progress?: { done: number; total: number };
+  milestones: { at: number; text: string; fired: boolean }[];
+  affordable: boolean;
+  missing: CostLine[];
+  /** A red bar lists this node among its answers. */
+  suggested: boolean;
+}
+
+export interface MeterView {
+  value: number;
+  min: number;
+  max: number;
+  gates: { watts: number; name: string; stage: number }[];
+}
+
+export interface NotebookStage {
+  stage: number;
+  name: string;
+  entries: { id: string; name: string; text: string }[];
+}
+
+export interface GameOptions {
+  /** Resume this save. */
+  save?: SaveGame;
+  /** What the draft wrote (new runs). Default: draft.yaml defaults. */
+  draft?: DraftOutcome;
+}
+
+/** Why the game is paused right now, for the banner. */
+export interface PauseView {
+  line: string;
+  cards: IntroCard[];
+  reasons: PauseReason[];
+}
+
+export class Game {
+  readonly content: EngineContent;
+  readonly engine: Engine;
+  readonly clock: Clock;
+  readonly projects: ProjectsSystem;
+  readonly pressures: PressureSystem;
+  readonly intro: IntroSystem;
+  readonly log: LogSystem;
+  /** The reasons of the last auto-pause (or the opening), shown until the player resumes. */
+  lastPause: PauseReason[] = [];
+
+  constructor(
+    readonly tree: Tree,
+    opts: GameOptions = {},
+  ) {
+    this.content = gameContent(tree);
+    this.engine = opts.save ? Engine.load(this.content, opts.save) : new Engine(this.content);
+    const book = () => this.projects.book;
+    this.projects = new ProjectsSystem(tree, this.engine, { gate: (id, b) => nodeBeatOpen(tree, id, b) });
+    this.intro = new IntroSystem(tree, book);
+    this.pressures = new PressureSystem(tree, book, (c) => this.intro.isIntroduced(c));
+    this.log = new LogSystem();
+    this.engine.addSystem(new EnergySystem(fuelsFromTree(tree)));
+    this.engine.addSystem(new StandInCampaigns());
+    this.engine.addSystem(this.projects);
+    this.engine.addSystem(new GateSystem(tree, this.projects));
+    this.engine.addSystem(this.pressures);
+    this.engine.addSystem(this.intro);
+    this.engine.addSystem(this.log);
+    this.clock = new Clock(this.engine);
+    this.clock.onPause((e) => {
+      if (!e.byPlayer) this.lastPause = e.reasons;
+    });
+
+    if (!opts.save) {
+      const draft = opts.draft ?? defaultDraftOutcome(tree);
+      this.engine.state.setIfDeclared("draft_roster", { ...draft.draft_roster });
+      this.engine.state.setIfDeclared("bundles_taken", { ...draft.bundles_taken });
+      this.log.add({ day: 0, kind: "opening", subject: String(this.stage) });
+      const first = this.intro.collectAndRelease(this.engine);
+      this.lastPause = first.length ? [{ kind: INTRO_PAUSE, subject: first.join(" ") }] : [];
+    }
+  }
+
+  /** Resume the saved run, or null if there is none. */
+  static load(tree: Tree, storage: SaveStorage, key?: string): Game | null {
+    const e = loadFromStorage(gameContent(tree), storage, key);
+    return e ? new Game(tree, { save: e.save() }) : null;
+  }
+
+  save(storage: SaveStorage, key?: string): void {
+    saveToStorage(this.engine, storage, key);
+  }
+
+  get book(): Readonly<NodeBook> {
+    return this.projects.book;
+  }
+
+  get stage(): number {
+    return currentStage(this.tree, this.projects.book);
+  }
+
+  // ---- Actions -------------------------------------------------------------------------------------
+
+  /** Simulate one day (tests; the Clock drives real time). Records the pause reasons like the clock. */
+  step(): TickReport {
+    const r = this.engine.tick();
+    if (r.pauseReasons.length) this.lastPause = [...r.pauseReasons];
+    return r;
+  }
+
+  /**
+   * ± on a people-panel row. People tier: [job]. Works tier: [works] moves the target, [works, job]
+   * pins that row. Departments tier: [department] moves its priority, deeper rows as the works tier.
+   */
+  adjust(path: readonly string[], delta: number): void {
+    const e = this.engine;
+    const tier = e.laborTier();
+    if (tier === "departments" && path.length >= 2) return this.adjust(path.slice(1), delta);
+    if (tier === "departments" && path.length === 1) {
+      const d = path[0]!;
+      const step = Math.sign(delta) * DEPARTMENT_PRIORITY_STEP;
+      e.setDepartmentPriority(d, (e.departmentPriority(d) ?? 0) + step);
+      return;
+    }
+    const works = e.works().find((w) => w.def.id === path[0]);
+    if (works && path.length === 1) {
+      const cur = typeof works.target === "number" ? works.target : 0;
+      e.setWorksTarget(works.def.id, Math.max(0, cur + Math.sign(delta) * WORKS_TARGET_STEP));
+      return;
+    }
+    if (works && path.length === 2) {
+      const job = path[1]!;
+      const now = e.pins()[`${works.def.id}/${job}`] ?? this.worksRowPeople(works.def.id, job);
+      e.pin(works.def.id, job, Math.max(0, now + delta));
+      return;
+    }
+    const job = path[path.length - 1]!;
+    if (!e.isJobUnlocked(job)) return;
+    e.assign(job, e.manual(job) + delta);
+  }
+
+  /** Pin toggle (works rows). */
+  setPinned(path: readonly string[], pinned: boolean): void {
+    const e = this.engine;
+    const p = e.laborTier() === "departments" ? path.slice(1) : path;
+    if (p.length !== 2) return;
+    const [w, j] = p as [string, string];
+    e.pin(w, j, pinned ? this.worksRowPeople(w, j) : null);
+  }
+
+  /** Start building a node from the projects panel. */
+  startProject(id: string): boolean {
+    if (!this.projects.shown().includes(id)) return false;
+    const r = this.projects.start(id);
+    if (!r.ok) return false;
+    this.log.add({ day: this.engine.day, kind: "started", subject: id });
+    if (r.pauses?.length) {
+      this.log.addPauses(this.engine.day, r.pauses);
+      this.lastPause = [...r.pauses];
+    }
+    return true;
+  }
+
+  setTrainingTrade(trade: string | null): void {
+    this.engine.setTrainingTrade(trade);
+  }
+
+  // ---- Views ---------------------------------------------------------------------------------------
+
+  header(): { stage: number; stageName: string; year: number; day: number; energy: number } {
+    const s = this.tree.stages.find((x) => x.stage === this.stage);
+    const { year, day } = yearDay(this.engine.day);
+    return { stage: this.stage, stageName: s?.name ?? "", year, day, energy: this.energy() };
+  }
+
+  energy(): number {
+    return this.engine.metric(ENERGY_METRIC) ?? 0;
+  }
+
+  meter(): MeterView {
+    const gates: MeterView["gates"] = [];
+    for (const s of this.tree.stages)
+      for (const c of s.gate.condition) {
+        const x = c.expr;
+        if (x.kind === "cmp" && x.ref === ENERGY_METRIC && typeof x.value === "number")
+          gates.push({ watts: x.value, name: s.gate.name, stage: s.stage });
+      }
+    return { value: this.energy(), min: METER_MIN_W, max: METER_MAX_W, gates };
+  }
+
+  /** The current stage's gate: name, the checks still unmet (their text), and whether it's done. */
+  gate(): { stage: number; name: string; unmet: string[]; done: boolean } {
+    const s = this.tree.stages.find((x) => x.stage === this.stage)!;
+    const done = this.projects.isComplete(s.gate.id);
+    const unmet = done ? [] : gateStatus(this.tree, s.stage, this.engine).unmet.map((c) => c.text);
+    return { stage: s.stage, name: s.gate.name, unmet, done };
+  }
+
+  /** Is a stage's gate complete? */
+  gateReached(stage: number): boolean {
+    const s = this.tree.stages.find((x) => x.stage === stage);
+    return !!s && this.projects.isComplete(s.gate.id);
+  }
+
+  resourceName(id: string): string {
+    return this.tree.resources[id]?.name ?? id;
+  }
+
+  stores(): StoreRow[] {
+    const e = this.engine;
+    const r = e.report;
+    const rows: StoreRow[] = [];
+    for (const id of e.resourceList()) {
+      const stock = e.stock(id);
+      const made = r?.produced[id] ?? 0;
+      const used = (r?.consumed[id] ?? 0) + (r?.worn[id] ?? 0) + (r?.spoiled[id] ?? 0);
+      const demand = r?.requested[id] ?? 0;
+      const claimed = e.claimed(id);
+      if (stock < 0.5 && made === 0 && demand === 0 && claimed === 0) continue;
+      rows.push({ id, name: this.resourceName(id), stock, rate: made - used, demand, claimed });
+    }
+    return rows;
+  }
+
+  idle(): number {
+    return this.engine.idle();
+  }
+
+  /** Jobs the people panel shows: unlocked, with rates, introduced. */
+  shownJobs(): string[] {
+    return this.engine
+      .unlockedJobs()
+      .map((j) => j.id)
+      .filter((id) => this.intro.isIntroduced(jobControl(id)));
+  }
+
+  jobName(id: string): string {
+    return this.tree.jobs[id]?.name ?? id;
+  }
+
+  /** Rows for the recursive people control at the current labor tier. */
+  peopleRows(): TreeRow[] {
+    const e = this.engine;
+    const tier = e.laborTier();
+    const staffing = e.staffing();
+    const idle = staffing.idle;
+    const report = e.report;
+    const shown = new Set(this.shownJobs());
+    const jobRow = (id: string, people: number, extra: Partial<TreeRow> = {}): TreeRow => {
+      const jr = report?.jobs[id];
+      let detail: string | undefined;
+      let tone: TreeRow["tone"] = "normal";
+      if (jr && people > 0 && jr.fraction < 0.98 && jr.limitedBy) {
+        detail =
+          jr.limitedBy === "pull"
+            ? STRINGS.people.pullCapped
+            : fill(STRINGS.people.short, { what: this.resourceName(jr.limitedBy).toLowerCase() });
+        tone = jr.limitedBy === "pull" ? "auto" : "short";
+      }
+      return {
+        id,
+        name: this.jobName(id),
+        value: people,
+        note: this.tree.jobs[id]?.what ?? "",
+        ...(detail ? { detail } : {}),
+        tone,
+        canInc: idle > 0,
+        canDec: people > 0,
+        ...extra,
+      };
+    };
+
+    if (tier === "people") {
+      return e
+        .unlockedJobs()
+        .filter((j) => shown.has(j.id))
+        .map((j) => jobRow(j.id, e.manual(j.id), { step: PEOPLE_BLOCK }));
+    }
+
+    // Works and departments: works rows with their jobs; manual jobs outside works stay flat.
+    const worksRows = (filter?: (dept: string | undefined) => boolean): TreeRow[] =>
+      e
+        .works()
+        .filter((w) => !filter || filter(w.def.department))
+        .map((w) => {
+          const recs = staffing.records.filter((r) => r.worksId === w.def.id);
+          const people = recs.reduce((s, r) => s + r.people, 0);
+          const short = recs.reduce((s, r) => s + r.shortfall, 0);
+          const target =
+            w.target === "pull" ? STRINGS.people.pull : w.target === null ? "" : fill(STRINGS.people.target, { n: fmtRound(w.target) });
+          return {
+            id: w.def.id,
+            name: w.def.name ?? this.resourceName(w.def.output),
+            value: people,
+            detail: short > 0 ? `${target} · ${fill(STRINGS.people.shortfall, { n: fmt(short) })}` : target,
+            tone: short > 0 ? "short" : "normal",
+            step: WORKS_TARGET_STEP,
+            children: recs.map((r) =>
+              jobRow(r.jobId, r.people, {
+                canPin: true,
+                pinned: r.reason === "pinned",
+                tone: r.reason === "auto" ? "auto" : r.shortfall > 0 ? "short" : "normal",
+                step: PEOPLE_BLOCK,
+              }),
+            ),
+          } satisfies TreeRow;
+        });
+    const inWorks = new Set(e.works().flatMap((w) => [w.def.primaryJob, ...(w.def.supportJobs ?? [])]));
+    const flat = e
+      .unlockedJobs()
+      .filter((j) => shown.has(j.id) && !inWorks.has(j.id))
+      .map((j) => jobRow(j.id, e.manual(j.id), { step: PEOPLE_BLOCK }));
+    if (tier === "works") return [...worksRows(), ...flat];
+    const depts = [...new Set(e.works().map((w) => w.def.department ?? ""))];
+    depts.sort((a, b) => (e.departmentPriority(b) ?? 0) - (e.departmentPriority(a) ?? 0));
+    return [
+      ...depts.map((d) => {
+        const kids = worksRows((x) => (x ?? "") === d);
+        return {
+          id: d,
+          name: (this.content.departments ?? []).find((x) => x.id === d)?.name ?? d,
+          value: kids.reduce((s, k) => s + k.value, 0),
+          detail: fill(STRINGS.people.priority, { n: e.departmentPriority(d) ?? 0 }),
+          step: DEPARTMENT_PRIORITY_STEP,
+          children: kids,
+        } satisfies TreeRow;
+      }),
+      ...flat,
+    ];
+  }
+
+  /** Trades idle people can train in, with a label from the state variable's description or id. */
+  trades(): { id: string; label: string }[] {
+    return (this.content.trades ?? []).map((id) => ({ id, label: this.tree.stateVariables[id]?.description ?? id.replace(/_/g, " ") }));
+  }
+
+  /** Nodes a red bar lists as answers (suggested). */
+  suggestedNodes(): Set<string> {
+    const out = new Set<string>();
+    for (const s of this.tree.stages)
+      for (const p of s.pressures) if (this.pressures.red().includes(p.id)) p.answers.forEach((a) => out.add(a));
+    return out;
+  }
+
+  projectCards(): ProjectCard[] {
+    const e = this.engine;
+    const suggested = this.suggestedNodes();
+    const cards: ProjectCard[] = [];
+    for (const id of this.projects.shown()) {
+      const n = this.tree.nodes[id]!;
+      if (n.kind === "gate") continue; // the gate completes on its own; the goal line shows it
+      const status = this.projects.status(id) as "available" | "building";
+      const cost = Object.entries(n.requires.resources).map(([r, a]) => ({ resource: r, name: this.resourceName(r), amount: a, have: e.stock(r) }));
+      const missing = Object.entries(missingResources(this.tree, id, e)).map(([r, a]) => ({ resource: r, name: this.resourceName(r), amount: a, have: e.stock(r) }));
+      const b = this.projects.book.building[id];
+      const labor = b ? b.laborTotal : effectiveLabor(this.tree, id, e);
+      const fired = b?.milestonesFired ?? [];
+      cards.push({
+        id,
+        name: n.name,
+        kind: n.kind,
+        problem: n.problem,
+        why: n.notebook,
+        effects: n.unlocks.effects,
+        status,
+        cost,
+        labor,
+        ...(b ? { progress: { done: b.laborDone, total: b.laborTotal } } : {}),
+        milestones: n.milestones.map((m) => ({ at: m.at, text: m.effect, fired: fired.includes(m.id) })),
+        affordable: missing.length === 0,
+        missing,
+        suggested: suggested.has(id),
+      });
+    }
+    return cards;
+  }
+
+  bars(): BarView[] {
+    return barViews(this.tree, this.engine, this.projects.book, (c) => this.intro.isIntroduced(c), this.projects.shown(), this.stage);
+  }
+
+  /** Workshops open and introduced (E packages mount into them; until then the shell shows the loop). */
+  workshops(): { id: string; name: string; loop: string }[] {
+    return openWorkshops(this.tree, this.projects.book as NodeBook)
+      .filter((w) => this.intro.isIntroduced(workshopControl(w)))
+      .map((w) => ({ id: w, name: this.tree.workshops[w]!.name, loop: this.tree.workshops[w]!.loop }));
+  }
+
+  /** Name of whatever a pause reason or log entry is about. */
+  subjectName(kind: string, subject: string | undefined): string {
+    const s = subject ?? "";
+    if (kind === "milestone") {
+      for (const n of Object.values(this.tree.nodes)) {
+        const m = n.milestones.find((x) => x.id === s);
+        if (m) return m.effect;
+      }
+    }
+    if (kind === "pressure_red") return this.tree.stages.flatMap((x) => x.pressures).find((p) => p.id === s)?.name ?? s;
+    if (kind === "workshop_open") return this.tree.workshops[s]?.name ?? s;
+    if (kind === GATE_PAUSE || kind === "opening") return this.tree.stages.find((x) => String(x.stage) === s)?.gate.name ?? s;
+    return this.tree.nodes[s]?.name ?? s;
+  }
+
+  /** The log, newest first, as text. */
+  logLines(): { stamp: string; text: string; kind: string }[] {
+    return [...this.log.entries()].reverse().map((l) => {
+      const { year, day } = yearDay(l.day);
+      const stamp = fill(STRINGS.log.stamp, { year, day });
+      let text: string;
+      if (l.kind === "opening") text = this.tree.stages.find((x) => String(x.stage) === l.subject)?.openingProblem ?? "";
+      else if (l.kind === GATE_PAUSE) text = fill(STRINGS.log.gate, { n: l.subject ?? "" });
+      else {
+        const t = (STRINGS.log as Record<string, string>)[l.kind] ?? "{name}";
+        text = fill(t, { name: this.subjectName(l.kind, l.subject) });
+      }
+      return { stamp, text, kind: l.kind };
+    });
+  }
+
+  /** One line for the pause banner, and the introduction cards the pause carries. */
+  pauseView(reasons: readonly PauseReason[] = this.lastPause): PauseView {
+    const order = [GATE_PAUSE, "node_complete", "pressure_red", "workshop_open", "milestone", "node_revealed"];
+    const sorted = [...reasons].filter((r) => r.kind !== INTRO_PAUSE).sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
+    const parts = sorted.map((r) => {
+      if (r.kind === GATE_PAUSE) return fill(STRINGS.pause.gate, { n: r.subject ?? "" });
+      const t = (STRINGS.pause as Record<string, string>)[r.kind] ?? "{name}";
+      return fill(t, { name: this.subjectName(r.kind, r.subject) });
+    });
+    const cards = reasons.filter((r) => r.kind === INTRO_PAUSE).flatMap((r) => introControls(r.subject).map((c) => introCard(this.tree, c)));
+    return { line: parts.join(STRINGS.pause.join), cards, reasons: [...reasons] };
+  }
+
+  notebook(): NotebookStage[] {
+    const out: NotebookStage[] = [];
+    for (const id of this.projects.book.completed) {
+      const n = this.tree.nodes[id];
+      if (!n || !n.notebook) continue;
+      let s = out.find((x) => x.stage === n.stage);
+      if (!s) {
+        s = { stage: n.stage, name: this.tree.stages.find((x) => x.stage === n.stage)?.name ?? "", entries: [] };
+        out.push(s);
+      }
+      s.entries.push({ id, name: n.name, text: n.notebook });
+    }
+    return out.sort((a, b) => a.stage - b.stage);
+  }
+
+  /** Tool users and tools (the heartbeat's numbers in words). */
+  tools(): { tools: number; users: number; coverage: number } {
+    const r = this.engine.report;
+    return { tools: r?.toolStock ?? 0, users: r?.toolUsers ?? 0, coverage: r?.toolCoverage ?? 1 };
+  }
+
+  private worksRowPeople(worksId: string, jobId: string): number {
+    return this.engine.staffing().records.find((r) => r.worksId === worksId && r.jobId === jobId)?.people ?? 0;
+  }
+}
+
+/** Control id helpers re-exported for the DOM shell. */
+export { jobControl, pressureControl, workshopControl };
