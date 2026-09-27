@@ -175,6 +175,25 @@ export interface TreeNode {
   tags: string[];
   trapLesson?: string;
   notebook: string;
+  /** The exclusive choice this node is an option of (stage `choices:`), if any. */
+  choice?: string;
+  /** One line on what this option gives up or gains, shown on its card (node `tradeoff:`). */
+  tradeoff?: string;
+  /** Engine modifiers applied for good when the node completes (node `modifiers:`, same shape as `red_modifiers`). */
+  modifiers?: PressureModifier[];
+  /** Pressures whose per-day drift this node replaces once complete (node `pressure_per_day:`). */
+  pressurePerDay?: Record<string, number>;
+}
+
+/**
+ * An either/or: a stage's `choices:` entry. Starting any option closes the others for good, and the
+ * projects panel shows the options together as one decision.
+ */
+export interface Choice {
+  id: string;
+  stage: number;
+  prompt: string;
+  options: string[];
 }
 
 // ---- Stages, pressures, workshops -------------------------------------------------------------------------
@@ -337,4 +356,6 @@ export interface Tree {
   warnings: string[];
   /** Tool resources from the stage files' `tools:` maps, keyed by resource id. Added for D/G1. */
   tools?: Record<string, ToolSpec>;
+  /** Exclusive choices from the stage files' `choices:` lists, keyed by id. */
+  choices?: Record<string, Choice>;
 }

@@ -8,6 +8,7 @@
 import type * as ExprLib from "./expr";
 import type { Expr } from "./expr";
 import type {
+  Choice,
   Condition,
   Dial,
   Draft,
@@ -322,6 +323,16 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     if (withoutPages !== undefined) node.withoutPages = withoutPages;
     if (n.numbers_status !== undefined) node.numbersStatus = String(n.numbers_status);
     if (n.trap_lesson !== undefined) node.trapLesson = String(n.trap_lesson);
+    if (n.tradeoff !== undefined) node.tradeoff = String(n.tradeoff);
+    if (n.modifiers !== undefined) node.modifiers = parseModifiers(n.modifiers, `${nid}: modifiers`, errors);
+    if (n.pressure_per_day !== undefined) {
+      const ppd: Record<string, number> = {};
+      for (const [pid, v] of Object.entries(obj(n.pressure_per_day))) {
+        if (typeof v !== "number") errors.push(`${nid}: pressure_per_day.${pid} must be a number`);
+        ppd[pid] = Number(v);
+      }
+      node.pressurePerDay = ppd;
+    }
     nodes[nid] = node;
   }
 
@@ -492,6 +503,41 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     }
   }
 
+  // Exclusive choices (stage `choices:`), and the references in node modifiers / pressure_per_day.
+  const choices: Record<string, Choice> = {};
+  for (const { file, data } of raw.stages) {
+    const d = obj(data);
+    for (const c of arr(d.choices)) {
+      const id = String(c?.id ?? "");
+      if (!id) {
+        errors.push(`${file}: a choice has no id`);
+        continue;
+      }
+      if (choices[id]) errors.push(`${file}: duplicate choice ${id}`);
+      const options = arr(c.options).map(String);
+      if (options.length < 2) errors.push(`${file}: choice ${id} needs at least two options`);
+      for (const o of options) {
+        const n = nodes[o];
+        if (!n) errors.push(`${file}: choice ${id} names unknown node ${JSON.stringify(o)}`);
+        else if (n.choice) errors.push(`${file}: node ${o} is an option of two choices (${n.choice}, ${id})`);
+        else if (n.stage !== Number(d.stage)) errors.push(`${file}: choice ${id} option ${o} is in another stage`);
+        else n.choice = id;
+      }
+      choices[id] = { id, stage: Number(d.stage), prompt: String(c.prompt ?? ""), options };
+    }
+  }
+  const pressureIds = new Set(stages.flatMap((s) => s.pressures.map((p) => p.id)));
+  for (const nid of nodeOrder) {
+    const n = nodes[nid]!;
+    for (const m of n.modifiers ?? []) {
+      if ((m.kind === "rate" || m.kind === "yield") && !jobs[m.target] && m.target !== "*")
+        errors.push(`${nid}: modifiers.${m.kind} names unknown job ${JSON.stringify(m.target)}`);
+      if (m.kind === "toolLife" && !tools[m.target]) errors.push(`${nid}: modifiers.toolLife names ${JSON.stringify(m.target)}, not a tool`);
+    }
+    for (const pid of Object.keys(n.pressurePerDay ?? {}))
+      if (!pressureIds.has(pid)) errors.push(`${nid}: pressure_per_day names unknown pressure ${JSON.stringify(pid)}`);
+  }
+
   const tree: Tree = {
     version: 1,
     stages,
@@ -505,6 +551,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     identifiers: Object.fromEntries(Object.entries(identifiers).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
     warnings,
     tools,
+    choices,
   };
   return { tree, errors, warnings };
 }
@@ -533,21 +580,24 @@ function pressureExtras(pr: Y, where: string, errors: string[]): { model?: Press
     if (typeof m.max === "number") model.max = m.max;
     out.model = model;
   }
-  if (pr.red_modifiers !== undefined) {
-    const mods: PressureModifier[] = [];
-    for (const [kind, targets] of Object.entries(obj(pr.red_modifiers))) {
-      if (!MODIFIER_KINDS.includes(kind as PressureModifier["kind"])) {
-        errors.push(`${where}: red_modifiers kind ${JSON.stringify(kind)} is not one of ${MODIFIER_KINDS.join(", ")}`);
-        continue;
-      }
-      for (const [target, f] of Object.entries(nums(targets, `red_modifiers.${kind}`))) {
-        if (!(f >= 0)) errors.push(`${where}: red_modifiers.${kind}.${target} must be >= 0`);
-        mods.push({ kind: kind as PressureModifier["kind"], target, factor: f });
-      }
-    }
-    out.redModifiers = mods;
-  }
+  if (pr.red_modifiers !== undefined) out.redModifiers = parseModifiers(pr.red_modifiers, `${where}: red_modifiers`, errors);
   return out;
+}
+
+/** `{rate: {job: 0.5}, toolLife: {blades: 2.5}}` -> modifiers (pressure `red_modifiers`, node `modifiers`). */
+function parseModifiers(v: Y, where: string, errors: string[]): PressureModifier[] {
+  const mods: PressureModifier[] = [];
+  for (const [kind, targets] of Object.entries(obj(v))) {
+    if (!MODIFIER_KINDS.includes(kind as PressureModifier["kind"])) {
+      errors.push(`${where} kind ${JSON.stringify(kind)} is not one of ${MODIFIER_KINDS.join(", ")}`);
+      continue;
+    }
+    for (const [target, f] of Object.entries(obj(targets))) {
+      if (typeof f !== "number" || !(f >= 0)) errors.push(`${where}.${kind}.${target} must be a number >= 0`);
+      mods.push({ kind: kind as PressureModifier["kind"], target, factor: Number(f) });
+    }
+  }
+  return mods;
 }
 
 function typeDefault(type: StateVarType, values: string[] | undefined): StateValue {

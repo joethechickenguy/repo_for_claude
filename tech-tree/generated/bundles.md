@@ -9,6 +9,7 @@ Budget 10000 pages; full coverage of everything would take 22800.
 
 **Copper, tin, clay, flint** (full 600): Stage 1 prospecting; the Kestel tin is only known from this
 
+- S1 `eastern_outcrop`: without pages, 1.5x labor
 - S1 `tin_survey_kestel`: without pages, Unavailable: without the survey there's no reason to go. Arsenical copper is the substitute
 - S1 `trail_green_stones`: without pages, Different route: prospecting parties (200,000 person-days) find the outcrop by following green staining in streambeds; the trail then follows
 
@@ -32,9 +33,12 @@ Budget 10000 pages; full coverage of everything would take 22800.
 
 **Flint, clay, cordage, lime, charcoal** (full 800): The Stage 1 furnace and kiln dials start at good values
 
+- S1 `coppice_near_woods`: without pages, 1.5x labor
 - S1 `digging_sticks`: without pages, 1.5x labor
 - S1 `ground_stone_axes`: without pages, Different route: the first axes shatter (wrong stone); crews find greenstone after ~6 months of trials
+- S1 `hafted_blades`: without pages, 1.5x labor
 - S1 `pit_kiln`: without pages, Different route: a third of early firings crack until the crew learns to dry pots a week first (~4 months)
+- S1 `timber_sledges`: without pages, 1.5x labor
 - S2 `coppicing`: without pages, Workers notice regrowth from stumps after 2 years; 1.5x labor
 - S2 `lime_burning`: without pages, No penalty; lime plaster was known here in the Neolithic
 - S3 `portland_cement`: without pages, 2x labor; early batches are hydraulic lime

@@ -226,7 +226,7 @@ describe("headless Stage 1 by scripted choices (stub state; tests/loader-engine.
     w.start("stone_molds");
     days += w.buildUntilDone("stone_molds", BUILDERS);
 
-    // Beat 7: after five campaigns, both forced-draft options appear; choose bellows
+    // Beat 6 (moved from 7): after a couple of campaigns, both forced-draft options appear; choose bellows
     w.metrics.campaigns_run = 6;
     expect(w.reveal()).toEqual(expect.arrayContaining(["wind_furnaces", "pot_bellows"]));
     w.add({ pots: 300, wood_kg: 5000 });
@@ -256,7 +256,8 @@ describe("headless Stage 1 by scripted choices (stub state; tests/loader-engine.
       "pot_bellows",
       "gate_reliable_smelting",
     ]);
-    // 6,120,000 person-days of Stage 1 projects at 5,000 builders is ~1,224 days (~3.4 years)
-    expect(days).toBe(Math.ceil(120000 / BUILDERS) + 80 + 120 + 240 + 160 + 200 + 180);
+    // 4,720,000 person-days of Stage 1 projects at 5,000 builders is ~944 days (~2.6 years); stone
+    // molds were trimmed from 1,000,000 to 700,000 when the owner's choices were added (2026-09-27)
+    expect(days).toBe(Math.ceil(120000 / BUILDERS) + 80 + 120 + 240 + 160 + 140 + 180);
   });
 });

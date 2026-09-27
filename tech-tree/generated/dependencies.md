@@ -8,24 +8,28 @@ Heartbeat: `tool_wear`. Gate: Reliable smelting.
 
 | Pressure | Red when | Answers |
 | --- | --- | --- |
-| Tools | tool_wear < 1 | ground_stone_axes, stone_molds, tin_bronze, arsenical_copper |
-| Nearest wood | forest_cover < 70 (stage 1 scale) | ground_stone_axes, charcoal_clamps |
-| Green stone left | malachite_left_kg < 20000 | ore_roasting, tin_survey_kestel |
+| Tools | tool_wear < 1 | ground_stone_axes, hafted_blades, stone_molds, tin_bronze, arsenical_copper |
+| Nearest wood | forest_cover < 70 (stage 1 scale) | coppice_near_woods, timber_sledges |
+| Green stone left | malachite_left_kg < 20000 | ore_roasting, eastern_outcrop |
 
 **Furnace workshop** (opens with `crucibles_blowpipes`): Air supply (from `crucibles_blowpipes`); Charcoal per kg ore (from `crucibles_blowpipes`)
 
 | Beat | Node | Kind | Substantive | Problem |
 | --- | --- | --- | --- | --- |
 | 1 | `digging_sticks` | project |  | The river terraces are full of clay, but it sits under a meter of gravel that bare hands can't move. |
-| 1 | `ground_stone_axes` | project | yes | Flint flakes chip and snag on hardwood; felling one oak takes a crew all day. |
+| 1 | `ground_stone_axes` | decision_option | yes | Flint flakes chip and snag on hardwood; felling one oak takes a crew all day. |
+| 1 | `hafted_blades` | decision_option | yes | Loose flakes cut hands and snap, and a dull one is thrown away. |
 | 2 | `pit_kiln` | project |  | Clay pots dry and crack, and one rain turns them back to mud. |
 | 3 | `charcoal_clamps` | project |  | Copper melts at 1,085 C, and an open wood fire rarely gets past 900 C. |
+| 3 | `coppice_near_woods` | decision_option | yes | The stands nearest camp are cut out, and crews walk farther every week. |
+| 3 | `timber_sledges` | decision_option | yes | The stands nearest camp are cut out, and crews walk farther every week. |
 | 4 | `trail_green_stones` | project |  | Your survey pages mark a malachite outcrop three days' walk east, and there is no path through the scrub. |
 | 5 | `crucibles_blowpipes` | workshop | yes | You have ore and charcoal, but nothing survives the heat and no fire burns hot enough without forced air. |
-| 5 | `ore_roasting` | project | yes | The green crust is running out; below it the ore is dark and brassy, and it won't smelt. |
+| 5 | `eastern_outcrop` | decision_option | yes | The green crust is running out; below it the ore is dark and brassy, and it won't smelt. |
+| 5 | `ore_roasting` | decision_option | yes | The green crust is running out; below it the ore is dark and brassy, and it won't smelt. |
+| 6 | `pot_bellows` | decision_option | yes | Blowpipes can't move enough air for a bigger furnace, and breath is mostly carbon dioxide. |
 | 6 | `stone_molds` | project | yes | Flint is sharp but brittle, and crews go through blades faster than knappers can make them. |
-| 7 | `pot_bellows` | decision_option | yes | Blowpipes can't move enough air for a bigger furnace, and breath is mostly carbon dioxide. |
-| 7 | `wind_furnaces` | decision_option | yes | Blowpipe crews are exhausted, and each crucible yields only a little copper. |
+| 6 | `wind_furnaces` | decision_option | yes | Blowpipe crews are exhausted, and each crucible yields only a little copper. |
 | 8 | `arsenical_copper` | decision_option | yes | Copper tools dull and bend within weeks, and toolmakers can't keep up. |
 | 8 | `gate_reliable_smelting` | gate |  | Metal tools are made faster than they wear out, and the colony burns fuel for real work at scale. |
 | 8 | `tin_bronze` | decision_option | yes | Pure copper casts poorly, full of bubbles, and wears fast. |
@@ -34,17 +38,24 @@ Heartbeat: `tool_wear`. Gate: Reliable smelting.
 ```mermaid
 flowchart TD
   ground_stone_axes["Ground-stone axes"]
+  hafted_blades["Hafted and retouched blades"]
   digging_sticks["Fire-hardened digging sticks"]
   pit_kiln["Pit kiln"]
   digging_sticks --> pit_kiln
   charcoal_clamps["Charcoal clamps"]
   pit_kiln --> charcoal_clamps
+  coppice_near_woods["Coppice the near woods"]
+  charcoal_clamps --> coppice_near_woods
+  timber_sledges["Sledge road to the far woods"]
+  charcoal_clamps --> timber_sledges
   trail_green_stones["Trail to the green stones"]
   charcoal_clamps --> trail_green_stones
   crucibles_blowpipes["Crucibles and blowpipes"]
   trail_green_stones --> crucibles_blowpipes
   ore_roasting["Ore roasting"]
-  crucibles_blowpipes --> ore_roasting
+  trail_green_stones --> ore_roasting
+  eastern_outcrop["Prospect the eastern valleys"]
+  trail_green_stones --> eastern_outcrop
   stone_molds["Stone molds"]
   crucibles_blowpipes --> stone_molds
   wind_furnaces["Wind-draft furnaces on the ridge"]
@@ -331,7 +342,7 @@ Heartbeat: `power_balance`. Gate: Liquid oxygen on tap.
 | 5 | `cascade_liquefier` | workshop | yes | Air won't liquefy until about -190 C, and nothing you have gets close. |
 | 5 | `claude_expander` | decision_option | yes | Throttling through a valve wastes most of the cooling that compressed air could give. |
 | 5 | `linde_liquefier` | decision_option | yes | Throttling compressed air cools it only slightly. Unless the cold is kept and reused, it never adds up. |
-| 6 | `aluminum` | project | yes | A preview of the rocket workshop shows a steel vehicle nearly twice the mass of an aluminum one. |
+| 6 | `aluminum` | project | yes | A preview of the rocket workshop shows a steel vehicle about two and a half times the mass of an aluminum one. |
 | 7 | `oil` | project | yes | Your chemists want a liquid fuel that doesn't need farmland, and the survey marks oil seeps to the southeast. |
 | 8 | `gate_liquid_oxygen` | gate |  | The colony makes liquid oxygen in bulk, every day. |
 

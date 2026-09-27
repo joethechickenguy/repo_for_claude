@@ -85,6 +85,23 @@ gate:
     state: ["metal_tools >= 5000", "tool_wear >= 0"]
   routes: [A_wind, B_bellows, C_arsenic, D_tin]
 
+# Either/or decisions (owner playtest 2026-09-27: a substantive decision at least once a year, and
+# alternatives that read as alternatives). Starting one option closes the others for good; the
+# projects panel shows them together with each option's `tradeoff`. Roughly year 0, 1 and 2.
+choices:
+  - id: first_tool_fix
+    prompt: "Blades wear out faster than the knappers can make them. Make better tools, or make them last?"
+    options: [ground_stone_axes, hafted_blades]
+  - id: woodland
+    prompt: "The nearest woods are thinning. Grow them back, or go farther for wood?"
+    options: [coppice_near_woods, timber_sledges]
+  - id: ore_source
+    prompt: "The green stones are running out, and the ore below won't smelt. Roast the deep ore, or find another outcrop?"
+    options: [ore_roasting, eastern_outcrop]
+  - id: air_supply
+    prompt: "Blowpipes can't feed a bigger furnace. Where does the air come from?"
+    options: [wind_furnaces, pot_bellows]
+
 pressures:
   - id: tool_wear
     name: Tools
@@ -93,7 +110,7 @@ pressures:
     rises_with: ["every gatherer, digger, miner and builder wears a tool; flint lasts ~20 worker-days, copper ~200, bronze ~400"]
     red_when: "tool_wear < 1"          # tools < tool users; the engine keeps tool_wear = tools / users
     effect_when_red: "Workers without a tool drop to quarter speed"
-    answers: [ground_stone_axes, stone_molds, tin_bronze, arsenical_copper]
+    answers: [ground_stone_axes, hafted_blades, stone_molds, tin_bronze, arsenical_copper]
     introduced_in_beat: 1
     # No model: the engine binds tool_wear. The quarter speed is the engine's bare-hand rule.
   - id: wood_distance
@@ -102,7 +119,7 @@ pressures:
     rises_with: ["gathering and charcoal burning clear the nearest stands first"]
     red_when: "forest_cover < 70 (stage 1 scale)"
     effect_when_red: "Wood per gatherer falls by a third as crews walk farther"
-    answers: [ground_stone_axes, charcoal_clamps]
+    answers: [coppice_near_woods, timber_sledges]
     introduced_in_beat: 3
     # Estimates (play values, package F): 1 point of cover per 1,700 t of wood cut; stands regrow
     # 0.01 points a day. ~2,700 gatherers with blades (108 t/day) reach red in about a year and a half.
@@ -114,7 +131,7 @@ pressures:
     rises_with: ["every kg of malachite mined"]
     red_when: "malachite_left_kg < 20000"
     effect_when_red: "Ore per miner halves; the outcrop is running out"
-    answers: [ore_roasting, tin_survey_kestel]
+    answers: [ore_roasting, eastern_outcrop]
     introduced_in_beat: 5
     # Estimate (package F): the outcrop starts at 80 t (state default); each kg mined removes a kg.
     # The gate needs ~27 t of ore at 20% yield, so a player who over-mines sees it go red.
@@ -142,9 +159,11 @@ nodes:
     name: Ground-stone axes
     stage: 1
     beat: 1
-    kind: project
+    kind: decision_option
     critical_path: false
     problem: "Flint flakes chip and snag on hardwood; felling one oak takes a crew all day."
+    tradeoff: "Wood per gatherer rises by half (60 kg a day). Blades still wear out as fast; a new crew grinds axes."
+    modifiers: {rate: {gather_wood: 1.5}}   # the 60 kg/day in `effects`; estimate
     requires:
       state: ["tool_wear < 0.8"]
       resources: {blades: 500}
@@ -162,6 +181,31 @@ nodes:
       A flaked edge is sharp but brittle. Grinding tough fine-grained stone like basalt against
       sandstone with water makes a blunter edge that survives thousands of blows. Neolithic farmers
       cleared much of Europe with ground axes.
+
+  - id: hafted_blades
+    name: Hafted and retouched blades
+    stage: 1
+    beat: 1
+    kind: decision_option
+    critical_path: false
+    problem: "Loose flakes cut hands and snap, and a dull one is thrown away."
+    tradeoff: "Every blade lasts two and a half times as long, so far fewer knappers are needed. Wood per gatherer stays at 40 kg a day."
+    modifiers: {toolLife: {blades: 2.5}}   # 20 -> 50 worker-days; estimate
+    requires:
+      state: ["tool_wear < 0.8"]
+      resources: {blades: 300, wood_kg: 500}
+      labor_person_days: 40000
+    unlocks:
+      effects: ["Blades last 2.5x as long"]
+    pages_bundle: primitive_technology
+    without_pages: "1.5x labor"
+    numbers_status: "Estimate. Hafting is Middle Paleolithic; retouch extends a flake's working life several times"
+    sources: ["https://en.wikipedia.org/wiki/Hafting"]
+    tags: [substantive]
+    notebook: >
+      Set a flake into a split handle with pine resin and sinew and it becomes a tool you can lean
+      on. When the edge dulls, press small flakes off it with an antler tine and it is sharp again.
+      A hafted, retouched blade does the work of several loose ones.
 
   - id: digging_sticks
     name: Fire-hardened digging sticks
@@ -238,6 +282,58 @@ nodes:
       volatile gases cook off, leaving nearly pure carbon at a fifth of the weight. With a strong
       draft, charcoal passes 1,200 C because nothing is left to boil off.
 
+  - id: coppice_near_woods
+    name: Coppice the near woods
+    stage: 1
+    beat: 3
+    kind: decision_option
+    critical_path: false
+    problem: "The stands nearest camp are cut out, and crews walk farther every week."
+    tradeoff: "The woods regrow eight times as fast, so wood holds for good. Nothing changes for months, and the near woods stay thin in the meantime."
+    requires:
+      nodes: [charcoal_clamps]
+      state: ["forest_cover < 90"]
+      resources: {blades: 1000}
+      labor_person_days: 200000
+    pressure_per_day: {wood_distance: 0.08}   # regrowth 0.01 -> 0.08 cover points a day; estimate
+    unlocks:
+      effects: ["Forest regrows 8x as fast"]
+    pages_bundle: primitive_technology
+    without_pages: "1.5x labor"
+    numbers_status: "Coppice cycles of 7-20 years are sourced (Sweet Track, Somerset, c. 3800 BCE, used coppiced poles); the regrowth rate is an estimate"
+    sources: ["https://en.wikipedia.org/wiki/Coppicing"]
+    tags: [substantive]
+    notebook: >
+      Cut a hazel or oak near the ground and it doesn't die: a ring of straight shoots springs up
+      from the stump and is ready to cut again in seven to twenty years. Managed this way, a wood
+      yields forever. Neolithic trackways in England are built from coppiced poles.
+
+  - id: timber_sledges
+    name: Sledge road to the far woods
+    stage: 1
+    beat: 3
+    kind: decision_option
+    critical_path: false
+    problem: "The stands nearest camp are cut out, and crews walk farther every week."
+    tradeoff: "Wood per gatherer rises by half, which more than makes up for the walk, and it's quick to build. The forest keeps shrinking, and Stage 2's furnaces will find it thin."
+    requires:
+      nodes: [charcoal_clamps]
+      state: ["forest_cover < 90"]
+      resources: {blades: 1500, wood_kg: 10000}
+      labor_person_days: 120000
+    modifiers: {rate: {gather_wood: 1.5}}   # offsets the red bar's two-thirds; estimate
+    unlocks:
+      effects: ["Wood per gatherer x1.5; forest_cover keeps falling"]
+    pages_bundle: primitive_technology
+    without_pages: "1.5x labor"
+    numbers_status: "Estimate. Log sledges on greased runners are attested from the Mesolithic"
+    sources: ["https://en.wikipedia.org/wiki/Sled"]
+    tags: [substantive]
+    notebook: >
+      A sledge on log runners drags several times what a person can carry, and a cleared, graded
+      road lets it run all year. It solves the walk, not the forest: every road into the woods is
+      also a road for the next crew of cutters.
+
   # ---- Beat 4: ore --------------------------------------------------------------------------------------
   - id: trail_green_stones
     name: Trail to the green stones
@@ -301,14 +397,16 @@ nodes:
     name: Ore roasting
     stage: 1
     beat: 5
-    kind: project
+    kind: decision_option
     critical_path: false
     problem: "The green crust is running out; below it the ore is dark and brassy, and it won't smelt."
+    tradeoff: "Miners back to full speed on a deep deposit, and soon. Every load is roasted over wood first, and the fumes kill the nearest trees: wood per gatherer falls for good."
+    modifiers: {rate: {mine_malachite: 2, gather_wood: 0.85}}   # undoes the red bar's half; roasting fuel and fumes; estimates
     requires:
-      nodes: [crucibles_blowpipes]
+      nodes: [trail_green_stones]
       state: ["malachite_left_kg < 20000"]
       resources: {wood_kg: 30000}
-      labor_person_days: 500000
+      labor_person_days: 300000   # trimmed from 500,000 so the added choices don't lengthen the stage (owner playtest 2026-09-27); estimate
     unlocks:
       jobs: [roast_sulfide_ore]   # 20 kg ore + 30 kg wood -> 16 kg roasted ore
       effects: ["Sulfide ore replaces the depleted carbonate; the outcrop bar is replaced by a deep deposit. Fumes: forest_cover -3 near the heaps"]
@@ -324,6 +422,32 @@ nodes:
       sulfur dioxide, leaving oxides that smelt like malachite. The fumes that stripped hillsides
       bare near historic smelters are the raw material for sulfuric acid, much later.
 
+  - id: eastern_outcrop
+    name: Prospect the eastern valleys
+    stage: 1
+    beat: 5
+    kind: decision_option
+    critical_path: false
+    problem: "The green crust is running out; below it the ore is dark and brassy, and it won't smelt."
+    tradeoff: "A second malachite outcrop: miners back to full speed with no extra wood. Prospecting parties take a long time to find it."
+    modifiers: {rate: {mine_malachite: 2}}   # undoes the red bar's half; estimate
+    requires:
+      nodes: [trail_green_stones]
+      state: ["malachite_left_kg < 20000"]
+      resources: {blades: 2000}
+      labor_person_days: 450000
+    unlocks:
+      effects: ["A second outcrop: mining back to full speed"]
+    pages_bundle: survey_copper_tin
+    without_pages: "1.5x labor"
+    numbers_status: "Estimate. Green staining in streambeds is the classic prospector's sign of copper upstream"
+    sources: []
+    tags: [substantive, labor_sink]
+    notebook: >
+      Copper stains everything it weathers onto green or blue. Prospectors walk streambeds looking
+      for colored pebbles, then follow them uphill to where they stop. The source is usually just
+      above the last stained stone.
+
   # ---- Beat 6: casting -----------------------------------------------------------------------------------------
   - id: stone_molds
     name: Stone molds
@@ -336,7 +460,7 @@ nodes:
       nodes: [crucibles_blowpipes]
       state: ["copper_kg > 40"]
       resources: {copper_kg: 200}
-      labor_person_days: 1000000
+      labor_person_days: 700000   # trimmed from 1,000,000 so the added choices don't lengthen the stage (owner playtest 2026-09-27); estimate
     unlocks:
       jobs: [cast_copper_tools]   # 1 kg copper per tool; 4 tools per worker-day
       effects: ["Tool mix: knappers vs casters; copper tools last 10x flint"]
@@ -351,20 +475,22 @@ nodes:
       be melted and recast when worn out. Hammering also hardens it by tangling the crystal
       structure. A carved stone mold lets one smith pour the same shape again and again.
 
-  # ---- Beat 7: scale ------------------------------------------------------------------------------------------------
+  # ---- Beat 6 (was 7): scale ------------------------------------------------------------------------------------------------
   - id: wind_furnaces
     name: Wind-draft furnaces on the ridge
     stage: 1
-    beat: 7
+    beat: 6   # was 7: the air choice comes with casting, so a year never passes without a decision
     kind: decision_option
     route: [A_wind]
     critical_path: false
     problem: "Blowpipe crews are exhausted, and each crucible yields only a little copper."
+    tradeoff: "Three times the copper per smelter, but only on the ridge: Stage 2's iron must be smelted there too, and output drops in the calm season."
+    modifiers: {rate: {smelt_copper: 3}}   # prototype's wind x3; the furnace workshop (E1) takes this over via air_supply
     requires:
       nodes: [crucibles_blowpipes]
-      state: ["campaigns_run > 5"]
+      state: ["campaigns_run > 1"]
       resources: {clay_kg: 60000, copper_kg: 100}
-      labor_person_days: 2000000
+      labor_person_days: 1300000   # was 2,000,000; cut so Stage 1 never goes a year without a decision (owner playtest 2026-09-27); estimate
     unlocks:
       effects: ["air_supply: wind_site. 3x output per campaign, ridge only; output drops 60% in the fixed calm season. Stage 2 iron must then be smelted on the ridge or bellows built"]
     writes_state: [has_wind_furnaces]
@@ -381,14 +507,16 @@ nodes:
   - id: pot_bellows
     name: Pot bellows
     stage: 1
-    beat: 7
+    beat: 6   # was 7: the air choice comes with casting, so a year never passes without a decision
     kind: decision_option
     route: [B_bellows]
     critical_path: false
     problem: "Blowpipes can't move enough air for a bigger furnace, and breath is mostly carbon dioxide."
+    tradeoff: "Twice the copper per smelter, anywhere; the bellows come with you to Stage 2's iron site. They need hides, and hunters to get them."
+    modifiers: {rate: {smelt_copper: 2}}   # the 2x in `effects`; E1 takes this over via air_supply
     requires:
       nodes: [crucibles_blowpipes]
-      state: ["campaigns_run > 5"]
+      state: ["campaigns_run > 1"]
       resources: {pots: 300, wood_kg: 5000}
       labor_person_days: 900000
     unlocks:
@@ -414,9 +542,11 @@ nodes:
     route: [C_arsenic]
     critical_path: false
     problem: "Copper tools dull and bend within weeks, and toolmakers can't keep up."
+    tradeoff: "Tools last 1.6 times as long, right away. The smelters breathe arsenic, and past a point some of them die."
+    modifiers: {toolLife: {copper_tools: 1.6}}   # the 1.6x in `effects`; estimate
     requires:
       nodes: [stone_molds]
-      state: ["tool_wear < 0.9"]
+      state: ["copper_kg > 100"]   # was tool_wear < 0.9, which late Stage 1 rarely meets; owner playtest 2026-09-27
       resources: {copper_kg: 300}
       labor_person_days: 600000
     unlocks:
@@ -441,6 +571,7 @@ nodes:
     route: [D_tin]
     critical_path: false
     problem: "Bronze needs tin, which is rare; the nearest known source is in the Taurus mountains, weeks away."
+    tradeoff: "A long expedition before any tool gets better, but bronze lasts twice as long as copper and carries into Stage 3."
     requires:
       nodes: [stone_molds]
       state: ["bundles_taken has survey_copper_tin"]

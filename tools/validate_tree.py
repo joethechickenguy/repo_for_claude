@@ -137,6 +137,29 @@ def validate(stages, state_vars, bundles, resources):
         if hb and hb not in {p["id"] for p in data.get("pressures") or []}:
             errors.append(f"{fname}: heartbeat {hb!r} is not one of the stage's pressures")
 
+    # exclusive choices: starting one option closes the others (tech-tree/README.md, `choices:`)
+    in_choice = {}
+    pids = {p["id"] for _, data in stages for p in data.get("pressures") or []}
+    for fname, data in stages:
+        for c in data.get("choices") or []:
+            cid = c.get("id")
+            opts = c.get("options") or []
+            if len(opts) < 2:
+                errors.append(f"{fname}: choice {cid} needs at least two options")
+            for o in opts:
+                if o not in nodes:
+                    errors.append(f"{fname}: choice {cid} names unknown node {o!r}")
+                elif nodes[o]["stage"] != data["stage"]:
+                    errors.append(f"{fname}: choice {cid} option {o} is in another stage")
+                elif o in in_choice:
+                    errors.append(f"{fname}: node {o} is an option of two choices ({in_choice[o]}, {cid})")
+                else:
+                    in_choice[o] = cid
+        for n in data["nodes"]:
+            for pid in (n.get("pressure_per_day") or {}):
+                if pid not in pids:
+                    errors.append(f"{n['id']}: pressure_per_day names unknown pressure {pid!r}")
+
     for nid, n in nodes.items():
         for p in all_prereqs(n):
             if p not in nodes:

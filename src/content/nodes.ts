@@ -31,7 +31,8 @@ export interface NodeBook {
   revealed: string[];
 }
 
-export type NodeStatus = "hidden" | "available" | "building" | "complete";
+/** `closed`: another option of the same exclusive choice was started, so this one is gone for good. */
+export type NodeStatus = "hidden" | "available" | "building" | "complete" | "closed";
 export type PagesTier = "known" | "partial" | "absent";
 
 export type BuildEvent =
@@ -102,7 +103,19 @@ export function isVisible(tree: Tree, id: string, view: StateView, book: NodeBoo
 export function nodeStatus(tree: Tree, id: string, view: StateView, book: NodeBook): NodeStatus {
   if (isComplete(book, id)) return "complete";
   if (isBuilding(book, id)) return "building";
+  if (closedBy(tree, id, book)) return "closed";
   return isVisible(tree, id, view, book) ? "available" : "hidden";
+}
+
+/**
+ * The option of `id`'s exclusive choice that was taken (started or finished), when it isn't `id`
+ * itself; null when `id` is in no choice or nothing else was taken.
+ */
+export function closedBy(tree: Tree, id: string, book: NodeBook): string | null {
+  const c = tree.nodes[id]?.choice;
+  const choice = c ? tree.choices?.[c] : undefined;
+  if (!choice) return null;
+  return choice.options.find((o) => o !== id && (isComplete(book, o) || isBuilding(book, o))) ?? null;
 }
 
 /** Nodes that are available or building, in tree order (optionally one stage). */
@@ -117,7 +130,7 @@ export function visibleNodes(tree: Tree, view: StateView, book: NodeBook, stage?
 /** Latch newly visible nodes into `revealed`. `revealed` lists the new ones (for auto-pause). */
 export function revealNodes(tree: Tree, view: StateView, book: NodeBook): { book: NodeBook; revealed: string[] } {
   const fresh = tree.nodeOrder.filter(
-    (id) => !book.revealed.includes(id) && !isComplete(book, id) && checkRequires(tree, id, view, book).ok,
+    (id) => !book.revealed.includes(id) && !isComplete(book, id) && !closedBy(tree, id, book) && checkRequires(tree, id, view, book).ok,
   );
   if (!fresh.length) return { book, revealed: [] };
   return { book: { ...book, revealed: [...book.revealed, ...fresh] }, revealed: fresh };
@@ -178,7 +191,7 @@ export const isAffordable = (tree: Tree, id: string, view: StateView): boolean =
 
 export type StartResult =
   | { ok: true; book: NodeBook; consume: Record<string, number>; events: BuildEvent[] }
-  | { ok: false; reason: "hidden" | "building" | "complete" | "unaffordable"; missing: Record<string, number> };
+  | { ok: false; reason: "hidden" | "building" | "complete" | "closed" | "unaffordable"; missing: Record<string, number> };
 
 /**
  * Start building a node: requires must hold (a revealed non-gate node may start after a state
@@ -189,6 +202,7 @@ export function startBuild(tree: Tree, id: string, view: StateView, book: NodeBo
   const n = node(tree, id);
   if (isComplete(book, id)) return { ok: false, reason: "complete", missing: {} };
   if (isBuilding(book, id)) return { ok: false, reason: "building", missing: {} };
+  if (closedBy(tree, id, book)) return { ok: false, reason: "closed", missing: {} };
   const check = checkRequires(tree, id, view, book);
   const structural = check.stageOpen && check.missingNodes.length === 0 && check.anyOfMet;
   const stateOk = check.failedState.length === 0 || (n.kind !== "gate" && book.revealed.includes(id));

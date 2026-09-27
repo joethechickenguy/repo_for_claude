@@ -96,6 +96,12 @@ export interface ProjectCard {
   missing: CostLine[];
   /** A red bar lists this node among its answers. */
   suggested: boolean;
+  /** One line on what this option gives up or gains (node `tradeoff`). */
+  tradeoff?: string;
+  /** The exclusive choice this card is an option of, while more than one option is open. */
+  choice?: { id: string; prompt: string };
+  /** For a taken option: the names of the options it closed. */
+  choseOver?: string[];
 }
 
 export interface MeterView {
@@ -529,9 +535,33 @@ export class Game {
         affordable: missing.length === 0,
         missing,
         suggested: suggested.has(id),
+        ...(n.tradeoff ? { tradeoff: n.tradeoff } : {}),
+        ...this.choiceFields(id),
       });
     }
-    return cards;
+    // Options of one choice sit together, where the first of them would be.
+    const order = new Map<string, number>();
+    cards.forEach((c, i) => {
+      const key = c.choice?.id ?? c.id;
+      if (!order.has(key)) order.set(key, i);
+    });
+    return cards
+      .map((c, i) => ({ c, i }))
+      .sort((a, b) => order.get(a.c.choice?.id ?? a.c.id)! - order.get(b.c.choice?.id ?? b.c.id)! || a.i - b.i)
+      .map((x) => x.c);
+  }
+
+  /** A card's place in an exclusive choice: grouped while options are open, "chosen over" once taken. */
+  private choiceFields(id: string): Pick<ProjectCard, "choice" | "choseOver"> {
+    const cid = this.tree.nodes[id]?.choice;
+    const c = cid ? this.tree.choices?.[cid] : undefined;
+    if (!c) return {};
+    const st = this.projects.status(id);
+    if (st === "building" || st === "complete") {
+      const closed = c.options.filter((o) => o !== id).map((o) => this.tree.nodes[o]?.name ?? o);
+      return closed.length ? { choseOver: closed } : {};
+    }
+    return { choice: { id: c.id, prompt: c.prompt } };
   }
 
   bars(): BarView[] {

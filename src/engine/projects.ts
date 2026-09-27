@@ -116,6 +116,8 @@ export class ProjectsSystem implements EngineSystem {
       }
       this.engine.applyWrites(ev.writes);
       for (const job of ev.jobs) if (this.engine.jobDef(job)) this.engine.unlockJob(job);
+      // Node `modifiers:` apply for good (they live in the engine's save like any modifier).
+      for (const m of this.tree.nodes[ev.node]?.modifiers ?? []) this.engine.setModifier(m.kind, m.target, `node:${ev.node}`, m.factor);
       pauses.push({ kind: "node_complete", subject: ev.node });
       if (ev.opensWorkshop) pauses.push({ kind: "workshop_open", subject: ev.opensWorkshop });
     }

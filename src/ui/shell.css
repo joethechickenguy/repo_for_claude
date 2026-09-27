@@ -87,6 +87,7 @@ hr{border:0; border-top:1px solid var(--rule); margin:14px 0}
 .pbar.red .head .n{color:var(--red); font-weight:600}
 .pbar .eff{font-size:13px; color:var(--red)}
 .pbar .ans{font-size:13px; color:var(--pencil)}
+.pbar .eff.warn{color:var(--pencil); font-style:italic}
 .pbar.heartbeat .head .n{font-weight:600}
 
 /* Columns */
@@ -129,3 +130,13 @@ details p{margin:4px 0 0}
   .energy{font-size:34px}
   .speed{margin-left:0}
 }
+
+/* Exclusive choices (owner playtest 2026-09-27): options side by side in one box, trade-off first. */
+.choice{border:1px solid var(--ink); padding:9px 11px 1px; margin-bottom:10px}
+.choice-head h3{margin:2px 0 0}
+.choice-head .tag{font-size:12px; color:var(--blue); text-transform:uppercase; letter-spacing:.04em}
+.choice-head p{margin:2px 0 8px}
+.choice .opts{display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:10px}
+.choice .opts .proj{margin-bottom:10px}
+.proj .tradeoff{font-size:14px; margin:4px 0}
+.proj.option .tradeoff{border-left:3px solid var(--blue); padding-left:7px}

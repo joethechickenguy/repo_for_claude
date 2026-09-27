@@ -6,7 +6,7 @@
 //
 // A `red_when` that is prose (expr null; most heartbeat bars after Stage 1) is never red here: the
 // bar still shows its value (open question 42).
-import { holds, stageOpen, type NodeBook, type Pressure, type Tree } from "../../content";
+import { checkRequires, holds, nodeStatus, stageOpen, type NodeBook, type Pressure, type Tree } from "../../content";
 import type { Engine, EngineSystem, JsonValue, TickContext } from "../../engine";
 import { beatOpen } from "./beats";
 
@@ -40,6 +40,12 @@ export function isRed(tree: Tree, p: Pressure, engine: Engine): boolean {
   return p.redWhen.expr ? holds(tree, p.redWhen.expr, engine) : false;
 }
 
+/**
+ * Play value (estimate, package J may tune): a bar within this fraction of its scale above the red
+ * mark counts as heading for red, and shows what fixes it before it bites (owner playtest 2026-09-27).
+ */
+export const WARN_FRACTION = 0.25;
+
 /** What the shell draws for one bar. */
 export interface BarView {
   id: string;
@@ -51,10 +57,44 @@ export interface BarView {
   /** 0-1 position of the red threshold, when there is one. */
   mark?: number;
   red: boolean;
+  /** Not red yet, but within WARN_FRACTION of the scale above the red mark: its fixes are shown early. */
+  warn: boolean;
   heartbeat: boolean;
   effect: string;
   /** Answer node ids that are currently shown in projects (suggested while red). */
   answers: string[];
+  /**
+   * Every answer with where it stands, so a red bar always says what will fix it, even before the
+   * fix can be built (owner playtest 2026-09-27). `after`: names of the projects it still waits on.
+   */
+  hints: AnswerHint[];
+}
+
+export interface AnswerHint {
+  id: string;
+  name: string;
+  state: "ready" | "building" | "done" | "closed" | "later";
+  after: string[];
+}
+
+/** Where each of a bar's answers stands (answers that are workshops, not nodes, are left out). */
+export function answerHints(tree: Tree, engine: Engine, book: Readonly<NodeBook>, p: Pressure, shownNodes: readonly string[]): AnswerHint[] {
+  const out: AnswerHint[] = [];
+  for (const id of p.answers) {
+    const n = tree.nodes[id];
+    if (!n) continue;
+    const s = nodeStatus(tree, id, engine, book as NodeBook);
+    let state: AnswerHint["state"];
+    if (s === "complete") state = "done";
+    else if (s === "building") state = "building";
+    else if (s === "closed") state = "closed";
+    else if (s === "available" && shownNodes.includes(id)) state = "ready";
+    else state = "later";
+    const after =
+      state === "later" ? checkRequires(tree, id, engine, book as NodeBook).missingNodes.map((m) => tree.nodes[m]?.name ?? m) : [];
+    out.push({ id, name: n.name, state, after });
+  }
+  return out;
 }
 
 /** Bar scale: the model's max, else the variable's (positive) start, else the red threshold, else 1. */
@@ -63,6 +103,19 @@ export function barScale(tree: Tree, p: Pressure): number {
   const d = tree.stateVariables[p.drives]?.default;
   if (typeof d === "number" && d > 0) return d;
   return redThreshold(p) ?? 1;
+}
+
+/**
+ * A pressure's per-day drift: the model's, unless a completed node replaces it (node
+ * `pressure_per_day:`, e.g. coppicing makes the forest regrow faster). The largest replacement wins.
+ */
+export function perDayFor(tree: Tree, pressureId: string, base: number, book: Readonly<NodeBook>): number {
+  let out: number | null = null;
+  for (const id of book.completed) {
+    const v = tree.nodes[id]?.pressurePerDay?.[pressureId];
+    if (v !== undefined) out = out === null ? v : Math.max(out, v);
+  }
+  return out ?? base;
 }
 
 export class PressureSystem implements EngineSystem {
@@ -86,7 +139,7 @@ export class PressureSystem implements EngineSystem {
         let v = e.state.getNumber(p.drives);
         for (const [r, k] of Object.entries(m.perUnitProduced)) v += (ctx.report.produced[r] ?? 0) * k;
         for (const [r, k] of Object.entries(m.perUnitConsumed)) v += (ctx.report.consumed[r] ?? 0) * k;
-        v += m.perDay;
+        v += perDayFor(this.tree, p.id, m.perDay, book);
         if (m.min !== undefined) v = Math.max(m.min, v);
         if (m.max !== undefined) v = Math.min(m.max, v);
         e.state.set(p.drives, v);
@@ -151,9 +204,11 @@ export function barViews(
       fill: Math.max(0, Math.min(1, value / scale)),
       ...(t !== undefined ? { mark: Math.max(0, Math.min(1, t / scale)) } : {}),
       red,
+      warn: !red && t !== undefined && value < t + WARN_FRACTION * scale,
       heartbeat: p.heartbeat,
       effect: p.effectWhenRed,
       answers: p.answers.filter((a) => shownNodes.includes(a)),
+      hints: answerHints(tree, engine, book, p, shownNodes),
     };
   });
 }

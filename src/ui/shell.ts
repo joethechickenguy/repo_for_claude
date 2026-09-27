@@ -253,70 +253,126 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
 
   // ---- Render ----
   const projEls = new Map<string, HTMLElement>();
+  const choiceEls = new Map<string, HTMLElement>();
   let logCount = -1;
   let wsKey = "";
   let nbCount = -1;
 
   function renderProjects(cards: ProjectCard[]): void {
-    const building = cards.some((c) => c.status === "building");
-    const builders = game.engine.assigned("build");
     if (!cards.length) {
       setHTML(projBox, `<p class="small muted">${esc(S.projects.nothing)}</p>`);
       projEls.clear();
+      choiceEls.clear();
       return;
     }
     if (projBox.querySelector(":scope > p")) projBox.replaceChildren();
     const seen = new Set<string>();
-    let prev: Element | null = null;
+    const seenChoices = new Set<string>();
+    // Group the cards: options of one choice (two or more open) share a "Choose one" box.
+    const groups: { choice?: { id: string; prompt: string }; cards: ProjectCard[] }[] = [];
     for (const c of cards) {
-      seen.add(c.id);
-      let e = projEls.get(c.id);
-      if (!e) {
-        e = el("div", "proj");
-        e.innerHTML =
-          `<h3>${esc(c.name)}</h3><div class="tag"></div><div class="problem">${esc(c.problem)}</div>` +
-          `<div class="cost"></div><div class="eff"></div><div class="prog"></div><div class="ms"></div>` +
-          `<div class="go"><button type="button" data-start="${esc(c.id)}">${esc(S.projects.start)}</button><span class="short"></span></div>` +
-          `<details><summary>${esc(S.projects.why)}</summary><p>${esc(c.why)}</p></details>`;
-        projEls.set(c.id, e);
+      const last = groups[groups.length - 1];
+      if (c.choice && last?.choice?.id === c.choice.id) last.cards.push(c);
+      else groups.push({ ...(c.choice ? { choice: c.choice } : {}), cards: [c] });
+    }
+    let prev: Element | null = null;
+    const place = (parent: HTMLElement, node: HTMLElement, after: Element | null): void => {
+      const want: Element | null = after ? after.nextElementSibling : parent.firstElementChild;
+      if (want !== node) parent.insertBefore(node, want);
+    };
+    for (const g of groups) {
+      if (g.choice && g.cards.length > 1) {
+        seenChoices.add(g.choice.id);
+        let box = choiceEls.get(g.choice.id);
+        if (!box) {
+          box = el("div", "choice");
+          box.setAttribute("role", "group");
+          box.innerHTML =
+            `<div class="choice-head"><span class="tag">${esc(S.projects.chooseOne)}</span><h3>${esc(g.choice.prompt)}</h3>` +
+            `<p class="small muted">${esc(S.projects.chooseOneNote)}</p></div><div class="opts"></div>`;
+          box.setAttribute("aria-label", g.choice.prompt);
+          choiceEls.set(g.choice.id, box);
+        }
+        const opts = box.querySelector(".opts") as HTMLElement;
+        let inner: Element | null = null;
+        for (const c of g.cards) {
+          seen.add(c.id);
+          const e = paintCard(c);
+          place(opts, e, inner);
+          inner = e;
+        }
+        place(projBox, box, prev);
+        prev = box;
+      } else {
+        for (const c of g.cards) {
+          seen.add(c.id);
+          const e = paintCard(c);
+          place(projBox, e, prev);
+          prev = e;
+        }
       }
-      e.classList.toggle("active", c.status === "building");
-      e.classList.toggle("suggested", c.suggested);
-      setHTML(e.querySelector(".tag") as HTMLElement, c.suggested ? esc(S.projects.suggested) : "");
-      const mats = c.cost.map((x) => `${fmt(x.amount)} ${x.name.toLowerCase()}`).join(", ");
-      setHTML(
-        e.querySelector(".cost") as HTMLElement,
-        esc([mats ? fill(S.projects.materials, { list: mats }) : "", fill(S.projects.labor, { n: fmtRound(c.labor) })].filter(Boolean).join(" ")),
-      );
-      setHTML(e.querySelector(".eff") as HTMLElement, c.effects.length ? esc(fill(S.projects.effect, { list: c.effects.join("; ") })) : "");
-      const prog = e.querySelector(".prog") as HTMLElement;
-      if (c.progress) {
-        const pct = Math.min(100, (c.progress.done / Math.max(1, c.progress.total)) * 100);
-        const txt = fill(S.projects.progress, { done: fmt(c.progress.done), total: fmt(c.progress.total) }) + (builders > 0 ? "" : `. ${S.projects.noBuilders}`);
-        setHTML(prog, `<div class="bar"><i style="width:${pct.toFixed(2)}%"></i></div><div class="small">${esc(txt)}</div>`);
-      } else setHTML(prog, "");
-      setHTML(
-        e.querySelector(".ms") as HTMLElement,
-        c.milestones
-          .map((m) => `<div class="${m.fired ? "done" : ""}">${esc(fill(S.projects.milestone, { pct: Math.round(m.at * 100), text: m.text }))}</div>`)
-          .join(""),
-      );
-      const go = e.querySelector(".go") as HTMLElement;
-      go.hidden = c.status !== "available";
-      const btn = go.querySelector("button") as HTMLButtonElement;
-      btn.disabled = !c.affordable;
-      const short = c.missing.map((x) => `${fmt(Math.ceil(x.amount))} ${x.name.toLowerCase()}`).join(", ");
-      setHTML(go.querySelector(".short") as HTMLElement, c.affordable ? "" : esc(fill(S.projects.missing, { list: short })));
-      const want: Element | null = prev ? prev.nextElementSibling : projBox.firstElementChild;
-      if (want !== e) projBox.insertBefore(e, want);
-      prev = e;
     }
     for (const [id, e] of projEls)
       if (!seen.has(id)) {
         e.remove();
         projEls.delete(id);
       }
-    void building;
+    for (const [id, e] of choiceEls)
+      if (!seenChoices.has(id)) {
+        e.remove();
+        choiceEls.delete(id);
+      }
+  }
+
+  function paintCard(c: ProjectCard): HTMLElement {
+    const builders = game.engine.assigned("build");
+    let e = projEls.get(c.id);
+    if (!e) {
+      e = el("div", "proj");
+      e.innerHTML =
+        `<h3>${esc(c.name)}</h3><div class="tag"></div><div class="problem">${esc(c.problem)}</div>` +
+        `<div class="tradeoff"></div><div class="cost"></div><div class="eff"></div><div class="prog"></div><div class="ms"></div>` +
+        `<div class="go"><button type="button" data-start="${esc(c.id)}">${esc(S.projects.start)}</button><span class="short"></span></div>` +
+        `<details><summary>${esc(S.projects.why)}</summary><p>${esc(c.why)}</p></details>`;
+      projEls.set(c.id, e);
+    }
+    e.classList.toggle("active", c.status === "building");
+    e.classList.toggle("suggested", c.suggested);
+    setHTML(e.querySelector(".tag") as HTMLElement, c.suggested ? esc(S.projects.suggested) : "");
+    e.classList.toggle("option", !!c.choice);
+    setHTML(
+      e.querySelector(".tradeoff") as HTMLElement,
+      [c.tradeoff ? esc(c.tradeoff) : "", c.choseOver ? `<span class="muted">${esc(fill(S.projects.choseOver, { list: c.choseOver.join(S.projects.or) }))}</span>` : ""]
+        .filter(Boolean)
+        .join(" "),
+    );
+    const mats = c.cost.map((x) => `${fmt(x.amount)} ${x.name.toLowerCase()}`).join(", ");
+    setHTML(
+      e.querySelector(".cost") as HTMLElement,
+      esc([mats ? fill(S.projects.materials, { list: mats }) : "", fill(S.projects.labor, { n: fmtRound(c.labor) })].filter(Boolean).join(" ")),
+    );
+    setHTML(e.querySelector(".eff") as HTMLElement, c.effects.length ? esc(fill(S.projects.effect, { list: c.effects.join("; ") })) : "");
+    const prog = e.querySelector(".prog") as HTMLElement;
+    if (c.progress) {
+      const pct = Math.min(100, (c.progress.done / Math.max(1, c.progress.total)) * 100);
+      const txt = fill(S.projects.progress, { done: fmt(c.progress.done), total: fmt(c.progress.total) }) + (builders > 0 ? "" : `. ${S.projects.noBuilders}`);
+      setHTML(prog, `<div class="bar"><i style="width:${pct.toFixed(2)}%"></i></div><div class="small">${esc(txt)}</div>`);
+    } else setHTML(prog, "");
+    setHTML(
+      e.querySelector(".ms") as HTMLElement,
+      c.milestones
+        .map((m) => `<div class="${m.fired ? "done" : ""}">${esc(fill(S.projects.milestone, { pct: Math.round(m.at * 100), text: m.text }))}</div>`)
+        .join(""),
+    );
+    const go = e.querySelector(".go") as HTMLElement;
+    go.hidden = c.status !== "available";
+    const btn = go.querySelector("button") as HTMLButtonElement;
+    btn.disabled = !c.affordable;
+    const label = c.choice ? S.projects.choose : S.projects.start;
+    if (btn.textContent !== label) btn.textContent = label;
+    const short = c.missing.map((x) => `${fmt(Math.ceil(x.amount))} ${x.name.toLowerCase()}`).join(", ");
+    setHTML(go.querySelector(".short") as HTMLElement, c.affordable ? "" : esc(fill(S.projects.missing, { list: short })));
+    return e;
   }
 
   function render(): void {
@@ -367,11 +423,25 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
     let sh = "";
     for (const b of game.bars()) {
       const v = b.unit === "percent" ? `${fmtSmart(b.value)}%` : `${fmtSmart(b.value)}${b.unit && b.unit !== "percent" ? ` ${b.unit}` : ""}`;
-      sh += `<div class="pbar${b.red ? " red" : ""}${b.heartbeat ? " heartbeat" : ""}"><div class="head"><span class="n">${esc(b.name)}</span><span class="v num">${esc(v)}</span></div>`;
+      sh += `<div class="pbar${b.red ? " red" : ""}${b.warn ? " warn" : ""}${b.heartbeat ? " heartbeat" : ""}"><div class="head"><span class="n">${esc(b.name)}</span><span class="v num">${esc(v)}</span></div>`;
       sh += `<div class="track"><i style="width:${(b.fill * 100).toFixed(1)}%"></i>${b.mark !== undefined ? `<b style="left:${(b.mark * 100).toFixed(1)}%"></b>` : ""}</div>`;
-      if (b.red) {
-        sh += `<div class="eff">${esc(fill(S.pressures.red, { effect: b.effect }))}</div>`;
-        if (b.answers.length) sh += `<div class="ans">${esc(fill(S.pressures.answers, { list: b.answers.map((a) => game.tree.nodes[a]?.name ?? a).join(", ") }))}</div>`;
+      if (b.warn) sh += `<div class="eff warn">${esc(fill(S.pressures.warn, { effect: b.effect }))}</div>`;
+      if (b.red || b.warn) {
+        if (b.red) sh += `<div class="eff">${esc(fill(S.pressures.red, { effect: b.effect }))}</div>`;
+        const hints = b.hints
+          .filter((h) => h.state !== "closed")
+          .map((h) =>
+            h.state === "ready"
+              ? fill(S.pressures.hintReady, { name: h.name })
+              : h.state === "building"
+                ? fill(S.pressures.hintBuilding, { name: h.name })
+                : h.state === "done"
+                  ? fill(S.pressures.hintDone, { name: h.name })
+                  : h.after.length
+                    ? fill(S.pressures.hintLater, { name: h.name, after: h.after.join(", ") })
+                    : fill(S.pressures.hintSoon, { name: h.name }),
+          );
+        if (hints.length) sh += `<div class="ans">${esc(fill(S.pressures.fixes, { list: hints.join("; ") }))}</div>`;
       }
       sh += `</div>`;
     }

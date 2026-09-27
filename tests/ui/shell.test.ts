@@ -99,5 +99,34 @@ describe("shell", () => {
     i2.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     expect(game.engine.manual("knap_flint")).toBe(10000 - 1234);
   });
+
+  it("an exclusive choice shows as one 'Choose one' box; taking an option closes the other", async () => {
+    const { root, game } = mount();
+    game.adjust(["gather_wood"], 1000);
+    game.adjust(["knap_flint"], 100); // 300 blades a day for 1,000 tool users: tools run short
+    for (let d = 0; d < 30 && !root.querySelector(".choice"); d++) {
+      game.step();
+      await frame();
+    }
+    const box = root.querySelector(".choice") as HTMLElement;
+    expect(box).toBeTruthy();
+    expect(box.querySelector("h3")!.textContent).toBe(tree.choices!.first_tool_fix!.prompt);
+    const opts = [...box.querySelectorAll(".proj.option")];
+    expect(opts.map((o) => o.querySelector("h3")!.textContent)).toEqual([tree.nodes.ground_stone_axes!.name, tree.nodes.hafted_blades!.name]);
+    expect(opts[1]!.querySelector(".tradeoff")!.textContent).toBe(tree.nodes.hafted_blades!.tradeoff);
+    const choose = box.querySelector('button[data-start="hafted_blades"]') as HTMLButtonElement;
+    expect(choose.textContent).toBe(STRINGS.projects.choose);
+    for (let d = 0; d < 200 && choose.disabled; d++) {
+      game.step();
+      await frame();
+    }
+    choose.click();
+    await frame();
+    expect(game.projects.status("ground_stone_axes")).toBe("closed");
+    expect(root.querySelector(".choice")).toBeNull();
+    expect(root.querySelector('button[data-start="ground_stone_axes"]')).toBeNull();
+    const taken = [...root.querySelectorAll(".proj")].find((p) => p.querySelector("h3")!.textContent === tree.nodes.hafted_blades!.name)!;
+    expect(taken.querySelector(".tradeoff")!.textContent).toContain(`Chosen over ${tree.nodes.ground_stone_axes!.name}.`);
+  });
 });
 

@@ -18,30 +18,31 @@ const p1 = (id: string) => tree.stages[0]!.pressures.find((p) => p.id === id)!;
 
 describe("beat gating", () => {
   it("beat N opens when a node of the nearest lower beat is complete", () => {
-    expect(stageBeats(tree, 1)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(stageBeats(tree, 1)).toEqual([1, 2, 3, 4, 5, 6, 8]); // beat 7 folded into 6 (owner playtest 2026-09-27)
     expect(beatOpen(tree, 1, 1, book([]))).toBe(true);
     expect(beatOpen(tree, 1, 2, book([]))).toBe(false);
     expect(beatOpen(tree, 1, 2, book(["ground_stone_axes"]))).toBe(true); // any beat-1 node
     expect(nodeBeatOpen(tree, "pit_kiln", book(["digging_sticks"]))).toBe(true);
-    expect(nodeBeatOpen(tree, "wind_furnaces", book(["crucibles_blowpipes"]))).toBe(false); // beat 7 needs beat 6
-    expect(nodeBeatOpen(tree, "wind_furnaces", book(["stone_molds"]))).toBe(true);
+    expect(nodeBeatOpen(tree, "wind_furnaces", book(["trail_green_stones"]))).toBe(false); // beat 6 needs beat 5
+    expect(nodeBeatOpen(tree, "wind_furnaces", book(["crucibles_blowpipes"]))).toBe(true);
+    expect(nodeBeatOpen(tree, "arsenical_copper", book(["stone_molds"]))).toBe(true); // beat 8: nearest lower is 6
     expect(currentBeat(tree, 1, book(["digging_sticks", "pit_kiln"]))).toBe(3);
   });
 
   it("a node whose requirements hold stays hidden (no pause) until its beat opens", () => {
     const g = new Game(tree);
-    // ore_roasting (beat 5) needs crucibles_blowpipes and a low outcrop; force both without any
-    // beat-4 node complete: requirements hold, the beat doesn't.
-    (g.projects as unknown as { bookValue: NodeBook }).bookValue = book(["crucibles_blowpipes"]);
-    g.engine.state.set("malachite_left_kg", 100);
+    // coppice_near_woods (beat 3) needs charcoal_clamps (also beat 3) and a thinning forest; force
+    // both without any beat-2 node complete: requirements hold, the beat doesn't.
+    (g.projects as unknown as { bookValue: NodeBook }).bookValue = book(["charcoal_clamps"]);
+    g.engine.state.set("forest_cover", 80);
     const r = g.step();
-    expect(g.projects.visible()).toContain("ore_roasting"); // B's requirements alone
-    expect(r.pauseReasons).not.toContainEqual({ kind: "node_revealed", subject: "ore_roasting" });
-    expect(g.projects.shown()).not.toContain("ore_roasting");
-    expect(g.projectCards().map((c) => c.id)).not.toContain("ore_roasting");
-    (g.projects as unknown as { bookValue: NodeBook }).bookValue = book(["trail_green_stones", "crucibles_blowpipes"]);
-    expect(g.step().pauseReasons).toContainEqual({ kind: "node_revealed", subject: "ore_roasting" });
-    expect(g.projectCards().map((c) => c.id)).toContain("ore_roasting");
+    expect(g.projects.visible()).toContain("coppice_near_woods"); // B's requirements alone
+    expect(r.pauseReasons).not.toContainEqual({ kind: "node_revealed", subject: "coppice_near_woods" });
+    expect(g.projects.shown()).not.toContain("coppice_near_woods");
+    expect(g.projectCards().map((c) => c.id)).not.toContain("coppice_near_woods");
+    (g.projects as unknown as { bookValue: NodeBook }).bookValue = book(["pit_kiln", "charcoal_clamps"]);
+    expect(g.step().pauseReasons).toContainEqual({ kind: "node_revealed", subject: "coppice_near_woods" });
+    expect(g.projectCards().map((c) => c.id)).toContain("coppice_near_woods");
   });
 });
 
@@ -120,3 +121,24 @@ describe("introductions", () => {
     expect(g.peopleRows().map((r) => r.id)).toContain("burn_charcoal");
   });
 });
+
+describe("answer hints (owner playtest 2026-09-27: a red bar always says what fixes it)", () => {
+  it("names answers that aren't reachable yet, with what they wait on; closed options drop out", async () => {
+    const { answerHints } = await import("../../src/ui/pressures/pressures");
+    const g = new Game(tree);
+    const wood = p1("wood_distance");
+    let hints = answerHints(tree, g.engine, g.projects.book, wood, []);
+    expect(hints.map((h) => [h.id, h.state])).toEqual([
+      ["coppice_near_woods", "later"],
+      ["timber_sledges", "later"],
+    ]);
+    expect(hints[0]!.after).toEqual([tree.nodes.charcoal_clamps!.name]);
+    (g.projects as unknown as { bookValue: NodeBook }).bookValue = { ...book(["pit_kiln", "charcoal_clamps"]), building: { timber_sledges: { laborDone: 0, laborTotal: 1, milestonesFired: [] } } } as NodeBook;
+    hints = answerHints(tree, g.engine, g.projects.book, wood, []);
+    expect(hints.map((h) => [h.id, h.state])).toEqual([
+      ["coppice_near_woods", "closed"],
+      ["timber_sledges", "building"],
+    ]);
+  });
+});
+
