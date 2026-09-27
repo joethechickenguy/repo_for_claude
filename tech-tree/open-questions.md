@@ -221,3 +221,10 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     so editing that topic *is* editing the category (there's no sibling to reallocate against).
     `stepTopic`/`stepSpecialty` cascade to the parent's own ± in that case (and whenever every sibling
     happens to be pinned by hand), rather than leaving a shortfall the spread can't place.
+50. **Speeds 0.5×/1×/2×, no pause (owner's decision).** The game never stops; a decision drops it to
+    0.5× and the banner stays, collecting newer decisions, until the player picks a speed or presses
+    its button (which returns to the speed they had). The engine still calls these `PauseReason`s /
+    `ctx.pause`; they now mean "needs the player". Open for J: at 2× top speed, DESIGN.md's "10 hours,
+    100-200 years" only fits the 100-year end (100 years = 36,500 days needs an average of ~1×; 200
+    years would need 2× throughout with no slowdowns). Either stages get shorter in years, or the
+    10-hour target grows.

@@ -43,7 +43,7 @@ Common preamble for every prompt:
 **D + F. Shell UI and pressures/beats** (Opus)
 > Packages D and F together. Build the shell in `src/ui/`: header, slide-rule meter, stores, the
 > recursive people panel (one control for jobs, works, departments and the draft), projects, log,
-> notebook, pressure bars, auto-pause. Then F: pressures driven from engine state, red effects, beat
+> notebook, pressure bars, slow-to-0.5× on decisions. Then F: pressures driven from engine state, red effects, beat
 > gating, introduction cards. Copy the CSS variables and layout from the Stage 1 prototype linked in
 > `README.md`. Done when Stage 1 plays end to end using A, B and C.
 

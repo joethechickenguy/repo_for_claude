@@ -1,10 +1,10 @@
 // Stage 1 plays end to end through the shell's controller (src/ui/shellGame.ts), the same object the
 // page drives: people are moved with the people panel's ± (only on rows the panel shows), projects
-// start from the projects panel's cards (only when a card offers them), the clock stops on its own,
+// start from the projects panel's cards (only when a card offers them), the clock slows on its own,
 // and the run reaches the Stage 1 gate on content from the YAML alone (A + B + C + D + F).
 import { describe, expect, it } from "vitest";
 import { tree } from "../../src/content";
-import type { PauseEvent, Scheduler } from "../../src/engine";
+import type { DecisionEvent, Scheduler } from "../../src/engine";
 import { introControls, INTRO_PAUSE, MAX_NEW_CONTROLS_PER_PAUSE } from "../../src/ui/pressures";
 import { Game, PEOPLE_BLOCK } from "../../src/ui/shellGame";
 
@@ -129,24 +129,28 @@ describe("Stage 1 end to end through the shell", () => {
     expect(game.pauseView().line).toContain(tree.nodes.digging_sticks!.name);
   });
 
-  it("the clock stops on its own and names the reason; saving and loading keeps the run", () => {
+  it("the clock slows to 0.5x on its own, never stops, and names the reason; saving and loading keeps the run", () => {
     const game = new Game(tree);
     game.adjust(["gather_wood"], 1000);
     let tick: (() => void) | null = null;
     let now = 0;
     const sched: Scheduler = { now: () => now, every: (_ms, fn) => ((tick = fn), () => (tick = null)) };
-    const events: PauseEvent[] = [];
-    game.clock.onPause((e) => events.push(e));
+    const events: DecisionEvent[] = [];
+    game.clock.onDecision((e) => events.push(e));
     game.clock.start(sched);
-    game.clock.setSpeed(20);
-    game.clock.resume();
-    for (let i = 0; i < 20 && events.length === 0; i++) {
+    game.clock.setSpeed(2);
+    for (let i = 0; i < 40 && events.length === 0; i++) {
       now += 1000;
       tick!();
     }
     expect(events.length).toBe(1);
-    expect(events[0]!.byPlayer).toBe(false);
+    expect(events[0]!.fromSpeed).toBe(2);
+    expect(game.clock.speed).toBe(0.5);
     expect(game.pauseView(events[0]!.reasons).line.length).toBeGreaterThan(0);
+    const day = game.engine.day;
+    now += 4000;
+    tick!();
+    expect(game.engine.day).toBeGreaterThan(day); // still running (a follow-up decision may cut the 4 s short)
     game.clock.stop();
 
     const store = new Map<string, string>();

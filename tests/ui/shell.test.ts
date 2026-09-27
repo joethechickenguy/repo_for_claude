@@ -29,7 +29,7 @@ describe("shell", () => {
     expect(root.querySelector(".log p")!.textContent).toContain(tree.stages[0]!.openingProblem);
   });
 
-  it("± moves people; Resume and a day later a project card offers Start, which starts it", async () => {
+  it("± moves people; the banner clears on Got it; a day later a project card offers Start", async () => {
     const { root, game } = mount();
     const plus = root.querySelector('[aria-label="+ Gather wood"]') as HTMLButtonElement;
     for (let i = 0; i < 10; i++) plus.click();
@@ -37,7 +37,9 @@ describe("shell", () => {
     expect(game.engine.manual("gather_wood")).toBe(1000);
     expect(root.querySelector(".idle b")!.textContent).toBe("9,000");
     (root.querySelector("button[data-resume]") as HTMLButtonElement).click();
-    expect(game.clock.isPaused).toBe(false);
+    await frame();
+    expect(game.decision).toEqual([]);
+    expect(root.querySelector(".banner")).toBeNull();
     game.step(); // a day passes (the clock's scheduler is off in this test)
     game.step();
     await frame();
@@ -51,15 +53,34 @@ describe("shell", () => {
     expect(root.querySelector(".pbar .n")!.textContent).toBe("Tools");
   });
 
-  it("the notebook screen and the pause button save the run", async () => {
+  it("the notebook screen; the speed buttons are 0.5x, 1x and 2x, and choosing one saves", async () => {
     const { root, game, store } = mount();
     const nb = [...root.querySelectorAll("button")].find((b) => b.textContent === STRINGS.header.notebook)!;
     nb.click();
     await frame();
     expect(root.querySelector(".notebook")!.textContent).toContain(STRINGS.notebook.empty);
-    const pause = [...root.querySelectorAll("button")].find((b) => b.textContent === STRINGS.header.pause)!;
-    game.clock.resume();
-    pause.click();
+    const speeds = [...root.querySelectorAll<HTMLButtonElement>("button[data-speed]")];
+    expect(speeds.map((b) => b.textContent)).toEqual(["0.5×", "1×", "2×"]);
+    expect([...root.querySelectorAll("button")].some((b) => b.textContent === "Pause")).toBe(false);
+    speeds[2]!.click();
+    expect(game.clock.speed).toBe(2);
     expect(store.size).toBe(1);
+  });
+
+  it("a decision drops to 0.5x and shows the banner; its button returns to the player's speed", async () => {
+    const { root, game } = mount();
+    (root.querySelector("button[data-speed='2']") as HTMLButtonElement).click();
+    expect(game.decision).toEqual([]);
+    root.querySelector<HTMLButtonElement>('[aria-label="+ Gather wood"]')!.click();
+    for (let d = 0; d < 400 && game.decision.length === 0; d++) game.step();
+    expect(game.decision.length).toBeGreaterThan(0);
+    expect(game.clock.speed).toBe(0.5);
+    await frame();
+    const back = root.querySelector("button[data-resume]") as HTMLButtonElement;
+    expect(back.textContent).toBe("Back to 2×");
+    back.click();
+    await frame();
+    expect(game.clock.speed).toBe(2);
+    expect(root.querySelector(".banner")).toBeNull();
   });
 });

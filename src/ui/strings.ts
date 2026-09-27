@@ -19,7 +19,6 @@ export const STRINGS = {
     stage: "Stage {n}, {name}",
     date: "Year {year}, day {day}",
     speed: "Speed",
-    pause: "Pause",
     speedX: "{n}×",
     energyUnit: "watts per person",
     notebook: "Notebook",
@@ -105,8 +104,8 @@ export const STRINGS = {
     workshop_open: "Workshop open: {name}",
     gate: "Stage {n} gate reached",
     join: " · ",
-    resume: "Resume",
-    paused: "Paused",
+    backTo: "Back to {n}×",
+    ok: "Got it",
     newHere: "New",
   },
   notebook: {

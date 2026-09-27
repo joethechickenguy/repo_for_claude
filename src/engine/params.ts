@@ -49,4 +49,6 @@ export const DEFAULT_BINDINGS: StateBindings = {
 };
 
 /** Clock speeds: in-game days per real second (DESIGN.md: one second is one day at 1x). */
-export const CLOCK_SPEEDS = [1, 5, 20] as const;
+export const CLOCK_SPEEDS = [0.5, 1, 2] as const;
+/** The game never stops: when something needs the player, the clock drops to this speed. */
+export const DECISION_SPEED = 0.5;

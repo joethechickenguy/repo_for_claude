@@ -9,8 +9,9 @@ splits the build into chunks.
 
 ## Goals
 
-- **10 player hours, 100-200 in-game years** for a beginner. One second is one in-game day at 1×;
-  the simulation pauses on its own when a decision is needed, so real time isn't the limit.
+- **10 player hours, 100-200 in-game years** for a beginner. One second is one in-game day at 1×.
+  The only speeds are 0.5×, 1× and 2×, and the game never stops: when a decision is needed it drops
+  to 0.5× on its own and keeps running until the player picks a speed again.
 - **Nothing forces a restart.** Every bad decision costs time; the worst cost a lot of time.
 - **A substantive decision every few minutes, hundreds of small ones.** Substantive: coal or charcoal,
   steel or aluminum, which engine, which seam. Small: a furnace campaign's dials, a job allocation,

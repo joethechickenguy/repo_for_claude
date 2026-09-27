@@ -23,7 +23,7 @@ E6. I can start any time after B. J is last and iterative.
 
 ## A. Engine core
 
-**Delivers.** A deterministic tick loop (one tick = one day; 1×/5×/20× and auto-pause), the state
+**Delivers.** A deterministic tick loop (one tick = one day; 0.5×/1×/2×, never stops, drops to 0.5× when a decision is needed), the state
 store (every variable in `state-variables.yaml`, typed), jobs (assign people in blocks; each job has
 inputs, outputs, tool use, skill), the three labor tiers (`DESIGN.md`, Labor: a works has a target
 output and is staffed from the pool in priority order; a department has a priority and staffs its
@@ -79,7 +79,7 @@ value". **Done when** each model has tests pinning the worked examples in the st
 slide-rule meter with gates, stores (pull-based: stock, rate, demand), people (jobs, ± blocks, idle,
 training), projects (visible nodes with problem, cost, Why-this-works, Start, progress, milestones),
 log, the notebook screen (entries fill as nodes complete), the pressure bars strip (heartbeat
-always visible; others appear at their `introduced_in_beat`). Auto-pause with a one-line reason when
+always visible; others appear at their `introduced_in_beat`). Slow to 0.5× with a one-line reason when
 a bar goes red, a project completes, or a new node appears. The people panel is **one recursive
 control** used at every tier and in the draft: a row with name, number, ±, an expander, and a pin;
 children spread the parent's allocation by size unless pinned. Phone width works.
@@ -113,7 +113,7 @@ N-1 is complete (in addition to their own requires), so controls arrive in order
 first appearance of any control shows one line of what it is and one of why.
 
 **Done when** a scripted Stage 2 run shows forest, fuel and mine water going red at plausible times
-and never shows more than two new controls in one auto-pause.
+and never shows more than two new controls in one slowdown.
 
 ## G. Stage content (one package each, G1-G6)
 
@@ -162,7 +162,7 @@ category change.
 ## J. Tuning
 
 Iterative, after G1-G6 exist. Targets from `DESIGN.md`: ~90 minutes and the stated years per stage,
-20-25 substantive decisions per stage, no lull over 3 minutes, no auto-pause with more than two new
+20-25 substantive decisions per stage, no lull over 3 minutes, no slowdown with more than two new
 controls. Levers: labor costs, rates, pressure slopes, beat thresholds. Record each pass in
 `docs/playtests/`.
 
@@ -173,8 +173,8 @@ controls. Levers: labor costs, rates, pressure slopes, beat thresholds. Record e
 Tick when done; add 3-5 lines of what shipped and what was left open.
 
 - [x] A engine core
-  - `src/engine` (interface documented in `index.ts`): deterministic day tick, `Clock` (1×/5×/20×,
-    auto-pause on structured `PauseReason`s), typed `StateStore` for every declared variable, jobs
+  - `src/engine` (interface documented in `index.ts`): deterministic day tick, `Clock` (0.5×/1×/2×,
+    never stops; drops to 0.5× on structured `PauseReason`s), typed `StateStore` for every declared variable, jobs
     with tools/wear, rate/yield/toolLife/training modifiers, people/works/departments staffing with
     pins and a record per row, pull works capped at demand + claims + buffer, spoilage, training, save/load.
   - Glue for other packages: the engine implements B's `StateView` and `applyWrites`; `ProjectsSystem`
@@ -216,7 +216,7 @@ Tick when done; add 3-5 lines of what shipped and what was left open.
     collapsing at 900 px; light, dark and 390 px checked in Chromium) draw `src/ui/shellGame.ts`, a
     DOM-free controller over A + B + C + F: header, slide rule with every energy gate, pressure strip,
     stores (stock, rate, demand, claims), people, projects, workshops (`registerWorkshop` hook for E),
-    log, notebook, auto-pause banner with a one-line reason; autosave to localStorage.
+    log, notebook, decision banner with a one-line reason; autosave to localStorage.
   - `src/ui/controls/`: the recursive people control (`PeopleTree`) and pure pin-and-spread
     (`spread.ts`), used at the people, works and departments tiers and by I's draft.
   - Rates, tools, resource names and fuels now live in the YAML (open questions 25, 26); the game
@@ -229,11 +229,11 @@ Tick when done; add 3-5 lines of what shipped and what was left open.
 - [x] F pressures and beats
   - `src/ui/pressures/`: `PressureSystem` moves each bar's `drives` per tick from the day's
     production (new optional pressure `model:`), goes red from `red_when`, applies `red_modifiers`
-    via `setModifier` while a shown bar is red, pauses once on the way in; red bars' `answers` are
+    via `setModifier` while a shown bar is red, slows the clock once on the way in; red bars' `answers` are
     marked on their project cards and under the bar.
-  - Beat gating at reveal (`ProjectsSystem` option `gate`, additive to A): no card or pause until a
+  - Beat gating at reveal (`ProjectsSystem` option `gate`, additive to A): no card or slowdown until a
     node of the previous beat is complete. `IntroSystem` introduces job rows, bars and workshops with
-    one line of what and one of why from content, at most two per auto-pause (the rest wait a tick).
+    one line of what and one of why from content, at most two per slowdown (the rest wait a tick).
   - Stage 1 has models for forest and outcrop (estimates) and tool_wear's `red_when` is an expression.
   - Open: the done-criterion's scripted Stage 2 run needs G2 (Stage 2 bars' `red_when` is prose and
     no Stage 2 job has rates); open questions 41, 42, 45.

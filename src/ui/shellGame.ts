@@ -15,12 +15,14 @@ import {
 } from "../content";
 import {
   Clock,
+  DECISION_SPEED,
   Engine,
   EnergySystem,
   ENERGY_METRIC,
   loadFromStorage,
   ProjectsSystem,
   saveToStorage,
+  type ClockSpeed,
   type EngineContent,
   type PauseReason,
   type SaveGame,
@@ -116,7 +118,7 @@ export interface GameOptions {
   draft?: DraftOutcome;
 }
 
-/** Why the game is paused right now, for the banner. */
+/** What needs the player right now, for the banner. */
 export interface PauseView {
   line: string;
   cards: IntroCard[];
@@ -131,8 +133,14 @@ export class Game {
   readonly pressures: PressureSystem;
   readonly intro: IntroSystem;
   readonly log: LogSystem;
-  /** The reasons of the last auto-pause (or the opening), shown until the player resumes. */
-  lastPause: PauseReason[] = [];
+  /**
+   * What needs the player (the opening, then every red bar, finished project, new node...). The
+   * clock never stops; it drops to 0.5x and these stay on the banner, newer ones added, until the
+   * player moves on (dismissDecision).
+   */
+  decision: PauseReason[] = [];
+  /** The player's own speed before the pending decisions slowed the clock; null when none pend. */
+  decisionFromSpeed: ClockSpeed | null = null;
 
   constructor(
     readonly tree: Tree,
@@ -153,9 +161,7 @@ export class Game {
     this.engine.addSystem(this.intro);
     this.engine.addSystem(this.log);
     this.clock = new Clock(this.engine);
-    this.clock.onPause((e) => {
-      if (!e.byPlayer) this.lastPause = e.reasons;
-    });
+    this.clock.onDecision((e) => this.noteDecision(e.reasons, e.fromSpeed));
 
     if (!opts.save) {
       const draft = opts.draft ?? defaultDraftOutcome(tree);
@@ -163,7 +169,7 @@ export class Game {
       this.engine.state.setIfDeclared("bundles_taken", { ...draft.bundles_taken });
       this.log.add({ day: 0, kind: "opening", subject: String(this.stage) });
       const first = this.intro.collectAndRelease(this.engine);
-      this.lastPause = first.length ? [{ kind: INTRO_PAUSE, subject: first.join(" ") }] : [];
+      if (first.length) this.noteDecision([{ kind: INTRO_PAUSE, subject: first.join(" ") }], this.clock.speed);
     }
   }
 
@@ -187,11 +193,31 @@ export class Game {
 
   // ---- Actions -------------------------------------------------------------------------------------
 
-  /** Simulate one day (tests; the Clock drives real time). Records the pause reasons like the clock. */
+  /** Simulate one day (tests; the Clock drives real time). Slows down and records a decision like the clock. */
   step(): TickReport {
     const r = this.engine.tick();
-    if (r.pauseReasons.length) this.lastPause = [...r.pauseReasons];
+    if (r.pauseReasons.length) this.slowFor(r.pauseReasons);
     return r;
+  }
+
+  /** The player has seen the banner: clear it (the speed stays wherever it is). */
+  dismissDecision(): void {
+    this.decision = [];
+    this.decisionFromSpeed = null;
+  }
+
+  /** Something outside the clock's own ticks needs the player: drop to 0.5x like the clock does. */
+  private slowFor(reasons: readonly PauseReason[]): void {
+    const from = this.clock.speed;
+    this.clock.setSpeed(DECISION_SPEED);
+    this.noteDecision(reasons, from);
+  }
+
+  private noteDecision(reasons: readonly PauseReason[], fromSpeed: ClockSpeed): void {
+    if (!this.decision.length) this.decisionFromSpeed = fromSpeed;
+    const key = (r: PauseReason) => `${r.kind} ${r.subject ?? ""}`;
+    const seen = new Set(this.decision.map(key));
+    this.decision = [...this.decision, ...reasons.filter((r) => !seen.has(key(r)))];
   }
 
   /**
@@ -245,7 +271,7 @@ export class Game {
     this.log.add({ day: this.engine.day, kind: "started", subject: id });
     if (r.pauses?.length) {
       this.log.addPauses(this.engine.day, r.pauses);
-      this.lastPause = [...r.pauses];
+      this.slowFor(r.pauses);
     }
     return true;
   }
@@ -519,7 +545,7 @@ export class Game {
   }
 
   /** One line for the pause banner, and the introduction cards the pause carries. */
-  pauseView(reasons: readonly PauseReason[] = this.lastPause): PauseView {
+  pauseView(reasons: readonly PauseReason[] = this.decision): PauseView {
     const order = [GATE_PAUSE, "node_complete", "pressure_red", "workshop_open", "milestone", "node_revealed"];
     const sorted = [...reasons].filter((r) => r.kind !== INTRO_PAUSE).sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
     const parts = sorted.map((r) => {

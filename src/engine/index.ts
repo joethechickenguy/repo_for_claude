@@ -4,7 +4,8 @@
  * ## Model
  * One tick is one day. `new Engine(content)` starts a run; `engine.tick()` simulates a day and
  * returns a {@link TickReport}. Everything is deterministic: no randomness, no wall clock, content
- * order everywhere. {@link Clock} turns real time into ticks at 1x/5x/20x and stops when a system asks.
+ * order everywhere. {@link Clock} turns real time into ticks at 0.5x/1x/2x and never stops; when a system asks
+ * for the player (`ctx.pause`), it drops to 0.5x and carries on.
  *
  * Each tick, in order:
  * 1. **Staffing** by labor tier (people: the player's counts; works: facilities staffed to their
@@ -59,7 +60,7 @@ export { EnergySystem, ENERGY_METRIC, WORK_KW_METRIC, ELECTRICITY_KW_METRIC } fr
 export { contentFromTree, TRADE_PATTERN } from "./content";
 export type { EngineExtras, TreeContent } from "./content";
 export { Clock, browserScheduler } from "./clock";
-export type { ClockSpeed, PauseEvent, PauseListener, Scheduler } from "./clock";
+export type { ClockSpeed, DecisionEvent, DecisionListener, Scheduler } from "./clock";
 export { StateStore, StateError, initialValue, checkValue } from "./state";
 export { staff, rowKey, worksJobs } from "./labor";
 export type { StaffingInput, StaffingResult } from "./labor";
@@ -76,6 +77,7 @@ export {
   DEFAULT_BINDINGS,
   DAYS_PER_YEAR,
   CLOCK_SPEEDS,
+  DECISION_SPEED,
   BARE_HAND_EFFICIENCY,
   DEFAULT_SPOIL_PER_DAY,
   TRAINING_PERSON_DAYS_PER_PERSON,

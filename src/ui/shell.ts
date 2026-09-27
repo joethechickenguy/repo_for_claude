@@ -1,6 +1,7 @@
 // The shell (package D): the frame every stage uses. Header (stage, date, speed, energy), the
 // slide-rule meter, the pressure strip, stores, the recursive people panel, projects, workshops, the
-// log, the notebook screen, and the auto-pause banner with introduction cards. It draws what
+// log, the notebook screen, and the decision banner with introduction cards (the game never
+// stops; a decision drops it to 0.5x). It draws what
 // ShellGame's views return and sends clicks to its actions; nothing here decides game rules.
 import type { SaveStorage } from "../engine";
 import { CLOCK_SPEEDS, type ClockSpeed } from "../engine";
@@ -55,9 +56,6 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
   const dateEl = el("div", "num");
   const speed = el("div", "speed");
   speed.appendChild(el("span", "muted", esc(S.header.speed)));
-  const pauseBtn = el("button", "", esc(S.header.pause));
-  pauseBtn.type = "button";
-  speed.appendChild(pauseBtn);
   const speedBtns = CLOCK_SPEEDS.map((n) => {
     const b = el("button", "", esc(fill(S.header.speedX, { n })));
     b.type = "button";
@@ -171,15 +169,12 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
       /* storage full or blocked: the run continues unsaved */
     }
   };
-  pauseBtn.onclick = () => {
-    game.clock.pause();
-    save();
-    dirty();
-  };
+  // Choosing a speed is moving on: it clears the decision banner.
   for (const b of speedBtns)
     b.onclick = () => {
       game.clock.setSpeed(Number(b.dataset.speed) as ClockSpeed);
-      game.clock.resume();
+      game.dismissDecision();
+      save();
       dirty();
     };
   nbBtn.onclick = () => {
@@ -201,7 +196,7 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
   };
   newBtn.onclick = () => {
     if (!confirm(S.header.resetConfirm)) return;
-    game.clock.pause();
+    game.clock.stop();
     opts.onNewRun?.();
   };
   trainSel.onchange = () => {
@@ -217,7 +212,10 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
   banner.addEventListener("click", (ev) => {
     const b = (ev.target as HTMLElement).closest("button[data-resume]");
     if (!b) return;
-    game.clock.resume();
+    // Back to the speed the player had before the decision slowed things down.
+    const from = game.decisionFromSpeed;
+    if (from !== null) game.clock.setSpeed(from);
+    game.dismissDecision();
     dirty();
   });
 
@@ -228,8 +226,8 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
     }
     dirty();
   });
-  const offPause = game.clock.onPause((e) => {
-    if (!e.byPlayer) save();
+  const offDecision = game.clock.onDecision(() => {
+    save();
     dirty();
   });
   const onUnload = () => save();
@@ -321,9 +319,7 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
     const hd = game.header();
     setHTML(stageEl, esc(fill(S.header.stage, { n: hd.stage, name: hd.stageName })));
     setHTML(dateEl, esc(fill(S.header.date, { year: hd.year, day: hd.day })));
-    const paused = game.clock.isPaused;
-    pauseBtn.classList.toggle("on", paused);
-    for (const b of speedBtns) b.classList.toggle("on", !paused && Number(b.dataset.speed) === game.clock.speed);
+    for (const b of speedBtns) b.classList.toggle("on", Number(b.dataset.speed) === game.clock.speed);
     setHTML(energy, `${esc(fmtRound(hd.energy))} <small>${esc(S.header.energyUnit)}</small>`);
     const g = game.gate();
     setHTML(
@@ -337,9 +333,9 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
     const m = game.meter();
     cursor.style.left = `${xs(Math.max(m.min, Math.min(m.max, m.value || m.min)))}%`;
 
-    // Banner: the last auto-pause's line and its introduction cards, while paused.
+    // Banner: what needs the player and its introduction cards, until they move on.
     const pv = game.pauseView();
-    if (paused && (pv.line || pv.cards.length)) {
+    if (pv.line || pv.cards.length) {
       const gateReason = pv.reasons.find((r) => r.kind === "gate");
       let h = "";
       if (gateReason) {
@@ -357,7 +353,9 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
           h += `<div class="card-intro"><div class="tag">${esc(S.pause.newHere)}</div><h3>${esc(c.name)}</h3><p>${esc(c.what)}</p><p class="muted">${esc(c.why)}</p></div>`;
         h += `</div>`;
       }
-      h += `<div class="actions"><button type="button" data-resume="1">${esc(S.pause.resume)}</button></div>`;
+      const from = game.decisionFromSpeed;
+      const label = from !== null && from > game.clock.speed ? fill(S.pause.backTo, { n: from }) : S.pause.ok;
+      h += `<div class="actions"><button type="button" data-resume="1">${esc(label)}</button></div>`;
       setHTML(banner, `<div class="banner" role="status">${h}</div>`);
     } else setHTML(banner, "");
 
@@ -457,7 +455,7 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
   return () => {
     game.clock.stop();
     offTick();
-    offPause();
+    offDecision();
     removeEventListener("beforeunload", onUnload);
     tree.destroy();
     root.replaceChildren();
