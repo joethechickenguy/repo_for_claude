@@ -75,7 +75,7 @@ nodes:
     stage: 5
     beat: 1
     kind: project
-    critical_path: true
+    critical_path: false
     problem: "Twelve works and an oxygen plant, and you're still setting furnace targets by hand while the engine program waits."
     requires:
       nodes: [gate_liquid_oxygen]

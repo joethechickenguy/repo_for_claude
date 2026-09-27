@@ -298,7 +298,7 @@ flowchart TD
   stone_molds("Stone molds (S1)")
   tin_bronze("Tin bronze (S1)")
   classDef crit stroke-width:3px
-  class foremen,rotative_engine_shafting,surface_plates,screw_cutting_lathe,measurement,bearings_lubrication,bessemer_converter,mineral_prospecting,glassworks,sulfuric_acid,wire_drawing,electrical_laboratory,dynamo,gate_generator crit
+  class rotative_engine_shafting,surface_plates,screw_cutting_lathe,measurement,bearings_lubrication,bessemer_converter,mineral_prospecting,glassworks,sulfuric_acid,wire_drawing,electrical_laboratory,dynamo,gate_generator crit
 ```
 
 ## Stage 4: Electricity and chemistry
@@ -508,7 +508,7 @@ flowchart TD
   vacuum_and_dewar("High vacuum and insulated flasks (S4)")
   welding("Welding (S4)")
   classDef crit stroke-width:3px
-  class departments,precision_grinding,electronics_lab,instrumentation,gyroscopes,test_stand,first_liquid_rocket,regenerative_cooling,injector_design,pressure_fed_booster_engine,launch_complex,tracking_network,gate_engine crit
+  class precision_grinding,electronics_lab,instrumentation,gyroscopes,test_stand,first_liquid_rocket,regenerative_cooling,injector_design,pressure_fed_booster_engine,launch_complex,tracking_network,gate_engine crit
 ```
 
 ## Stage 6: The rocket

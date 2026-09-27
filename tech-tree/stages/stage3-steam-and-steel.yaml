@@ -104,7 +104,7 @@ nodes:
     stage: 3
     beat: 1
     kind: project
-    critical_path: true
+    critical_path: false
     problem: "Forty jobs, and half your day is moving people between them."
     requires:
       nodes: [gate_steam]
