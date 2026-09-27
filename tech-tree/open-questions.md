@@ -58,8 +58,9 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     `campaigns_run`, `energy_w_per_person`, `bloom_kg`, `iron_kg_total`, `terrain_allows_adit`,
     `engine_static_fire_s`, `engine_thrust_kn`, `dv_total_km_s` and `crewed_landing_survived`, which
     are in neither `state-variables.yaml` nor `resources.yaml` (the validator doesn't check
-    conditions). Reading: they are engine metrics, answered by the engine's `StateView.get`, and
-    listed in `tree.identifiers` as `undeclared`. Declare them, or keep them as metrics?
+    conditions). Reading: they are engine metrics, answered by the engine's `StateView.get` (or its
+    stock, if the engine models one as a resource, as it does `ore_kg`), and listed in
+    `tree.identifiers` as `undeclared`. Declare them, or keep them as metrics?
 19. **`bundles_taken has geological_survey`** (`tin_survey_kestel`) names no topic or category in
     `draft.yaml`, so it is never true and the D_tin route never appears. Probably
     `survey_copper_tin` (the node's own bundle) or the `survey` category.

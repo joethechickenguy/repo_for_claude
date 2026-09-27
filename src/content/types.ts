@@ -26,7 +26,9 @@ export type StateValue =
  * What the node logic needs from the running game. The engine (package A) implements it.
  * `get` answers declared state variables and any metric the engine computes that expressions
  * name without declaring (see `Tree.identifiers`, kind "undeclared", e.g. energy_w_per_person).
- * It returns undefined for names it doesn't know; a condition on an unknown name is false.
+ * It returns undefined for names it doesn't know; an undeclared name it doesn't know is then read
+ * from `stock` (so an engine may model `ore_kg` as a resource), and a condition on any other unknown
+ * name is false.
  */
 export interface StateView {
   get(name: string): StateValue | undefined;

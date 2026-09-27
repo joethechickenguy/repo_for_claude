@@ -6,11 +6,19 @@ import type { StateValue, StateView, Tree } from "./types";
 export type Lookup = (name: string) => StateValue | undefined;
 
 /**
- * Resolve an identifier the way the tree says: resources read stock, everything else reads the
- * state view (declared variables and engine metrics such as energy_w_per_person).
+ * Resolve an identifier the way the tree says: resources read stock; declared variables read the
+ * state view; a name that is neither (tree.identifiers "undeclared", e.g. energy_w_per_person or
+ * ore_kg) reads the state view first (an engine metric) and falls back to stock (an engine-only
+ * resource).
  */
-export function lookupFor(tree: Pick<Tree, "resources">, view: StateView): Lookup {
-  return (name) => (Object.prototype.hasOwnProperty.call(tree.resources, name) ? view.stock(name) : view.get(name));
+export function lookupFor(tree: Pick<Tree, "resources" | "identifiers">, view: StateView): Lookup {
+  const own = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
+  return (name) => {
+    if (own(tree.resources, name)) return view.stock(name);
+    const v = view.get(name);
+    if (v === undefined && own(tree.identifiers, name) && tree.identifiers[name] === "undeclared") return view.stock(name);
+    return v;
+  };
 }
 
 /**

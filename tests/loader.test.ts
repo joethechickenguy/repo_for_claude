@@ -173,7 +173,7 @@ describe("node logic", () => {
   });
 });
 
-describe("headless Stage 1 by scripted choices (stub state; package A's engine not wired yet)", () => {
+describe("headless Stage 1 by scripted choices (stub state; tests/loader-engine.test.ts runs it on the engine)", () => {
   it("reaches the gate via the bellows route and opens Stage 2", () => {
     const w = new StubWorld();
     w.vars.bundles_taken = FULL_PAGES;
