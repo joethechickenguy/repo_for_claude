@@ -1,0 +1,753 @@
+# Stage 3: Steam and steel
+# Rotative engines, machine tools, cheap steel, basic chemistry, first electricity.
+# Target: ~90 min of play, ~13 in-game years.
+
+stage: 3
+name: Steam and steel
+opening_problem: "You have engine power, but every part is still shaped by hand, one at a time, and no two fit."
+gate:
+  id: gate_generator
+  name: Electric power from a generator
+  condition:
+    energy_w_per_person: 1500     # proposed; prototype used 4,000
+    state: ["dynamo_output_kw >= 50"]
+  routes: [A_steam_dynamo, B_water_turbine, T_magneto]
+
+nodes:
+
+  - id: rotative_engine_shafting
+    name: Rotative engines and line shafting
+    stage: 3
+    kind: project
+    critical_path: true
+    problem: "Engines only pump up and down, but lathes, hammers and bellows need to turn."
+    requires:
+      nodes: [gate_steam]
+      resources: {iron_kg: 30000, wood_kg: 20000}
+      labor_person_days: 2500000
+    unlocks:
+      effects: ["One engine drives a whole workshop through belts and overhead shafts; machines can be placed anywhere, not just on rivers"]
+    reads_state: [engine_type]
+    writes_state: [factory_power_kw]
+    pages_bundle: steam_engines
+    without_pages: "2x labor; crank and flywheel geometry learned by trial"
+    fallback: "Water wheels at river sites"
+    energy_effect: "Mechanical work multiplies; this is where watts per person start to climb fast"
+    numbers_status: "Estimate"
+    sources: ["https://en.wikipedia.org/wiki/Line_shaft"]
+    tags: []
+    notebook: >
+      A crank and flywheel turn a piston's back-and-forth into steady rotation. Run that rotation
+      along an overhead iron shaft, and leather belts can take power down to every machine in the
+      room. For about a century, factories were laid out around their shafting, which is why old
+      mill buildings are long and narrow.
+
+  - id: surface_plates
+    name: Three-plate surface plates
+    stage: 3
+    kind: project
+    critical_path: true
+    problem: "Nobody can make or check a truly flat surface, so every machine slide is a little crooked."
+    requires:
+      nodes: [gate_steam]
+      resources: {iron_kg: 2000}
+      labor_person_days: 600000
+    unlocks:
+      effects: ["Reference flat surfaces; required by every precision machine tool node"]
+    reads_state: [machinists_trained]
+    writes_state: [has_flat_reference, machinists_trained]
+    pages_bundle: machine_tools
+    without_pages: "3x labor; players who pair only two plates get matching curves (the game shows it)"
+    fallback: "Polishing against a single master (less accurate)"
+    energy_effect: "None"
+    numbers_status: "Maudslay's scraping and Whitworth's popularizing the three-plate method in the 1830s are sourced"
+    sources:
+      - "https://en.wikipedia.org/wiki/Surface_plate"
+      - "https://en.wikipedia.org/wiki/Joseph_Whitworth"
+    tags: [skill_builder, labor_sink]
+    notebook: >
+      Rub two plates together and grind off the high spots, and they'll fit each other perfectly,
+      but one may be slightly concave and the other convex. Work three plates in rotation, A on
+      B, B on C, C on A, and the only shape all three pairs can share is flat. It's a way to make
+      precision from nothing but patience, and every machine tool descends from it.
+
+  - id: screw_cutting_lathe
+    name: Screw-cutting lathe
+    stage: 3
+    kind: project
+    critical_path: true
+    problem: "Hand-filed screws and bolts are all different, so every nut must be matched to its bolt."
+    requires:
+      nodes: [surface_plates, rotative_engine_shafting]
+      resources: {iron_kg: 6000, copper_kg: 500}
+      labor_person_days: 1500000
+    unlocks:
+      jobs: [turn_parts]
+      effects: ["Accurate lead screws; interchangeable fasteners; lathes can make better lathes"]
+    reads_state: [has_flat_reference, has_steel_edges]
+    writes_state: [has_lathe, machinists_trained]
+    pages_bundle: machine_tools
+    without_pages: "3x labor"
+    fallback: "Bow lathes and hand-chased threads (slow, not interchangeable)"
+    energy_effect: "Mechanical"
+    numbers_status: "Maudslay's c. 1800 screw-cutting lathe with a geared lead screw is sourced"
+    sources:
+      - "https://en.wikipedia.org/wiki/Henry_Maudslay"
+      - "https://collection.sciencemuseumgroup.org.uk/objects/co46284/henry-maudslays-original-screw-cutting-lathe-c-1800"
+    tags: [skill_builder]
+    notebook: >
+      Henry Maudslay's lathe of about 1800 geared the carriage to the spindle through a lead
+      screw, so the cutting tool advanced exactly the same distance every turn. A good screw can
+      then cut a better screw, and each generation of lathe improves the next. This bootstrapping
+      of accuracy is the quiet heart of the industrial revolution.
+
+  - id: measurement_standards
+    name: Gauges and standard measures
+    stage: 3
+    kind: project
+    critical_path: true
+    problem: "Workshops disagree on what an inch is, so parts from one shop don't fit another's."
+    requires:
+      nodes: [screw_cutting_lathe]
+      resources: {iron_kg: 500, copper_kg: 200}
+      labor_person_days: 400000
+    unlocks:
+      effects: ["Go/no-go gauges and micrometers; interchangeable parts; unlocks tolerance-based checks in later nodes"]
+    reads_state: []
+    writes_state: [tolerance_mm]
+    pages_bundle: machine_tools
+    without_pages: "2x labor"
+    fallback: "Fit every part by hand"
+    energy_effect: "None"
+    numbers_status: "Whitworth's measuring machine and standard threads (1840s) are sourced"
+    sources: ["https://en.wikipedia.org/wiki/Joseph_Whitworth"]
+    tags: []
+    notebook: >
+      Making a part accurately is useless if you can't check it. A go/no-go gauge is a pair of
+      reference shapes: the part must pass one and not the other. A micrometer turns a fine screw
+      into a way to read thousandths of an inch. Joseph Whitworth also pushed for a standard
+      screw thread so bolts from any shop would fit.
+
+  - id: planer_milling
+    name: Planers and milling machines
+    stage: 3
+    kind: upgrade
+    critical_path: false
+    problem: "Flat faces on big castings are still chiseled and filed by hand, which takes weeks per engine."
+    requires:
+      nodes: [measurement_standards]
+      resources: {iron_kg: 12000}
+      labor_person_days: 1200000
+    unlocks:
+      effects: ["Machine-shop output x3; engine and machine parts cost 40% less labor"]
+    reads_state: [machinists_trained]
+    writes_state: [machine_shop_capacity]
+    pages_bundle: machine_tools
+    without_pages: "2x labor"
+    fallback: "Hand filing"
+    energy_effect: "Mechanical"
+    numbers_status: "Estimate"
+    sources: ["https://en.wikipedia.org/wiki/Milling_(machining)"]
+    tags: []
+    notebook: >
+      A planer drags the workpiece back and forth under a fixed cutting tool, taking a thin strip
+      off each pass until the face is flat. A milling machine does the opposite: a spinning,
+      many-toothed cutter moves across a clamped part. With these, machines began to be built
+      by machines, and the cost of an engine fell steeply.
+
+  - id: hot_blast
+    name: Hot blast
+    stage: 3
+    kind: upgrade
+    critical_path: false
+    problem: "Blast furnaces burn tons of coal per ton of iron, and the coal pits can't keep up."
+    requires:
+      nodes: [gate_steam, coking]
+      resources: {iron_kg: 8000, clay_kg: 20000}
+      labor_person_days: 800000
+    unlocks:
+      effects: ["Fuel per ton of iron cut by about a third to two thirds; iron output per furnace up"]
+    reads_state: [has_coke]
+    writes_state: [coke_rate]
+    pages_bundle: metallurgy_2
+    without_pages: "1.5x labor"
+    fallback: "Cold blast"
+    energy_effect: "Lowers fuel per ton; watts per person dip briefly as iron output rises (a teaching moment about efficiency vs total use)"
+    numbers_status: "Neilson's 1828 hot blast: 8.06 to 5.16 long tons of coal per ton of iron at 149 C blast is sourced"
+    sources: ["https://en.wikipedia.org/wiki/Hot_blast"]
+    tags: []
+    notebook: >
+      Blowing cold air into a furnace means spending fuel just to heat that air. James Neilson
+      preheated the blast in 1828, and even at 150 C it cut coal per ton of iron by more than a
+      third. Hotter blasts did better still. The same idea, reclaiming heat that would otherwise
+      be thrown away, runs through the regenerators in Stage 3 and the heat exchangers in Stage 4.
+
+  - id: puddling
+    name: Puddling furnace
+    stage: 3
+    kind: project
+    critical_path: false
+    problem: "Finery forges need charcoal and are slow; you need tons of wrought iron from coke pig iron."
+    requires:
+      nodes: [gate_steam, coking]
+      resources: {iron_kg: 6000, clay_kg: 15000}
+      labor_person_days: 900000
+    unlocks:
+      jobs: [puddle_iron]         # skilled, exhausting; ~1 t per furnace per shift (estimate)
+    reads_state: [has_coke]
+    writes_state: [wrought_iron_capacity]
+    pages_bundle: metallurgy_2
+    without_pages: "2x labor"
+    fallback: "Finery forges on charcoal"
+    energy_effect: "Coal counts"
+    numbers_status: "Cort's puddling process (1784) is sourced; rates are estimates"
+    sources: ["https://en.wikipedia.org/wiki/Puddling_(metallurgy)"]
+    tags: [labor_sink]
+    notebook: >
+      In a puddling furnace, flames from a coal fire sweep over a bath of molten pig iron without
+      touching it, so the coal's sulfur stays out. A puddler stirs the bath with an iron rod,
+      exposing it to air so the carbon burns off. As the iron loses carbon its melting point
+      rises, and it thickens into pasty balls to be hammered. It was brutal, skilled work.
+
+  - id: rails_wagonways
+    name: Iron rails
+    stage: 3
+    kind: project
+    critical_path: false
+    problem: "Carting coal and ore on dirt tracks takes more workers than mining it."
+    requires:
+      any_of: [[puddling], [finery_forge]]
+      nodes: [rotative_engine_shafting]
+      resources: {iron_kg: 200000, wood_kg: 150000}
+      labor_person_days: 5000000
+    unlocks:
+      effects: ["Haul labor between mine, furnace and works cut by 80%; repeatable per route"]
+    reads_state: [haul_distance_days]
+    writes_state: [rail_km]
+    pages_bundle: steam_engines
+    without_pages: "No penalty"
+    fallback: "Canals (if river_sites) or carts"
+    energy_effect: "None directly; frees labor"
+    numbers_status: "Estimate. About 30-60 kg of iron per meter of track per rail pair is a rough figure for light early rail (treat as estimate)."
+    sources: ["https://en.wikipedia.org/wiki/Wagonway"]
+    tags: [labor_sink]
+    notebook: >
+      A wheel on a smooth iron rail rolls with a small fraction of the resistance it meets on a
+      dirt road, so one horse on a wagonway could pull what took a dozen on a track. Mines laid
+      wooden and then iron rails long before steam locomotives. Building track is heavy work,
+      but every kilometer keeps paying back in freed labor.
+
+  - id: locomotive
+    name: Locomotives
+    stage: 3
+    kind: upgrade
+    critical_path: false
+    problem: "Wagons on your rails are still pushed by people."
+    requires:
+      nodes: [rails_wagonways]
+      any_of: [[high_pressure_engine], [plate_rolling]]
+      resources: {iron_kg: 15000, copper_kg: 1500}
+      labor_person_days: 1500000
+    unlocks:
+      effects: ["Rail haul labor near zero; unlocks distant resource sites (bauxite, oil in Stage 4)"]
+    reads_state: [engine_type, rail_km]
+    writes_state: [has_locomotive]
+    pages_bundle: steam_engines
+    without_pages: "2x labor"
+    fallback: "Stationary engines hauling by cable on inclines"
+    energy_effect: "Coal counts"
+    numbers_status: "Estimate"
+    sources: ["https://en.wikipedia.org/wiki/Steam_locomotive"]
+    tags: []
+    notebook: >
+      A locomotive is a high-pressure engine carrying its own boiler. Blowing the exhaust steam up
+      the chimney drags air through the fire, so a small boiler burns hard. Traction comes from
+      the weight on the driving wheels, which is why early engineers were surprised that smooth
+      iron wheels could grip smooth iron rails at all.
+
+  - id: glassworks
+    name: Glassworks
+    stage: 3
+    kind: project
+    critical_path: true
+    problem: "Chemists can't see their reactions or hold acids; clay and metal vessels crack, react or hide what's inside."
+    requires:
+      nodes: [gate_steam, mineral_prospecting]
+      resources: {sand_kg: 20000, lime_kg: 5000, clay_kg: 20000}
+      labor_person_days: 700000
+    unlocks:
+      jobs: [make_glass]          # needs soda ash or potash; see soda_ash
+      effects: ["Glassware for chemistry; later gauge glasses, lamp bulbs and vacuum tubes"]
+    reads_state: [has_soda_ash]
+    writes_state: [has_glass, glassblowers_trained]
+    pages_bundle: industrial_chemistry
+    without_pages: "2x labor; cloudy glass until the lime ratio is right"
+    fallback: "Glazed stoneware (opaque)"
+    energy_effect: "Furnace fuel counts"
+    numbers_status: "Soda-lime-silica composition is standard; labor is an estimate"
+    sources: ["https://en.wikipedia.org/wiki/Soda%E2%80%93lime_glass"]
+    tags: [skill_builder]
+    notebook: >
+      Pure silica sand melts above 1,700 C, too hot for any early furnace. Adding soda or potash
+      breaks up the silica network so it melts far lower, and adding lime makes the result stop
+      dissolving in water. Glass is a liquid frozen before it could crystallize, which is why
+      it's transparent. Your future vacuum tubes start here, with glassblowers.
+
+  - id: mineral_prospecting
+    name: Prospecting for minor minerals
+    stage: 3
+    kind: project
+    critical_path: true
+    problem: "Your chemists and electricians keep asking for lead, zinc, sulfur, salt and a dozen other minerals that nobody has looked for."
+    requires:
+      nodes: [gate_steam]
+      resources: {iron_kg: 2000, wood_kg: 20000}
+      labor_person_days: 1500000
+    unlocks:
+      jobs: [mine_mineral]        # one job per mineral site found: salt, sand, lead, zinc, sulfur, manganese, dolomite, graphite, mercury, silver, fluorite, chromite, nickel, tungsten, bauxite, platinum (trace)
+      effects: ["Reveals mineral sites; each later node that needs a mineral lists it as a resource"]
+    reads_state: [bundles_taken, has_locomotive]
+    writes_state: [mineral_sites]
+    pages_bundle: geological_survey
+    without_pages: "3x labor, and scarce minerals (tungsten, platinum, chromite) are found late or not at all; their nodes then use fallbacks"
+    fallback: "Substitutes listed on each node (e.g. carbon filaments instead of tungsten)"
+    energy_effect: "None"
+    numbers_status: "Estimate. Which minerals Anatolia and the Caucasus actually offer is a design question; see open-questions.md."
+    sources: ["https://www.usgs.gov/centers/national-minerals-information-center/turkey"]
+    tags: [labor_sink]
+    notebook: >
+      An industrial economy needs dozens of elements, most in small amounts. Lead lines acid
+      chambers, zinc makes batteries, sulfur makes acid, salt becomes soda and chlorine, graphite
+      makes electrodes. Anatolia is geologically rich because it sits where continental plates
+      collide, which pushes metal-bearing rock up near the surface. The hard part is knowing where
+      to dig.
+
+  - id: portland_cement
+    name: Portland cement
+    stage: 3
+    kind: project
+    critical_path: true
+    problem: "Lime mortar sets slowly, stays weak, and washes out under water, and you need foundations for heavy engines and furnaces."
+    requires:
+      nodes: [lime_burning, coal_mining, rotative_engine_shafting]
+      resources: {iron_kg: 5000, stone_kg: 100000}
+      labor_person_days: 1200000
+    unlocks:
+      jobs: [make_cement]         # rotary or shaft kiln; limestone + clay fired to ~1,450 C
+    reads_state: [has_lime]
+    writes_state: [has_cement]
+    pages_bundle: primitive_technology
+    without_pages: "2x labor; early batches are hydraulic lime rather than true cement"
+    fallback: "Lime mortar and stone masonry (heavier, slower)"
+    energy_effect: "Kiln fuel is a real heat load"
+    numbers_status: "Portland cement clinker firing near 1,450 C (sourced); rates are estimates"
+    sources: ["https://en.wikipedia.org/wiki/Portland_cement"]
+    tags: [labor_sink]
+    notebook: >
+      Fire limestone and clay together hot enough to partly melt, and they form calcium silicates.
+      Ground to powder and mixed with water, those silicates grow interlocking crystals, and unlike
+      lime they don't need air to harden, so concrete sets even underwater. Test stands, engine
+      beds and launch pads are all concrete.
+
+  - id: sulfuric_acid
+    name: Lead-chamber sulfuric acid
+    stage: 3
+    kind: project
+    critical_path: true
+    problem: "Nearly every chemical process you want needs a strong acid, and you have none."
+    requires:
+      nodes: [glassworks, mineral_prospecting]
+      resources: {lead_kg: 8000, sulfur_kg: 2000}
+      labor_person_days: 1000000
+    unlocks:
+      jobs: [make_sulfuric_acid]
+    reads_state: [has_nitrate]
+    writes_state: [has_sulfuric_acid]
+    pages_bundle: industrial_chemistry
+    without_pages: "Unavailable except as small-scale burning of sulfur over water (tiny, weak yield). Hard to rediscover."
+    fallback: "Roast pyrite and condense (small scale)"
+    energy_effect: "Small"
+    numbers_status: "Lead chamber process (Roebuck, 1746) is sourced"
+    sources: ["https://en.wikipedia.org/wiki/Lead_chamber_process"]
+    tags: []
+    notebook: >
+      Burn sulfur or roast pyrite and you get sulfur dioxide. In a lead-lined room with steam and
+      a little nitrogen oxide as a go-between, it picks up more oxygen and water and becomes
+      sulfuric acid. Lead is used because the acid barely attacks it. For two centuries a
+      country's sulfuric acid output was a good measure of its industry.
+
+  - id: soda_ash
+    name: Soda ash
+    stage: 3
+    kind: project
+    critical_path: false
+    problem: "Glass, soap and many reactions need alkali, and burning plants for potash eats forest."
+    requires:
+      nodes: [sulfuric_acid]
+      resources: {salt_kg: 20000, lime_kg: 10000}
+      labor_person_days: 900000
+    unlocks:
+      jobs: [make_soda_ash, make_paper]   # Leblanc first; Solvay once coal_gas gives ammonia. Paper by the soda pulping process
+    reads_state: [has_ammonia_byproduct]
+    writes_state: [has_soda_ash, hcl_pollution]
+    pages_bundle: industrial_chemistry
+    without_pages: "Leblanc only, 2x labor"
+    fallback: "Potash from wood ash (forest cost)"
+    energy_effect: "Leblanc is fuel-hungry"
+    numbers_status: "Leblanc process and Solvay (1861) with ammonia recycling are sourced"
+    sources: ["https://en.wikipedia.org/wiki/Solvay_process", "https://en.wikipedia.org/wiki/Leblanc_process"]
+    tags: [scar]
+    notebook: >
+      The Leblanc process turns salt into soda ash using sulfuric acid, coal and limestone, and
+      belches hydrochloric acid gas that killed fields around 19th-century works. Ernest
+      Solvay's 1861 process makes it from brine and limestone, using ammonia that it recovers
+      and reuses. Choosing Leblanc now and Solvay later leaves a pollution scar but gets glass
+      moving sooner.
+
+  - id: coal_gas_tar
+    name: Coke-oven by-products
+    stage: 3
+    kind: upgrade
+    critical_path: false
+    problem: "Coke ovens pour clouds of tar, gas and ammonia into the air, and your chemists want all three."
+    requires:
+      nodes: [coking, glassworks]
+      resources: {iron_kg: 6000}
+      labor_person_days: 700000
+    unlocks:
+      effects: ["Ammonia liquor, coal tar (benzene, pitch) and town gas as by-products of coking"]
+    reads_state: [has_coke]
+    writes_state: [has_ammonia_byproduct, has_coal_tar]
+    pages_bundle: industrial_chemistry
+    without_pages: "1.5x labor"
+    fallback: "Waste the by-products"
+    energy_effect: "Gas burned for work counts"
+    numbers_status: "Estimate"
+    sources: ["https://en.wikipedia.org/wiki/Coal_tar"]
+    tags: []
+    notebook: >
+      Coal is not just carbon. Heating it drives off a mixture that condenses into ammonia water
+      and black tar, plus a flammable gas. Victorian chemists found dyes, drugs and explosives in
+      the tar. For you, the ammonia is the prize: it feeds the Solvay process and is a small first
+      source of fixed nitrogen.
+
+  - id: bessemer_converter
+    name: Bessemer converter
+    stage: 3
+    kind: project
+    critical_path: true
+    problem: "Puddled iron comes a few hundred kilograms at a time, and real steel is still a luxury."
+    requires:
+      nodes: [blast_furnace_charcoal, measurement_standards]
+      resources: {iron_kg: 30000, clay_kg: 20000}
+      labor_person_days: 2000000
+    unlocks:
+      jobs: [blow_steel]          # tons in 20 minutes
+    reads_state: [iron_ore_phosphorus, iron_sulfur]
+    writes_state: [has_steel, steel_quality]
+    pages_bundle: metallurgy_2
+    without_pages: "3x labor; first blows are over-oxidized and brittle"
+    fallback: "Crucible steel and puddled iron (slow)"
+    energy_effect: "No fuel: the carbon and silicon in the iron burn and heat the charge. Energy comes from the pig iron."
+    numbers_status: "Bessemer process (1856) is sourced"
+    sources: ["https://en.wikipedia.org/wiki/Bessemer_process"]
+    tags: [trap_if_phosphorus]
+    trap_lesson: "With phosphorus-rich ore, Bessemer steel is cold-short and shatters. The acid lining can't remove phosphorus."
+    notebook: >
+      Blow air up through molten pig iron and the carbon and silicon burn so hot that the metal
+      gets hotter, not colder, with no fuel at all. In about twenty minutes, tons of iron become
+      steel. The catch surprised Bessemer's first licensees: it doesn't remove phosphorus, and
+      phosphorus makes steel brittle when cold. It only worked with low-phosphorus ore.
+
+  - id: manganese_additions
+    name: Manganese additions
+    stage: 3
+    kind: upgrade
+    critical_path: false
+    problem: "Your blown steel is full of oxygen and sulfur, and it cracks when rolled hot."
+    requires:
+      nodes: [bessemer_converter, mineral_prospecting]
+      resources: {manganese_ore_kg: 5000}
+      labor_person_days: 500000
+    unlocks:
+      effects: ["Removes hot shortness; steel_quality +1"]
+    reads_state: [iron_sulfur]
+    writes_state: [steel_quality]
+    pages_bundle: metallurgy_2
+    without_pages: "Found only after ~2 years of cracked ingots"
+    fallback: "Use only low-sulfur coke"
+    energy_effect: "None"
+    numbers_status: "Mushet's use of spiegeleisen (manganese-rich iron) in the 1850s is sourced"
+    sources: ["https://en.wikipedia.org/wiki/Robert_Forester_Mushet"]
+    tags: []
+    notebook: >
+      Robert Mushet found that adding a manganese-rich iron after the blow rescued Bessemer steel.
+      Manganese grabs oxygen and sulfur more eagerly than iron does. Manganese sulfide stays solid
+      at forging heat, so instead of a liquid film between grains you get harmless specks.
+
+  - id: basic_lining
+    name: Basic converter lining
+    stage: 3
+    kind: upgrade
+    critical_path: false
+    problem: "Your only good iron ore is high in phosphorus, and steel from it snaps in the cold."
+    requires:
+      nodes: [bessemer_converter, lime_burning, mineral_prospecting]
+      resources: {dolomite_kg: 30000}
+      labor_person_days: 900000
+    unlocks:
+      effects: ["Removes phosphorus; slag becomes phosphate fertilizer (not needed in base rules)"]
+    reads_state: [iron_ore_phosphorus]
+    writes_state: [steel_quality]
+    pages_bundle: metallurgy_2
+    without_pages: "Very hard to find: historically took 22 years after Bessemer. 4x labor."
+    fallback: "Find low-phosphorus ore (survey)"
+    energy_effect: "None"
+    numbers_status: "Thomas and Gilchrist's basic lining (announced 1878) is sourced"
+    sources: ["https://en.wikipedia.org/wiki/Gilchrist%E2%80%93Thomas_process"]
+    tags: []
+    notebook: >
+      Phosphorus burns to an acidic oxide. In a converter lined with acidic silica bricks, it has
+      nowhere to go and falls back into the steel. Sidney Gilchrist Thomas and his cousin Percy
+      Gilchrist lined the converter with basic dolomite and added lime, which captured the
+      phosphorus in the slag. Suddenly the phosphorus-rich ores of Lorraine were worth mining.
+
+  - id: open_hearth
+    name: Open-hearth furnace
+    stage: 3
+    kind: upgrade
+    critical_path: false
+    problem: "Bessemer blows are over in minutes, too fast to test and correct the steel's composition."
+    requires:
+      nodes: [bessemer_converter, hot_blast]
+      resources: {iron_kg: 20000, clay_kg: 40000}
+      labor_person_days: 1500000
+    unlocks:
+      effects: ["Controlled steel chemistry; remelts scrap; steel_quality +1; needed for boiler and pressure-vessel steel grades"]
+    reads_state: []
+    writes_state: [steel_quality, has_open_hearth]
+    pages_bundle: metallurgy_2
+    without_pages: "2x labor"
+    fallback: "Bessemer with careful sampling"
+    energy_effect: "Burns gas or coal for hours; significant heat load"
+    numbers_status: "Siemens regenerative furnace and Martin process (1860s) are sourced"
+    sources: ["https://en.wikipedia.org/wiki/Open-hearth_furnace"]
+    tags: []
+    notebook: >
+      The Siemens regenerative furnace runs its hot exhaust through a chamber of bricks, then
+      reverses the flow so incoming air passes through the heated bricks. Swapping back and forth
+      reaches temperatures high enough to keep steel liquid for hours. That time lets you take
+      samples and adjust, so steel can be made to a specification.
+
+  - id: wire_drawing
+    name: Copper wire drawing
+    stage: 3
+    kind: project
+    critical_path: true
+    problem: "Your chemists have seen sparks and magnets move, but you have no way to make long thin conductors."
+    requires:
+      nodes: [measurement_standards]
+      resources: {copper_kg: 5000, iron_kg: 2000}
+      labor_person_days: 600000
+    unlocks:
+      jobs: [draw_wire]
+    reads_state: []
+    writes_state: [has_copper_wire]
+    pages_bundle: electricity
+    without_pages: "2x labor"
+    fallback: "Hammered and drawn by hand (short lengths)"
+    energy_effect: "Mechanical"
+    numbers_status: "Estimate"
+    sources: ["https://en.wikipedia.org/wiki/Wire_drawing"]
+    tags: []
+    notebook: >
+      Pull copper rod through a hardened die slightly smaller than itself, and it comes out
+      thinner and longer. Repeat through smaller and smaller dies and you get wire. Copper is the
+      second-best conductor of the common metals after silver, and it's the reason your earliest
+      trail to the green stones pays off a second time.
+
+  - id: wire_insulation
+    name: Wire insulation
+    stage: 3
+    kind: upgrade
+    critical_path: true
+    problem: "Bare wires wound into a coil touch each other and short out."
+    requires:
+      nodes: [wire_drawing]
+      resources: {fiber_kg: 2000, wood_kg: 5000}
+      labor_person_days: 300000
+    unlocks:
+      effects: ["Cotton- or silk-wrapped, varnished wire for coils"]
+    reads_state: []
+    writes_state: [has_insulated_wire]
+    pages_bundle: electricity
+    without_pages: "No penalty; obvious once coils short"
+    fallback: "Paper or waxed thread wrapping"
+    energy_effect: "None"
+    numbers_status: "Estimate. Rubber and gutta-percha are not native to Anatolia; see open questions."
+    sources: []
+    tags: []
+    notebook: >
+      Current takes the easiest path. In a coil of bare wire, that path jumps sideways from turn
+      to turn and skips the coil entirely. Early electromagnets were wound with silk-covered wire,
+      and plant-oil varnishes and shellac filled the gaps. Rubber insulation came much later, and
+      it won't be available to you without trade.
+
+  - id: voltaic_cells
+    name: Batteries
+    stage: 3
+    kind: project
+    critical_path: true
+    problem: "Static sparks are useless for work; your electrical engineers need a steady current to test anything."
+    requires:
+      nodes: [sulfuric_acid, wire_drawing]
+      resources: {zinc_kg: 500, copper_kg: 500}
+      labor_person_days: 300000
+    unlocks:
+      effects: ["Steady current for experiments, electromagnets and electroplating"]
+    reads_state: []
+    writes_state: [has_battery]
+    pages_bundle: electricity
+    without_pages: "Rediscovered from the Stage 1 notebook entry on metals, 2x labor"
+    fallback: "None"
+    energy_effect: "Negligible"
+    numbers_status: "Volta's pile (1800) and Daniell cell (1836) are sourced"
+    sources: ["https://en.wikipedia.org/wiki/Voltaic_pile"]
+    tags: []
+    notebook: >
+      Put two different metals in acid and connect them with a wire, and a current flows: zinc
+      gives up electrons more readily than copper, and the acid carries charge between them. A
+      battery turns a chemical reaction directly into electricity. It's far too expensive to run
+      a factory on, but it lets you discover everything else.
+
+  - id: electromagnets
+    name: Electromagnets and the motor effect
+    stage: 3
+    kind: project
+    critical_path: true
+    problem: "Your only magnets are weak lodestones, and you can't tell how much current is flowing."
+    requires:
+      nodes: [voltaic_cells, wire_insulation]
+      resources: {iron_kg: 500, copper_kg: 1000}
+      labor_person_days: 400000
+    unlocks:
+      effects: ["Strong electromagnets; galvanometers to measure current; prerequisite for the dynamo"]
+    reads_state: []
+    writes_state: [has_electromagnet]
+    pages_bundle: electricity
+    without_pages: "2x labor"
+    fallback: "Lodestones (weak)"
+    energy_effect: "None"
+    numbers_status: "Oersted (1820), Sturgeon's electromagnet (1825) and Faraday's induction (1831) are sourced"
+    sources: ["https://en.wikipedia.org/wiki/Electromagnet"]
+    tags: []
+    notebook: >
+      A current in a wire makes a magnetic field around it. Wrap the wire into a coil around soft
+      iron and the fields add up: a few amps can lift hundreds of kilograms. In 1831 Michael
+      Faraday found the reverse. Move a magnet past a coil and a current flows. That symmetry is
+      what makes generators and motors possible.
+
+  - id: water_turbine
+    name: Water turbine
+    stage: 3
+    kind: project
+    critical_path: false
+    route: [B_water_turbine]
+    problem: "Water wheels turn slowly, but a generator wants to spin hundreds of times a minute."
+    requires:
+      nodes: [planer_milling]
+      resources: {iron_kg: 12000}
+      labor_person_days: 1500000
+    unlocks:
+      effects: ["High-speed shaft power at river sites; no fuel"]
+    reads_state: [river_sites]
+    writes_state: [hydro_kw]
+    pages_bundle: steam_engines
+    without_pages: "2x labor"
+    fallback: "Water wheel with step-up gearing (lossy, noisy)"
+    energy_effect: "Hydro counts as mechanical or electrical energy with no fuel burned; weighted like other mechanical energy"
+    numbers_status: "Fourneyron turbine (1827) is sourced"
+    sources: ["https://en.wikipedia.org/wiki/Water_turbine"]
+    tags: [new_energy_source]
+    notebook: >
+      A turbine runs water through curved vanes enclosed in a casing, turning its pressure and
+      speed into rotation far faster than a wheel. Benoit Fourneyron's turbines of the 1820s and
+      1830s beat the best water wheels and spun fast enough to drive machines directly. Eastern
+      Anatolia's rivers, the Tigris and Euphrates headwaters, drop steeply out of the mountains.
+
+  - id: magneto_generator
+    name: Permanent-magnet generator
+    stage: 3
+    kind: decision_option
+    critical_path: false
+    route: [T_magneto]
+    problem: "You want electric current without batteries, using the strongest magnets you have."
+    requires:
+      nodes: [electromagnets, rotative_engine_shafting, bessemer_converter]
+      resources: {steel_kg: 2000, copper_kg: 2000}
+      labor_person_days: 800000
+    unlocks:
+      effects: ["Works, but output is capped by the permanent magnets' strength: a few hundred watts. Can't reach the 50 kW gate."]
+    reads_state: []
+    writes_state: [has_magneto]
+    pages_bundle: electricity
+    without_pages: "Same result"
+    fallback: "Self-excited dynamo"
+    energy_effect: "Tiny"
+    numbers_status: "Early magnetos powered arc lamps and lighthouses at small scale; the cap is a simplification"
+    sources: ["https://en.wikipedia.org/wiki/Dynamo"]
+    tags: [trap]
+    trap_lesson: "Steel magnets of this era are weak and lose strength; a generator whose field comes from its own output (self-excitation) scales, one using permanent magnets doesn't."
+    notebook: >
+      Spin a coil between permanent magnets and you get current. The trouble is that 19th-century
+      steel magnets were weak and faded with vibration and heat, so output stayed small no matter
+      how hard you turned it. Early magneto machines lit lighthouses, one arc lamp at a time.
+
+  - id: dynamo
+    name: Self-excited dynamo
+    stage: 3
+    kind: decision_option
+    critical_path: true
+    route: [A_steam_dynamo, B_water_turbine]
+    problem: "Batteries and magnetos give watts; your works needs tens of kilowatts."
+    requires:
+      nodes: [electromagnets, planer_milling]
+      any_of: [[rotative_engine_shafting], [water_turbine]]
+      resources: {iron_kg: 8000, copper_kg: 4000}
+      labor_person_days: 1500000
+    unlocks:
+      effects: ["50-100 kW per machine; electric arc lighting and electroplating; opens Stage 4"]
+    reads_state: [engine_type, hydro_kw]
+    writes_state: [dynamo_output_kw, electrical_engineers_trained]
+    pages_bundle: electricity
+    without_pages: "3x labor; self-excitation is a non-obvious idea"
+    fallback: "Magneto (capped)"
+    energy_effect: "Electricity weighted x2.5 in watts per person (see energy.md)"
+    numbers_status: "Self-excited dynamos (Siemens, Wheatstone, 1866-67) and the Gramme machine (1871) are sourced"
+    sources: ["https://en.wikipedia.org/wiki/Dynamo"]
+    tags: []
+    notebook: >
+      A self-excited dynamo uses a little of its own output to power its field electromagnets.
+      Leftover magnetism in the iron gives a trickle of current, which strengthens the field,
+      which gives more current, until the machine is running at full power. Werner Siemens and
+      Charles Wheatstone both announced it in 1867. It turned electricity from a laboratory
+      curiosity into an industry.
+
+  - id: gate_generator
+    name: "Gate: electric power"
+    stage: 3
+    kind: gate
+    critical_path: true
+    problem: "A generator delivers sustained power to the works."
+    requires:
+      nodes: [dynamo, bessemer_converter, glassworks]
+      state: ["energy_w_per_person >= 1500", "dynamo_output_kw >= 50"]
+    unlocks:
+      effects: ["Stage 4 opens: electricity and chemistry"]
+    reads_state: [steel_quality, machinists_trained, rail_km, hcl_pollution]
+    writes_state: []
+    notebook: >
+      Electricity is the first energy you can send down a wire and turn into heat, motion, light
+      or chemistry at the other end. It costs more fuel per unit than burning coal directly, and
+      it's worth it. From here on, what you can do depends as much on the form of your energy as
+      its amount.

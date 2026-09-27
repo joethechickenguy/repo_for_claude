@@ -1,0 +1,608 @@
+# Stage 6: The rocket
+# Workshop design, launch infrastructure, guidance, life support, the lander, testing, the landing.
+# Target: ~90 min of play, ~10 in-game years.
+
+stage: 6
+name: The rocket
+opening_problem: "One engine fires on a test stand. You need a vehicle of several stages, a way to steer it, a capsule that keeps someone alive, and a lander that sets down gently on a world with no air."
+gate:
+  id: gate_landing
+  name: A living pilot on the Moon
+  condition:
+    state: ["crewed_landing_survived == true"]
+  score: "In-game year of the successful landing"
+  routes: [A_luna_style_direct, B_parking_orbit, T_single_stage]
+
+nodes:
+
+  - id: rocket_workshop
+    name: Rocket workshop
+    stage: 6
+    kind: project
+    critical_path: true
+    problem: "Engines and tanks exist, but nobody has worked out how big each stage must be to reach the Moon."
+    requires:
+      nodes: [gate_engine]
+      labor_person_days: 300000
+    unlocks:
+      effects:
+        - "Design screen: per stage choose propellant mass, propellants (as chemistry allows), tank material, feed system; computes Δv with the rocket equation"
+        - "Mission budget 15.3 km/s: ~9.4 to low orbit incl. losses, ~3.1 toward the Moon, ~2.8 to brake and land"
+    reads_state: [feed_system, has_duralumin, has_kerosene, has_ethanol, has_hypergolics, has_solids, calc_hours]
+    writes_state: [vehicle_design]
+    pages_bundle: orbital_mechanics
+    without_pages: "The budget must be computed by the computing office (needs calc_hours) before the Δv bar shows targets"
+    fallback: "None"
+    energy_effect: "None"
+    numbers_status: "Rocket equation is exact. Structural fractions and Isp values in the mockup are play simplifications (steel 0.14, aluminum 0.09, pressure-fed +0.08; ethanol/LOX 280 s, kerosene/LOX 310 s, hydrogen/LOX 440 s, pressure-fed -25 s)."
+    sources: ["https://en.wikipedia.org/wiki/Tsiolkovsky_rocket_equation", "https://en.wikipedia.org/wiki/Multistage_rocket"]
+    tags: [core_screen]
+    notebook: >
+      The rocket equation says Δv = v_e ln(m_full/m_empty). Because of the logarithm, doubling the
+      propellant never doubles the speed. Staging is the escape: once a tank is empty, drop it and
+      its engines so the rest of the burn doesn't carry dead weight. Every lunar rocket ever
+      flown has had at least three stages including the lander.
+
+  - id: single_stage_attempt
+    name: Single-stage vehicle
+    stage: 6
+    kind: decision_option
+    critical_path: false
+    route: [T_single_stage]
+    problem: "Separating stages mid-flight sounds like the riskiest thing you could add, so why not one big stage?"
+    requires:
+      nodes: [rocket_workshop]
+    unlocks:
+      effects: ["Workshop shows the result: with a steel structure (0.14) and ~300 s, a single stage tops out below orbital speed even with no payload"]
+    reads_state: [vehicle_design]
+    writes_state: []
+    pages_bundle: none
+    without_pages: "Same"
+    fallback: "Multistage"
+    energy_effect: "None"
+    numbers_status: "Arithmetic from the workshop's own model: max Δv ≈ 300 × 9.81 × ln(1/0.14) ≈ 5.8 km/s with zero payload"
+    sources: ["https://en.wikipedia.org/wiki/Single-stage-to-orbit"]
+    tags: [trap, hard_wall_explained]
+    trap_lesson: "If the empty stage is 14% of its fueled mass, the best possible mass ratio is about 7, and ln(7) × 2.9 km/s ≈ 5.7 km/s. The Moon needs 15.3."
+    notebook: >
+      The best mass ratio a stage can have is set by how light its tanks and engines are relative to
+      the propellant. With early steel tanks, even an empty-payload single stage can't reach orbit.
+      Staging lets each stage start with a fresh, favorable ratio. Single-stage-to-orbit is still
+      out of reach for chemical rockets today.
+
+  - id: stage_separation
+    name: Stage separation
+    stage: 6
+    kind: project
+    critical_path: true
+    problem: "A spent stage must let go cleanly, in thin air, at high speed, without hitting the stage above it."
+    requires:
+      nodes: [rocket_workshop]
+      any_of: [[solid_motors], [niter_beds]]
+      resources: {steel_kg: 2500}
+      labor_person_days: 800000
+    unlocks:
+      effects: ["Explosive bolts and small retro or ullage motors; multistage vehicles can fly"]
+    reads_state: [has_solids]
+    writes_state: [has_staging]
+    pages_bundle: liquid_rocket_engines
+    without_pages: "2x labor; a separation flaw is added to the first design"
+    fallback: "Springs and black-powder bolts (adds separation_recontact risk)"
+    energy_effect: "None"
+    numbers_status: "Estimate"
+    sources: ["https://en.wikipedia.org/wiki/Multistage_rocket"]
+    tags: []
+    notebook: >
+      When one stage burns out, bolts with small explosive charges cut it loose, and small rockets
+      either push the spent stage back or give the next stage a nudge forward. That nudge also
+      settles the liquid in the upper stage's tanks toward the pumps, because in free fall the
+      propellant floats. Some designs light the next engine while still attached, called hot
+      staging.
+
+  - id: launch_complex
+    name: Launch complex
+    stage: 6
+    kind: project
+    critical_path: true
+    problem: "A fueled rocket weighs hundreds of tons, needs tons of liquid oxygen loaded in its last hours, and will destroy an ordinary site when it lights."
+    requires:
+      nodes: [rocket_workshop, air_separation]
+      resources: {steel_kg: 400000, cement_kg: 3000000}
+      labor_person_days: 12000000
+    unlocks:
+      effects: ["Pad, flame trench, LOX storage and loading lines, assembly building, blockhouse"]
+    reads_state: [rail_km, lox_kg_per_day]
+    writes_state: [has_launch_pad]
+    pages_bundle: none
+    without_pages: "No penalty"
+    fallback: "None"
+    energy_effect: "None directly"
+    numbers_status: "Estimate. Real pads used thousands of tons of steel and concrete; scale here is a guess tuned for a small colony."
+    sources: []
+    tags: [labor_sink]
+    notebook: >
+      Liquid oxygen boils at -183 C, so a rocket is loaded in its final hours and topped up until
+      liftoff while vapor pours off the tanks. The engines' exhaust at ignition would dig a crater,
+      so it's turned sideways down a concrete trench. Launch complexes are some of the largest
+      single structures any space program builds.
+
+  - id: lox_plant_scaleup
+    name: Oxygen plant expansion
+    stage: 6
+    kind: project
+    critical_path: true
+    problem: "One launch needs hundreds of tons of liquid oxygen, and every static fire burns tens more."
+    requires:
+      nodes: [air_separation, launch_complex]
+      resources: {steel_kg: 60000, copper_kg: 20000}
+      labor_person_days: 3000000
+    unlocks:
+      effects: ["lox_kg_per_day x10 per build (repeatable)"]
+    reads_state: [cryo_process, grid_kw]
+    writes_state: [lox_kg_per_day]
+    pages_bundle: cryogenics
+    without_pages: "No penalty"
+    fallback: "Wait longer between tests"
+    energy_effect: "Electric load, but smaller than many players expect: see energy.md"
+    numbers_status: "Estimate"
+    sources: []
+    tags: [labor_sink]
+    notebook: >
+      A kerosene rocket burns more than two kilograms of oxygen for every kilogram of fuel. The
+      oxygen itself is free, but separating it takes electricity to compress and cool air. A lunar
+      rocket plus a test campaign can easily consume thousands of tons, which is why launch sites
+      grew their own oxygen plants.
+
+  - id: radio_command_guidance
+    name: Radio command guidance
+    stage: 6
+    kind: decision_option
+    critical_path: false
+    route: [A_luna_style_direct, B_parking_orbit]
+    problem: "Your gyroscopes drift; ground radar can see the rocket's speed far more precisely than anything onboard."
+    requires:
+      nodes: [radio, tracking_network]
+      resources: {copper_kg: 3000, steel_kg: 5000}
+      labor_person_days: 1500000
+    unlocks:
+      effects: ["Precise engine cutoff commanded from the ground; adds hidden flaw cutoff_signal_delay until tested on an impactor flight"]
+    reads_state: [has_radio]
+    writes_state: [guidance_mode]
+    pages_bundle: guidance
+    without_pages: "2x labor"
+    fallback: "Inertial guidance"
+    energy_effect: "None"
+    numbers_status: "Luna 1's delayed ground cutoff added ~175 m/s and missed the Moon by ~5,900 km (sourced)"
+    sources: ["https://en.wikipedia.org/wiki/Luna_1"]
+    tags: []
+    notebook: >
+      Tracking a rocket from the ground by radio Doppler shift gives its speed very precisely, and
+      the ground can radio the shutdown command at the right moment. In January 1959 the Soviet
+      Luna 1 got that command late. The extra 175 meters per second meant it missed the Moon by
+      nearly 6,000 km and became the first spacecraft to orbit the Sun.
+
+  - id: inertial_guidance
+    name: Inertial guidance platform
+    stage: 6
+    kind: decision_option
+    critical_path: false
+    route: [A_luna_style_direct, B_parking_orbit]
+    problem: "Beyond the horizon, ground radio can't see the rocket, and the lunar burn happens far from home."
+    requires:
+      nodes: [gyroscopes, precision_grinding, vacuum_tubes]
+      resources: {alloy_steel_kg: 500, copper_kg: 500}
+      labor_person_days: 3000000
+    unlocks:
+      effects: ["Onboard velocity measurement; needed for a parking-orbit route; adds hidden flaw gyro_drift until tested"]
+    reads_state: [has_gyros, tolerance_mm, calc_hours]
+    writes_state: [guidance_mode, guidance_quality]
+    pages_bundle: guidance
+    without_pages: "4x labor"
+    fallback: "Radio command (direct-ascent route only)"
+    energy_effect: "None"
+    numbers_status: "Estimate"
+    sources: ["https://en.wikipedia.org/wiki/Inertial_navigation_system"]
+    tags: [skill_builder]
+    notebook: >
+      Hold three accelerometers steady on a gyroscope-stabilized platform, add up their readings
+      over time, and you know your velocity without looking outside. Every tiny error in the
+      gyroscopes adds up too, which is why guidance engineers obsessed over bearings and balance.
+      Your precision grinding work in Stage 5 decides how well this works.
+
+  - id: tracking_network
+    name: Tracking stations
+    stage: 6
+    kind: project
+    critical_path: true
+    problem: "After the engines stop, nobody knows exactly where the spacecraft is or whether it's on course."
+    requires:
+      nodes: [radio, rocket_workshop]
+      resources: {steel_kg: 30000, copper_kg: 5000}
+      labor_person_days: 2500000
+    unlocks:
+      effects: ["Large dish antennas; trajectory determination; required for midcourse correction and for knowing the pilot survived"]
+    reads_state: [has_radio, calc_hours]
+    writes_state: [has_tracking]
+    pages_bundle: orbital_mechanics
+    without_pages: "Needs 2x calc_hours to reduce tracking data"
+    fallback: "None for a lunar mission"
+    energy_effect: "Small"
+    numbers_status: "Estimate. A single site sees the Moon for only part of each day; see open questions."
+    sources: []
+    tags: [labor_sink]
+    notebook: >
+      A radio dish measures the direction to a spacecraft, and the Doppler shift of its signal
+      measures how fast it's moving toward or away from you. Repeat that for hours and a room of
+      computers can fit an orbit to the data. Without it, a lunar mission flies blind after the
+      last engine burn.
+
+  - id: uncrewed_orbital_flight
+    name: Uncrewed orbital flight
+    stage: 6
+    kind: project
+    critical_path: false
+    route: [B_parking_orbit]
+    problem: "You've never put anything in orbit, and a crewed flight can't be the first try."
+    requires:
+      nodes: [stage_separation, launch_complex, tracking_network]
+      any_of: [[radio_command_guidance], [inertial_guidance]]
+      resources: {lox_kg: 300000, steel_kg: 40000}
+      labor_person_days: 2000000
+    unlocks:
+      effects: ["Reveals up to two hidden booster flaws; proves staging and guidance; repeatable"]
+    reads_state: [vehicle_design, guidance_mode]
+    writes_state: [orbital_flights]
+    pages_bundle: orbital_mechanics
+    without_pages: "No penalty"
+    fallback: "None"
+    energy_effect: "None"
+    numbers_status: "Estimate"
+    sources: []
+    tags: [repeatable, test]
+    notebook: >
+      An orbit is falling around the Earth fast enough that the ground curves away as quickly as
+      you drop toward it, about 7.8 km/s near the surface. Getting there costs more, around 9.4
+      km/s in total, because the rocket also fights gravity while climbing and pushes through air.
+      Sputnik weighed 84 kg; a first orbital test doesn't need to carry much.
+
+  - id: lunar_impactor
+    name: Lunar impactor probe
+    stage: 6
+    kind: project
+    critical_path: false
+    route: [A_luna_style_direct]
+    problem: "You don't know whether your guidance can hit the Moon at all."
+    requires:
+      nodes: [stage_separation, launch_complex, tracking_network]
+      any_of: [[radio_command_guidance], [inertial_guidance]]
+      resources: {lox_kg: 300000, steel_kg: 30000}
+      labor_person_days: 2000000
+    unlocks:
+      effects: ["Reveals guidance flaws (cutoff_signal_delay, gyro_drift); proves the trans-lunar trajectory"]
+    reads_state: [guidance_mode]
+    writes_state: [lunar_probes]
+    pages_bundle: orbital_mechanics
+    without_pages: "Trajectory tables must be computed first (calc_hours)"
+    fallback: "Skip it and risk the crewed flight"
+    energy_effect: "None"
+    numbers_status: "Luna 2 impacted the Moon in September 1959 (sourced)"
+    sources: ["https://en.wikipedia.org/wiki/Luna_2"]
+    tags: [repeatable, test]
+    notebook: >
+      The Moon moves about 1 km/s across the sky, so you aim not at where it is but where it will be
+      three days after launch. Luna 2 became the first human-made object to reach another world when
+      it struck the Moon in September 1959, eight months after Luna 1 missed. Hitting is much easier
+      than landing, which makes it a cheap test of everything but the last few minutes.
+
+  - id: midcourse_correction
+    name: Midcourse correction
+    stage: 6
+    kind: upgrade
+    critical_path: false
+    problem: "Even a small error at engine cutoff grows into thousands of kilometers by the time you reach the Moon."
+    requires:
+      nodes: [tracking_network, hypergolic_propellants]
+      resources: {steel_kg: 200}
+      labor_person_days: 600000
+    unlocks:
+      effects: ["A small burn halfway corrects the aim; guidance flaws become survivable with enough Δv margin"]
+    reads_state: [has_tracking, has_hypergolics]
+    writes_state: [has_midcourse]
+    pages_bundle: orbital_mechanics
+    without_pages: "Needs calc_hours"
+    fallback: "Rely on perfect cutoff"
+    energy_effect: "None"
+    numbers_status: "Luna 9 used a midcourse correction en route (sourced)"
+    sources: ["https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1966-006A"]
+    tags: []
+    notebook: >
+      An error of one meter per second at cutoff shifts where you arrive at the Moon by hundreds of
+      kilometers or more. Measuring the actual path by tracking and then firing a small engine for a
+      few seconds fixes it cheaply. It costs a little Δv, which is why the lander needs margin.
+
+  - id: capsule
+    name: Pressure capsule
+    stage: 6
+    kind: project
+    critical_path: true
+    problem: "Above about 18 km, the fluids in a person's body boil at body temperature; the pilot needs a sealed vessel of air."
+    requires:
+      nodes: [rocket_workshop, welding]
+      any_of: [[duralumin], [open_hearth]]
+      resources: {steel_kg: 800, glass_kg: 50}
+      labor_person_days: 1500000
+    unlocks:
+      effects: ["1.6 t one-pilot capsule (with life support); the workshop's payload"]
+    reads_state: [has_duralumin, has_weld_xray]
+    writes_state: [capsule_mass_t]
+    pages_bundle: life_support
+    without_pages: "2x labor; leaks found in testing"
+    fallback: "Heavier steel capsule (payload mass up)"
+    energy_effect: "None"
+    numbers_status: "Armstrong limit of about 18 km (6.3 kPa) is sourced; capsule mass is the mockup's 1.6 t"
+    sources: ["https://en.wikipedia.org/wiki/Armstrong_limit"]
+    tags: []
+    notebook: >
+      At about 18 km altitude, the air pressure falls so low that water boils at 37 C, which means the
+      liquids in an unprotected body start to boil. A capsule is a small pressure vessel that holds
+      breathable air in. Because this is a one-way trip with no return through the atmosphere, it
+      needs no heat shield, which saves a lot of mass.
+
+  - id: life_support
+    name: Oxygen and CO2 scrubbing
+    stage: 6
+    kind: project
+    critical_path: true
+    problem: "A sealed capsule fills with the pilot's exhaled carbon dioxide within hours."
+    requires:
+      nodes: [capsule, chlor_alkali]
+      resources: {steel_kg: 100, caustic_kg: 200}
+      labor_person_days: 800000
+    unlocks:
+      effects: ["Four days of oxygen and chemical CO2 absorbers; temperature control"]
+    reads_state: [has_caustic, has_lox]
+    writes_state: [life_support_days]
+    pages_bundle: life_support
+    without_pages: "3x labor"
+    fallback: "Larger oxygen supply and soda lime (heavier)"
+    energy_effect: "None"
+    numbers_status: "Lithium hydroxide and soda lime CO2 absorbers are standard; masses are estimates"
+    sources: ["https://en.wikipedia.org/wiki/Carbon_dioxide_scrubber"]
+    tags: []
+    notebook: >
+      A resting person uses roughly 0.8 kg of oxygen and exhales about 1 kg of carbon dioxide a day.
+      Oxygen is easy to carry. Carbon dioxide has to be removed chemically: air is blown through a
+      canister of a strong base like lithium or sodium hydroxide, which binds the CO2 as carbonate.
+      Headaches start at a few percent CO2; above about 10% it kills.
+
+  - id: pressure_suit
+    name: Pressure suit
+    stage: 6
+    kind: upgrade
+    critical_path: false
+    problem: "If the capsule leaks on landing, the pilot dies in seconds."
+    requires:
+      nodes: [capsule]
+      resources: {rubber_substitute_kg: 30, fiber_kg: 20}
+      labor_person_days: 500000
+    unlocks:
+      effects: ["Pilot survives capsule depressurization; removes the capsule_leak flaw from being fatal"]
+    reads_state: []
+    writes_state: [has_pressure_suit]
+    pages_bundle: life_support
+    without_pages: "2x labor"
+    fallback: "No suit (a capsule leak is fatal)"
+    energy_effect: "None"
+    numbers_status: "Estimate. Elastomer supply is uncertain in base rules; see open questions."
+    sources: ["https://en.wikipedia.org/wiki/Space_suit"]
+    tags: [safety]
+    notebook: >
+      A pressure suit is a wearable capsule: an airtight inner bladder holding pressure against the
+      body, and a strong outer layer stopping it from ballooning. High-altitude pilots wore them in
+      the 1930s. Every early crewed spacecraft flew with its pilot suited because a leak can't be
+      patched fast enough otherwise.
+
+  - id: launch_escape
+    name: Launch escape system
+    stage: 6
+    kind: upgrade
+    critical_path: false
+    problem: "If the booster fails on the pad or climbing out, the pilot dies with it."
+    requires:
+      nodes: [capsule, solid_motors]
+      resources: {steel_kg: 600}
+      labor_person_days: 700000
+    unlocks:
+      effects: ["Booster failures before staging become survivable (the run costs a vehicle and time, not a pilot)"]
+    reads_state: [has_solids]
+    writes_state: [has_escape_system]
+    pages_bundle: life_support
+    without_pages: "2x labor"
+    fallback: "No escape: booster failure kills the pilot (the run continues with a new pilot and a time penalty)"
+    energy_effect: "None"
+    numbers_status: "Mercury, Apollo and Soyuz escape towers are documented"
+    sources: ["https://en.wikipedia.org/wiki/Launch_escape_system"]
+    tags: [safety]
+    notebook: >
+      A launch escape tower is a small, powerful solid rocket on top of the capsule. If the booster
+      fails, it fires and yanks the capsule clear in a few seconds, and parachutes bring it down.
+      It adds mass that's thrown away on every successful flight. That trade, mass for survival, is
+      the whole story of crewed spaceflight.
+
+  - id: lander_stage
+    name: Lander stage
+    stage: 6
+    kind: project
+    critical_path: true
+    problem: "The Moon has no air to slow you down, so every meter per second of arrival speed must be cancelled by an engine."
+    requires:
+      nodes: [rocket_workshop]
+      any_of: [[hypergolic_propellants], [regenerative_cooling]]
+      resources: {steel_kg: 3000}
+      labor_person_days: 2000000
+    unlocks:
+      effects: ["Braking stage with ~2.8 km/s Δv; the workshop's final stage. Pressure-fed is appropriate here"]
+    reads_state: [has_hypergolics, has_duralumin]
+    writes_state: [lander_propellant, lander_design]
+    pages_bundle: liquid_rocket_engines
+    without_pages: "2x labor"
+    fallback: "LOX/alcohol lander (boil-off during a 3-day coast; restart flaw more likely)"
+    energy_effect: "None"
+    numbers_status: "Luna 9 braked from ~2.6 km/s in a 46 s burn, triggered by radar altimeter at 75 km (sourced)"
+    sources: ["https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1966-006A", "https://www.drewexmachina.com/2016/02/03/luna-9-the-first-lunar-landing/"]
+    tags: []
+    notebook: >
+      A spacecraft falling toward the Moon arrives at about 2.5 km/s, and nothing but its own engine
+      can slow it. The Soviet Luna 9 lander flew straight in, fired its braking engine for 46 seconds
+      starting at 75 km altitude, and slowed from about 2.6 km/s to a few meters per second. Your
+      lander has to do the same with a person inside.
+
+  - id: lander_throttle
+    name: Throttleable descent engine
+    stage: 6
+    kind: upgrade
+    critical_path: false
+    problem: "An engine that only runs at full thrust will overshoot to zero speed high above the ground or slam into it."
+    requires:
+      nodes: [lander_stage]
+      resources: {alloy_steel_kg: 200}
+      labor_person_days: 900000
+    unlocks:
+      effects: ["Pilot can hover and choose a spot; removes landing_boulder_field flaw; reduces landing Δv margin needed"]
+    reads_state: [injector_quality]
+    writes_state: [lander_throttle]
+    pages_bundle: liquid_rocket_engines
+    without_pages: "3x labor"
+    fallback: "Fixed-thrust main engine plus small vernier engines (Luna-style)"
+    energy_effect: "None"
+    numbers_status: "Apollo LM descent engine: pressure-fed, hypergolic, throttleable ~10-65% (sourced)"
+    sources: ["https://en.wikipedia.org/wiki/Descent_propulsion_system"]
+    tags: []
+    notebook: >
+      Throttling a rocket engine is harder than it sounds: at low flow the injector sprays poorly and
+      combustion can become unstable. The Apollo lunar module's descent engine could throttle over
+      a wide range, and it was pressure-fed. A human pilot with a throttle can pick a flat spot, which
+      Neil Armstrong had to do with seconds of fuel to spare.
+
+  - id: radar_altimeter
+    name: Radar altimeter
+    stage: 6
+    kind: project
+    critical_path: true
+    problem: "The pilot can't judge height over a gray, featureless surface with no haze to give depth."
+    requires:
+      nodes: [radio, vacuum_tubes]
+      resources: {copper_kg: 100, steel_kg: 50}
+      labor_person_days: 800000
+    unlocks:
+      effects: ["Triggers the braking burn at the right altitude and gives the pilot height and descent rate"]
+    reads_state: [has_tubes]
+    writes_state: [has_radar_altimeter]
+    pages_bundle: vacuum_tubes_radio
+    without_pages: "3x labor"
+    fallback: "Timed burn from tracking data (large landing risk)"
+    energy_effect: "None"
+    numbers_status: "Luna 9's radar altimeter triggered the retro-rocket at 75 km (sourced)"
+    sources: ["https://en.wikipedia.org/wiki/Luna_9"]
+    tags: []
+    notebook: >
+      A radar altimeter sends a radio pulse down and times the echo; at the speed of light, each
+      microsecond of delay is 150 meters of height. On the Moon there's no air to blur distant
+      features, so human eyes misjudge distance badly. Luna 9's altimeter triggered its braking
+      engine automatically.
+
+  - id: landing_gear
+    name: Landing legs and shock absorbers
+    stage: 6
+    kind: upgrade
+    critical_path: false
+    problem: "Touching down at a few meters per second on a slope could tip the lander over."
+    requires:
+      nodes: [lander_stage]
+      resources: {steel_kg: 200}
+      labor_person_days: 400000
+    unlocks:
+      effects: ["Crushable honeycomb or oil-damped legs; tolerates 3 m/s and 12 degree slopes"]
+    reads_state: []
+    writes_state: [landing_tolerance]
+    pages_bundle: none
+    without_pages: "No penalty"
+    fallback: "Airbag or crushable nose (Luna 9 used airbags for its tiny capsule; unsuitable for a pilot)"
+    energy_effect: "None"
+    numbers_status: "Estimate"
+    sources: []
+    tags: []
+    notebook: >
+      A lander's legs have to absorb its landing speed over a short distance without bouncing. The
+      Apollo lunar module used aluminum honeycomb inside the legs that crushed on impact and never
+      sprang back. Wide-set legs keep the center of mass inside the footprint even on a slope.
+
+  - id: uncrewed_lunar_landing
+    name: Uncrewed lunar landing
+    stage: 6
+    kind: project
+    critical_path: false
+    problem: "Nobody knows if your lander survives the last hundred meters; losing a test lander costs months, losing a pilot is worse."
+    requires:
+      nodes: [lander_stage, radar_altimeter, tracking_network, launch_complex]
+      resources: {lox_kg: 300000, steel_kg: 5000}
+      labor_person_days: 2000000
+    unlocks:
+      effects: ["Reveals lander flaws (engine_restart_failure, landing_boulder_field, radar_lockon_failure); proves the surface can hold a lander"]
+    reads_state: [lander_design]
+    writes_state: [lunar_landers_flown]
+    pages_bundle: none
+    without_pages: "No penalty"
+    fallback: "Skip it and risk the pilot"
+    energy_effect: "None"
+    numbers_status: "Several Soviet landing attempts failed before Luna 9 (sourced in the Luna 9 article's program history)"
+    sources: ["https://en.wikipedia.org/wiki/Luna_9"]
+    tags: [repeatable, test]
+    notebook: >
+      Before Luna 9 succeeded in 1966, several Soviet landers crashed or missed. Before it landed,
+      some scientists worried the Moon might be covered in deep dust that would swallow a spacecraft.
+      Only landing answered that question. An uncrewed landing is the most expensive test in the game
+      and the most informative.
+
+  - id: test_campaign
+    name: Test campaign
+    stage: 6
+    kind: hub
+    critical_path: true
+    problem: "Every design hides flaws you can't see on paper."
+    requires:
+      nodes: [rocket_workshop, test_stand]
+    unlocks:
+      effects: ["Static fires (months each) and test flights reveal hidden flaws; fixing takes longer. See failure-modes.md"]
+    reads_state: [instrumentation_level, has_weld_xray, has_wind_tunnel, flight_tests]
+    writes_state: [known_flaws, fixed_flaws]
+    pages_bundle: liquid_rocket_engines
+    without_pages: "Flaws are revealed at a lower rate"
+    fallback: "Launch anyway"
+    energy_effect: "Propellant burned counts"
+    numbers_status: "Game system"
+    sources: []
+    tags: [core_screen]
+    notebook: >
+      Testing never proves a rocket works. It can only reveal ways it doesn't. The skill is deciding
+      when you've found enough: every month of testing costs time on the score, and every flaw you
+      didn't find risks the pilot. Real programs faced exactly this trade.
+
+  - id: gate_landing
+    name: "Gate: a living pilot on the Moon"
+    stage: 6
+    kind: gate
+    critical_path: true
+    problem: "One person, one way, alive on the lunar surface."
+    requires:
+      nodes: [capsule, life_support, lander_stage, radar_altimeter, launch_complex, lox_plant_scaleup, tracking_network, stage_separation, thrust_vector_control, test_campaign]
+      any_of: [[radio_command_guidance], [inertial_guidance]]
+      state: ["vehicle_dv_km_s >= 15.3", "crewed_landing_survived == true"]
+    unlocks:
+      effects: ["Run ends. Score: the in-game year of the landing"]
+    reads_state: [known_flaws, fixed_flaws, has_pressure_suit, has_escape_system, has_midcourse, lander_throttle]
+    writes_state: []
+    notebook: >
+      The launch threshold is not a number on the slide rule but a checklist: cryogenics, precision
+      turbomachinery, guidance, life support. Energy got you to the pad. The checklist decided
+      whether the rocket worked.

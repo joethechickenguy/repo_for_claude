@@ -1,0 +1,174 @@
+# State variables the tech tree reads and writes.
+# The validator (tools/validate_tree.py) fails if a node uses a variable not listed here.
+# generated/state-index.md lists which nodes read and write each one.
+#
+# Types:
+#   flag    boolean
+#   number  numeric, unit in the name where it has one
+#   enum    one of the listed values
+#   set     a set of ids
+#   count   non-negative integer
+#
+# `has_*` flags are set true when the node that writes them completes. Engines can derive them
+# from completed nodes instead of storing them; they're listed so decisions can be written against
+# capabilities ("has_lox") rather than specific routes ("linde_liquefier OR claude_expander").
+
+variables:
+
+  # ---- Draft (Stage 0) -------------------------------------------------------
+  bundles_taken: {type: set, description: "Page bundles carried from the draft. Nodes check this to apply discounts and to decide whether a discovery is even possible (e.g. the tin expedition)."}
+  draft_roster: {type: set, description: "Map of skill pool -> number of drafted specialists (miners, smiths, machinists, chemists, electrical engineers, rocket engineers, teachers, builders, primitive-skills experts)."}
+
+  # ---- Environment and land ---------------------------------------------------
+  forest_cover: {type: number, unit: percent, description: "Share of forest within two days' walk. Charcoal and construction lower it; coppicing sets a regrowth floor. Drives the push to coal."}
+  coppice_area: {type: number, unit: ha, description: "Managed coppice. Sets a sustainable charcoal ceiling (roughly 1 t charcoal per 3-5 ha per year, estimate)."}
+  river_sites: {type: count, description: "Usable water-power sites discovered. Caps water wheels and hydro."}
+  haul_distance_days: {type: number, unit: days, description: "Walking days between main mine and works. Roads and rails reduce haul labor."}
+  mine_depth_m: {type: number, unit: m, description: "Depth of the main workings. Rises with cumulative ore/coal extracted. Past ~15 m the mine floods; past ~10 m of lift, suction pumps fail."}
+  cropland_ha: {type: number, unit: ha, description: "Land farmed for fuel alcohol (not food; base rules have no survival burden)."}
+  hcl_pollution: {type: flag, description: "Scar from Leblanc soda. Kills nearby coppice growth until Solvay replaces it."}
+  arsenic_exposure: {type: number, unit: person-years, description: "Scar from arsenical copper. At thresholds, some smelters die (deterministic at fixed levels)."}
+  boiler_explosions: {type: count, description: "Scar: explosions so far. Each kills workers and destroys the engine; rises only on the high-pressure and Savery routes before pressure testing."}
+  malachite_mined_kg: {type: number, unit: kg, description: "Cumulative oxide ore mined. Past a threshold, the outcrop is exhausted and ore_roasting appears."}
+
+  # ---- Ores and fuel quality ----------------------------------------------------
+  ore_type: {type: enum, values: [carbonate, sulfide], description: "Current copper ore."}
+  iron_ore_grade: {type: number, unit: percent Fe, description: "Iron content of the ore being mined. Below ~50%, bloomery yields collapse."}
+  iron_ore_phosphorus: {type: enum, values: [low, high], description: "High-phosphorus ore makes Bessemer steel cold-short until basic lining."}
+  coal_sulfur: {type: enum, values: [low, high], description: "Sulfur in the coal seam found. High sulfur makes hot-short iron unless coked carefully or manganese is added."}
+  iron_sulfur: {type: enum, values: [low, high], description: "Sulfur carried into iron. Read by steelmaking."}
+  coke_rate: {type: number, unit: t fuel per t iron, description: "Fuel per ton of pig iron. Hot blast lowers it."}
+
+  # ---- Metals and materials capabilities ----------------------------------------
+  has_copper_ore: {type: flag, description: "Access to copper ore."}
+  has_copper: {type: flag, description: "Copper smelting works."}
+  has_bronze: {type: flag, description: "Tin bronze available."}
+  has_tin_source: {type: flag, description: "Tin mine opened."}
+  has_iron: {type: flag, description: "Bloomery iron."}
+  iron_tools: {type: count, description: "Iron tools in stock (part of metal_tools)."}
+  has_steel_edges: {type: flag, description: "Quench-hardened steel edges; later machining nodes cost less."}
+  has_cast_iron: {type: flag, description: "Blast furnace running."}
+  has_foundry: {type: flag, description: "Sand casting of large iron parts."}
+  has_coal: {type: flag, description: "Coal mining."}
+  has_coke: {type: flag, description: "Coke ovens."}
+  has_lime: {type: flag, description: "Lime burning."}
+  has_rolling_mill: {type: flag, description: "Rolled plate."}
+  plate_quality: {type: enum, values: [hammered, rolled, open_hearth], description: "Boiler and tank plate grade; sets explosion risk and max pressure."}
+  wrought_iron_capacity: {type: number, unit: t per year, description: "Puddled and fined iron output."}
+  has_steel: {type: flag, description: "Bulk steel."}
+  steel_quality: {type: count, description: "0-3. Bessemer gives 1; manganese, basic lining and open hearth add up to 3. Pressure vessels and turbines need 2+."}
+  has_open_hearth: {type: flag, description: "Open-hearth steel."}
+  has_arc_furnace: {type: flag, description: "Electric arc furnace."}
+  has_alloy_steel: {type: flag, description: "Chromium, nickel and tungsten steels."}
+  has_alumina: {type: flag, description: "Bayer alumina."}
+  has_aluminum: {type: flag, description: "Hall-Heroult aluminum."}
+  has_duralumin: {type: flag, description: "Age-hardened aluminum; unlocks aluminum tanks in the workshop."}
+  has_glass: {type: flag, description: "Glassworks."}
+  has_copper_wire: {type: flag, description: "Drawn copper wire."}
+  has_insulated_wire: {type: flag, description: "Insulated wire for coils."}
+  mineral_sites: {type: set, description: "Minor-mineral sites found by prospecting (salt, lead, zinc, sulfur, manganese, graphite, chromite, tungsten, bauxite, ...). Nodes needing a mineral use their fallback if it's missing."}
+  has_cement: {type: flag, description: "Portland cement."}
+
+  # ---- Chemistry ----------------------------------------------------------------
+  has_nitrate: {type: flag, description: "Any nitrate supply."}
+  nitrate_source: {type: enum, values: [none, niter_beds, arc, haber], description: "Best nitrogen fixation route."}
+  nitrate_capacity: {type: number, unit: t N per year, description: "Fixed nitrogen output; caps nitric acid."}
+  has_sulfuric_acid: {type: flag, description: "Lead-chamber acid."}
+  has_soda_ash: {type: flag, description: "Soda ash (Leblanc or Solvay)."}
+  has_ammonia_byproduct: {type: flag, description: "Ammonia from coke ovens; enables Solvay."}
+  has_coal_tar: {type: flag, description: "Coal tar (aromatics, amines)."}
+  has_caustic: {type: flag, description: "Caustic soda."}
+  has_hydrogen: {type: flag, description: "Hydrogen from electrolysis."}
+  has_carbide: {type: flag, description: "Calcium carbide / acetylene."}
+  has_ammonia: {type: flag, description: "Synthetic ammonia."}
+  has_nitric_acid: {type: flag, description: "Bulk nitric acid."}
+  has_crude: {type: flag, description: "Crude oil."}
+  has_kerosene: {type: flag, description: "Refined kerosene; kerosene/LOX option in the workshop."}
+  has_ethanol: {type: flag, description: "Fuel alcohol; ethanol/LOX option in the workshop."}
+  has_peroxide: {type: flag, description: "Concentrated hydrogen peroxide."}
+  has_hypergolics: {type: flag, description: "Nitric acid/amine storable propellants."}
+  has_solids: {type: flag, description: "Composite solid motors."}
+
+  # ---- Energy and power ---------------------------------------------------------
+  water_wheels_built: {type: count, description: "Water wheels."}
+  engine_type: {type: enum, values: [none, savery, newcomen, watt, high_pressure], description: "First engine design. Sets coal per kW, machinist skill and rail head start."}
+  coal_per_engine_kw: {type: number, unit: kg per kWh, description: "Coal burned per unit of engine work."}
+  mine_drained_by_engine: {type: flag, description: "Stage 2 gate condition."}
+  factory_power_kw: {type: number, unit: kW, description: "Mechanical power delivered to workshops."}
+  hydro_kw: {type: number, unit: kW, description: "Water turbine power."}
+  dynamo_output_kw: {type: number, unit: kW, description: "Generator output; Stage 3 gate condition."}
+  grid_kw: {type: number, unit: kW, description: "Electric power distributed."}
+  has_ac: {type: flag, description: "AC with transformers."}
+  power_station_efficiency: {type: number, unit: fraction, description: "Electric output per unit of fuel heat."}
+  has_magneto: {type: flag, description: "Built the permanent-magnet generator (trap)."}
+  has_electromagnet: {type: flag, description: "Electromagnets and galvanometers."}
+  has_battery: {type: flag, description: "Batteries."}
+
+  # ---- Machines and skills -------------------------------------------------------
+  trained_smiths: {type: count, description: "Smiths trained beyond the draft."}
+  trained_miners: {type: count, description: "Miners trained beyond the draft."}
+  machinists_trained: {type: count, description: "Machinists. The boring mill, surface plates and lathes train them; many later nodes check thresholds (50, 200, 500)."}
+  glassblowers_trained: {type: count, description: "Glassblowers; gates vacuum pumps, Dewars and tubes."}
+  welders_trained: {type: count, description: "Welders; tank and weld flaws depend on it."}
+  electrical_engineers_trained: {type: count, description: "Electrical engineers beyond the draft."}
+  rocket_engineers_trained: {type: count, description: "Rocket engineers beyond the draft."}
+  has_boring_mill: {type: flag, description: "Boring mill built."}
+  has_flat_reference: {type: flag, description: "Surface plates."}
+  has_lathe: {type: flag, description: "Screw-cutting lathe."}
+  tolerance_mm: {type: number, unit: mm, description: "Best routine machining tolerance. Starts ~1 mm (hand work), boring mill ~0.5, gauges ~0.1, grinding ~0.01. Turbopumps and gyros check it."}
+  machine_shop_capacity: {type: number, unit: machine-hours per day, description: "Machine-shop throughput."}
+  has_ball_bearings: {type: flag, description: "Precision ball bearings."}
+  max_pressure_atm: {type: number, unit: atm, description: "Highest pressure the colony's compressors and vessels can hold."}
+  has_high_vacuum: {type: flag, description: "Mercury pumps and high vacuum in glass."}
+  has_dewar: {type: flag, description: "Vacuum-insulated vessels."}
+  has_liquid_air: {type: flag, description: "Liquid air."}
+  cryo_process: {type: enum, values: [none, cascade, linde, claude], description: "Liquefaction route; sets energy per kg LOX."}
+  has_lox: {type: flag, description: "Liquid oxygen."}
+  lox_kg_per_day: {type: number, unit: kg per day, description: "Liquid oxygen production; Stage 4 gate and test-campaign pacing."}
+  storage_capacity_t: {type: number, unit: t, description: "Covered storage; above it, perishable stock spoils."}
+  pump_workers: {type: count, description: "Workers bailing mines; visible cost the steam engine removes."}
+  rail_km: {type: number, unit: km, description: "Track laid."}
+  has_locomotive: {type: flag, description: "Steam locomotives."}
+
+  # ---- Electronics, guidance, testing ----------------------------------------------
+  has_tubes: {type: flag, description: "Vacuum tubes."}
+  has_radio: {type: flag, description: "Radio."}
+  instrumentation_level: {type: count, description: "0-2. Raises flaw discovery chance per test."}
+  calc_hours: {type: number, unit: computer-hours, description: "Accumulated calculation from the computing office; spent by design, tracking and trajectory nodes."}
+  has_gyros: {type: flag, description: "Gyroscopes."}
+  guidance_quality: {type: count, description: "0-3. Sets the size of hidden guidance flaws."}
+  guidance_mode: {type: enum, values: [none, radio_command, inertial], description: "Chosen guidance."}
+  has_tvc: {type: flag, description: "Thrust vector control."}
+  has_test_stand: {type: flag, description: "Engine test stand."}
+  injector_quality: {type: count, description: "0-2. Lowers combustion instability severity."}
+  has_regen_cooling: {type: flag, description: "Regenerative cooling."}
+  feed_system: {type: enum, values: [pressure, steam_turbopump, gas_generator], description: "Booster feed system carried into the workshop."}
+  turbopump_quality: {type: count, description: "0-2. Lowers cavitation and bearing flaws."}
+  has_weld_xray: {type: flag, description: "Radiographic weld inspection."}
+  has_wind_tunnel: {type: flag, description: "Supersonic wind tunnel."}
+  flight_tests: {type: count, description: "Guided test flights flown."}
+
+  # ---- Rocket and mission -----------------------------------------------------------
+  vehicle_design: {type: set, description: "The workshop design: per stage propellant mass, propellants, tank material, feed system."}
+  has_staging: {type: flag, description: "Stage separation works."}
+  has_launch_pad: {type: flag, description: "Launch complex."}
+  has_tracking: {type: flag, description: "Tracking stations."}
+  orbital_flights: {type: count, description: "Uncrewed orbital flights."}
+  lunar_probes: {type: count, description: "Impactor flights."}
+  has_midcourse: {type: flag, description: "Midcourse correction capability."}
+  capsule_mass_t: {type: number, unit: t, description: "Payload mass for the workshop (1.6 t baseline)."}
+  life_support_days: {type: number, unit: days, description: "Oxygen and CO2 absorber endurance."}
+  has_pressure_suit: {type: flag, description: "Pressure suit."}
+  has_escape_system: {type: flag, description: "Launch escape tower."}
+  lander_design: {type: set, description: "Lander engine and propellant choices."}
+  lander_propellant: {type: enum, values: [lox_alcohol, lox_kerosene, hypergolic], description: "Lander propellant."}
+  lander_throttle: {type: flag, description: "Throttleable descent engine."}
+  has_radar_altimeter: {type: flag, description: "Radar altimeter."}
+  landing_tolerance: {type: number, unit: m/s, description: "Touchdown speed the legs survive."}
+  lunar_landers_flown: {type: count, description: "Uncrewed landers flown."}
+  known_flaws: {type: set, description: "Flaws revealed by testing (see failure-modes.md)."}
+  fixed_flaws: {type: set, description: "Flaws fixed."}
+
+  # ---- Stage 1 flags --------------------------------------------------------------
+  has_bellows: {type: flag, description: "Pot bellows (portable forced draft)."}
+  has_wind_furnaces: {type: flag, description: "Wind-draft furnaces (ridge sites only)."}

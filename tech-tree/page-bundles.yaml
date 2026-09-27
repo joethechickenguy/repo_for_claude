@@ -1,0 +1,105 @@
+# Knowledge bundles for the Stage 0 draft.
+# Page costs follow the interface mockup where a bundle already existed there; new bundles are marked.
+# All bundles together cost more than the budget, so the draft forces real choices.
+# generated/bundles.md lists every node each bundle discounts.
+#
+# Discount rule (proposal): a node whose pages_bundle was taken costs its base labor and has no
+# discovery delay. Without the bundle, the node's `without_pages` line applies (usually 1.5x-4x
+# labor, sometimes a slower historical substitute, rarely unavailable with a named fallback).
+#
+# synergy: the roster pool that makes the bundle more valuable. With at least `threshold`
+# drafted specialists in that pool, the bundle's nodes also get the `bonus`.
+
+page_budget: 600
+
+bundles:
+
+  primitive_technology:
+    name: "Field guide to primitive technology"
+    pages: 40
+    summary: "Flint, cordage, clay, lime, charcoal basics, water-lifting. The first year depends on it."
+    synergy: {pool: primitive_skills, threshold: 300, bonus: "Stage 1 projects -15% labor"}
+
+  geological_survey:
+    name: "Geological survey: Anatolia and the Caucasus"
+    pages: 60
+    summary: "Where the copper, tin, iron, coal, chromite, bauxite and oil actually are, and which seams are low in sulfur and phosphorus."
+    synergy: {pool: miners, threshold: 800, bonus: "Survey projects halved; first coal seam found is low-sulfur"}
+
+  metallurgy_1:
+    name: "Metallurgy I: copper to bloomery iron"
+    pages: 45
+    summary: "Smelting, fluxes, bellows, forging, quenching, charcoal kilns."
+    synergy: {pool: smiths, threshold: 600, bonus: "Smelting yields start at full value"}
+
+  metallurgy_2:
+    name: "Metallurgy II: blast furnace to alloy steel"
+    pages: 70
+    summary: "Coke, hot blast, puddling, Bessemer, manganese, the basic lining, open hearth, alloying, age hardening."
+    synergy: {pool: smiths, threshold: 1000, bonus: "Steel quality +1 at first blow"}
+
+  steam_engines:
+    name: "Steam engines, Newcomen to turbine"
+    pages: 60
+    summary: "Working drawings and the reasons behind each improvement; water wheels and turbines."
+    synergy: {pool: machinists, threshold: 500, bonus: "Engine projects -20% labor"}
+
+  machine_tools:
+    name: "Machine tools"
+    pages: 55
+    summary: "Scraping flat plates, cutting accurate screws, boring cylinders, gauges, grinding, welding practice."
+    synergy: {pool: machinists, threshold: 500, bonus: "tolerance_mm improves one step early"}
+
+  industrial_chemistry:
+    name: "Industrial chemistry"
+    pages: 90
+    summary: "Acids, alkalis, glass, electrolysis, aluminum, ammonia synthesis and its catalyst, nitric acid, peroxide, propellants."
+    synergy: {pool: chemists, threshold: 500, bonus: "Chemistry plants start at full output"}
+
+  electricity:
+    name: "Electricity and generators"
+    pages: 85
+    summary: "From batteries and electromagnets to self-excited dynamos, transformers and a three-phase grid."
+    synergy: {pool: electrical_engineers, threshold: 400, bonus: "Dynamo and grid projects -25% labor"}
+
+  vacuum_tubes_radio:
+    name: "Vacuum tubes and radio"
+    pages: 65
+    summary: "Glassblowing, vacuum pumps, tungsten filaments, circuits, radar ranging, X-ray tubes."
+    synergy: {pool: electrical_engineers, threshold: 400, bonus: "Tube yield starts high"}
+
+  cryogenics:
+    name: "Cryogenics"
+    pages: 50
+    summary: "Compressors, heat exchangers, Dewar vessels, the Linde and Claude cycles, rectification columns."
+    synergy: {pool: chemists, threshold: 300, bonus: "LOX plant energy per kg -20%"}
+
+  liquid_rocket_engines:
+    name: "Liquid rocket engines"
+    pages: 120
+    summary: "Injectors, cooling, turbopumps, test stands, staging, and why engines shake themselves apart. Lists the known failure modes by name."
+    synergy: {pool: rocket_engineers, threshold: 200, bonus: "One hidden flaw per design is revealed for free"}
+
+  guidance:
+    name: "Guidance and control (new)"
+    pages: 60
+    summary: "Gyroscopes, accelerometers, autopilots, jet vanes, supersonic aerodynamics."
+    synergy: {pool: machinists, threshold: 300, bonus: "guidance_quality +1"}
+
+  orbital_mechanics:
+    name: "Orbital mechanics and lunar tables"
+    pages: 70
+    summary: "Precomputed trajectories, launch windows and the Δv budget. Replaces thousands of computer-hours."
+    synergy: {pool: teachers, threshold: 500, bonus: "Computing office output +50%"}
+
+  life_support:
+    name: "Life support and pressure suits (new)"
+    pages: 30
+    summary: "Breathing gas, CO2 absorbers, cabin pressure, suits, the physiology of acceleration and vacuum."
+    synergy: {pool: chemists, threshold: 100, bonus: "Capsule mass -10%"}
+
+  medicine_sanitation:
+    name: "Medicine and sanitation (mortal variant only)"
+    pages: 40
+    summary: "Germ theory, soap, clean water, variolation. Discounts nothing in base rules; the mortal-colonists mode needs it."
+    synergy: {pool: teachers, threshold: 0, bonus: "None in base rules"}
