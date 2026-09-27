@@ -166,6 +166,13 @@ Iterative, after G1-G6 exist. Targets from `DESIGN.md`: ~90 minutes and the stat
 controls. Levers: labor costs, rates, pressure slopes, beat thresholds. Record each pass in
 `docs/playtests/`.
 
+## Owner feedback backlog
+
+Not yet scheduled. Before starting a package, read `docs/playtests/2026-09-27-stage1-owner.md` and
+pick up any item that names your package: typed values in the people control (I/D), hints and a
+decision every in-game year (F/G1/J), either/or project cards (D/F/G1), explaining training (D/F),
+speeds (J), and a proposed **K. Tech map**, a simple tree graphic of where the player is and has been.
+
 ---
 
 ## Status
