@@ -104,7 +104,7 @@ nodes:
     numbers_status: "Rocket equation exact; structural fractions and Isp are play values"
     sources: ["https://en.wikipedia.org/wiki/Tsiolkovsky_rocket_equation"]
     tags: [substantive]
-    trap_lesson: "A single steel stage tops out near 5.8 km/s with zero payload: ln(1/0.14) x 2.9 km/s. Orbit needs 9.4."
+    trap_lesson: "A single steel stage tops out near 5.8 km/s on alcohol and 6.4 on kerosene, even with zero payload. Orbit needs 9.4."
     notebook: >
       Δv = v_e ln(m_full/m_empty). Because of the logarithm, doubling propellant never doubles speed.
       Staging is the escape: drop the empty tank so the rest of the burn doesn't carry it. Every lunar
@@ -336,7 +336,7 @@ nodes:
     problem: "One person, one way, alive on the lunar surface."
     requires:
       nodes: [test_campaign, launch_complex]
-      state: ["dv_total_km_s >= 15.3", "crewed_landing_survived == true"]
+      state: ["dv_margin_km_s >= 0", "crewed_landing_survived == true"]
     unlocks:
       effects: ["Run ends. Score: the year of the landing"]
     reads_state: [known_flaws, fixed_flaws, has_pressure_suit, has_escape_system, has_midcourse, lander_throttle, dv_margin_km_s]

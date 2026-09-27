@@ -108,8 +108,8 @@ estimates chosen to be plausible for a 10,000-person colony.
 | Dynamo at the gate | 50 kW electric | × 2.5 | ~12.5 W |
 | Grid, mid Stage 4 | 2 MW electric | × 2.5 | ~500 W |
 | Aluminum smelter | 1 t/day at ~20 kWh/kg | × 2.5 | ~210 W |
-| Liquid oxygen plant | 500 kg/day at ~1 kWh/kg | × 2.5 | ~5 W |
-| Liquid oxygen plant, Stage 6 | 50 t/day | × 2.5 | ~520 W |
+| Liquid oxygen plant | 500 kg/day at ~2 kWh/kg (Linde) | × 2.5 | ~10 W |
+| Liquid oxygen plant, Stage 6 | 50 t/day | × 2.5 | ~1 kW |
 
 Hot-blast figures come from Neilson's 8.06 → 5.16 long tons of coal per ton of iron
 ([Hot blast](https://en.wikipedia.org/wiki/Hot_blast)). Aluminum's theoretical minimum of

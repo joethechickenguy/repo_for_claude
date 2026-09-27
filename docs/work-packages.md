@@ -38,7 +38,7 @@ exceeds demand plus a small buffer.
 
 ## B. Stage loader
 
-**Delivers.** Load `tech-tree/stages/*.yaml`, `state-variables.yaml`, `page-bundles.yaml`,
+**Delivers.** Load `tech-tree/stages/*.yaml`, `state-variables.yaml`, `draft.yaml`,
 `resources.yaml` at build time into typed objects. A parser for `requires.state` expressions
 (`var op value`, `var has member`, `NOT flag`, `AND`/`OR`). Node availability: a node is *visible*
 when its `requires.nodes`/`any_of`/`state` hold; *affordable* when resources are in stock; *building*

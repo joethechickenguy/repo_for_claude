@@ -443,7 +443,7 @@ nodes:
     milestones:
       - {at: 0.5, id: furnace_stack_raised, effect: "The stack is up; the workshop shows the stack_height dial and a preview of tons/day before the first campaign"}
     unlocks:
-      jobs: [run_blast_furnace]   # continuous; ~1 t pig iron/day; 1.5-2 t charcoal or coke per t (estimate)
+      jobs: [run_blast_furnace]   # continuous; ~1 t pig iron/day; ~1.5 t charcoal or ~5 t coke per t cold-blast (estimate; hot blast cuts it)
       effects: ["Adds stack_height and blast_source dials. Cast iron output; pig iron must be fined for tools or cast for parts"]
     reads_state: [forest_cover, coppice_area, has_lime, water_wheels_built, coal_sulfur]
     writes_state: [has_cast_iron, forest_cover, iron_quality]

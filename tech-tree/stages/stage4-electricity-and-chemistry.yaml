@@ -57,7 +57,7 @@ workshops:
     loop: "Design a cold plant: pressure, exchanger, expansion method, column. Outputs liters per day, kW per kg, purity. Runs for in-game days before the first drop; the player watches the temperature fall."
     dials:
       - {id: method, name: "Method", options: [cascade, throttle_regenerative, expansion_engine], added_by: cascade_liquefier,
-         effect: "Cascade: liters a day, laboratory only. Throttle with regenerative exchange (Linde): continuous, simple, ~1 kWh/kg (estimate). Expansion engine (Claude): about half the energy, needs a cold precision piston",
+         effect: "Cascade: liters a day, laboratory only. Throttle with regenerative exchange (Linde): continuous, simple, ~2 kWh/kg (estimate). Expansion engine (Claude): about half the energy, needs a cold precision piston",
          basis: "Pictet/Cailletet 1877; Hampson and Linde 1895; Claude 1902"}
       - {id: pressure, name: "Compressor pressure (atm)", range: [20, 200], added_by: compressors,
          effect: "Higher pressure: more cooling per pass, more compressor power, thicker vessels (steel_quality read)",
@@ -378,7 +378,7 @@ nodes:
       resources: {copper_kg: 3000, steel_kg: 8000}
       labor_person_days: 1200000
     unlocks:
-      effects: ["method: throttle_regenerative; adds the exchanger_length dial. Continuous liquid air, no moving parts in the cold, ~1 kWh/kg (estimate)"]
+      effects: ["method: throttle_regenerative; adds the exchanger_length dial. Continuous liquid air, no moving parts in the cold, ~2 kWh/kg (estimate)"]
     reads_state: [max_pressure_atm]
     writes_state: [has_liquid_air, cryo_process]
     pages_bundle: cryogenics
@@ -451,7 +451,7 @@ nodes:
     beat: 6
     kind: project
     critical_path: false
-    problem: "A preview of the rocket workshop shows a steel vehicle nearly twice the mass of an aluminum one."
+    problem: "A preview of the rocket workshop shows a steel vehicle about two and a half times the mass of an aluminum one."
     requires:
       nodes: [chlor_alkali, arc_furnace]
       state: ["mineral_sites has bauxite", "power_balance_kw > 500"]

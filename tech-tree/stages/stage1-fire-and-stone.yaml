@@ -130,7 +130,7 @@ workshops:
       - {id: air_supply, name: "Air supply", options: [blowpipes, bellows_crews, wind_site], added_by: crucibles_blowpipes,
          effect: "Blowpipes reach copper's melting point barely and slowly; bellows or a wind site double or triple output per crucible",
          basis: "Forced draft lifts a charcoal fire from ~900 C to 1,200 C+"}
-      - {id: fuel_ratio, name: "Charcoal per kg ore", range: [2, 15], added_by: crucibles_blowpipes,
+      - {id: fuel_ratio, name: "Charcoal per kg ore", range: [0.5, 15], added_by: crucibles_blowpipes,
          effect: "Too little: the charge never reaches temperature and the campaign fails. More than needed is just fuel burned",
          basis: "Copper melts at 1,085 C; prototype uses 10 kg charcoal per kg copper"}
     outputs: [metal_kg, fuel_kg, failed_campaigns]
@@ -443,7 +443,7 @@ nodes:
     problem: "Bronze needs tin, which is rare; the nearest known source is in the Taurus mountains, weeks away."
     requires:
       nodes: [stone_molds]
-      state: ["bundles_taken has geological_survey"]
+      state: ["bundles_taken has survey_copper_tin"]
       resources: {blades: 6000, pots: 500}
       labor_person_days: 2500000
     milestones:

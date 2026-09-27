@@ -66,7 +66,7 @@ A launch escape system turns booster-phase flaws from *fatal* into *vehicle loss
 | `cascade_liquefier` | 4 | A laboratory chain of fragile stages, liters per day | LOX output flat far below the gate |
 | Black-powder stage (rocket workshop what-if) | 6 | Exhaust speed ~0.8 km/s; orbit needs a mass ratio of ~130,000 | The Δv bar with a black-powder stage selected |
 | `pressure_fed_booster_engine` | 5 → 6 | Tank pressure must exceed chamber pressure, so booster tanks are heavy | Passes the Stage 5 gate; in the workshop the first stage's dry mass balloons. [Pressure-fed engine](https://en.wikipedia.org/wiki/Pressure-fed_engine), [Sea Dragon](https://en.wikipedia.org/wiki/Sea_Dragon_(rocket)) |
-| Single stage (rocket workshop what-if) | 6 | Best mass ratio of a steel stage is ~7; ln(7) × 2.9 km/s ≈ 5.7 km/s | The Δv bar stops short of orbit even with no payload |
+| Single stage (rocket workshop what-if) | 6 | With steel tanks the best mass ratio is about 7, so one stage tops out near 5.8 km/s on alcohol, 6.4 on kerosene | The Δv bar stops short of orbit even with no payload |
 | Steel tanks on every stage (no aluminum) | 6 | Structural fraction 0.14 vs 0.09 | Needs a much larger vehicle; possible, but slower to build and test |
 | LOX lander without insulation | 6 | Boil-off over a three-day coast | Adds `lox_boiloff`; shows the case for storable propellants |
 | No midcourse correction with radio command guidance | 6 | Small cutoff errors grow over 380,000 km | The impactor misses; teaches why Luna 1 missed |

@@ -171,7 +171,6 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     energy.md §1 also says "about a third of a percent", which would give 3.8 t/day. The model uses
     0.5%, which matches the example and energy.md's own 10 kW → ~6 t/day arithmetic.
 
-<<<<<<< HEAD
 ## Shell and pressures (packages D, F)
 
 41. **Beat gating reading.** A node of beat N shows only once a node of the nearest *lower beat that

@@ -10,7 +10,7 @@ variables:
   draft_roster: {type: set, description: "Skill pool -> drafted specialists."}
 
   # ---- Pressures (one bar each; the simulation moves them) ----------------------------------------
-  tool_wear: {type: number, description: "Stage 1 heartbeat. tools / tool users; below 1 workers slow down."}
+  tool_wear: {type: number, default: 1.0, description: "Stage 1 heartbeat. tools / tool users; below 1 workers slow down."}
   fuel_balance: {type: number, unit: kg/day, description: "Stage 2 heartbeat. Fuel produced minus fuel used. Negative for 10 days: furnaces stall."}
   shop_hours_balance: {type: number, unit: hours/day, description: "Stage 3 heartbeat. Shop capacity minus the parts queue's demand."}
   power_balance_kw: {type: number, unit: kW, description: "Stage 4 heartbeat. Generation minus load. Negative: brownout."}
@@ -23,8 +23,8 @@ variables:
   mine_water_m: {type: number, unit: m, description: "Workings below the water table not yet drained. Rises with cumulative extraction and the wet season."}
   haul_workers: {type: count, description: "People carrying things between sites. Roads and rails reduce it."}
   chemical_balance: {type: number, description: "Alkali and acid supply minus demand (Stage 4)."}
-  iron_quality: {type: count, description: "0-3, starts 3. Phosphorus ore -1, sulfur coke -1, over-blown steel -1. Below 2: tool life and plate strength fall a third."}
-  tolerance_mm: {type: number, unit: mm, description: "Best routine machining fit. Hand 1.0; flat reference 0.5; lead screw 0.25; gauges 0.1; micrometer 0.02; grinding 0.01."}
+  iron_quality: {type: count, default: 3, description: "0-3, starts 3. Phosphorus ore -1, sulfur coke -1, over-blown steel -1. Below 2: tool life and plate strength fall a third."}
+  tolerance_mm: {type: number, unit: mm, default: 1.0, description: "Best routine machining fit. Hand 1.0; flat reference 0.5; lead screw 0.25; gauges 0.1; micrometer 0.02; grinding 0.01."}
   known_flaws: {type: set, description: "Flaws revealed by testing (failure-modes.md)."}
 
   # ---- Labor control ---------------------------------------------------------------------------------
@@ -144,7 +144,7 @@ variables:
   has_test_stand: {type: flag}
   injector_quality: {type: count, description: "0-2. Lowers combustion instability severity; needed for throttling."}
   has_regen_cooling: {type: flag}
-  feed_system: {type: enum, values: [pressure, steam_turbopump, gas_generator]}
+  feed_system: {type: enum, values: [pressure_fed, peroxide_turbopump, gas_generator_turbopump], description: "Same names as the rocket engine workshop's feed dial."}
   turbopump_quality: {type: count}
   flight_tests: {type: count}
 
