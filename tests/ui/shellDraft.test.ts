@@ -8,7 +8,7 @@ import { Game } from "../../src/ui/shellGame";
 describe("draft -> game start", () => {
   it("the default outcome is I's model with no interaction", () => {
     const r = buildResult(tree, defaultDraftState(tree));
-    expect(defaultDraftOutcome(tree)).toEqual({ draft_roster: r.draftRoster, bundles_taken: r.bundlesTaken });
+    expect(defaultDraftOutcome(tree)).toEqual({ draft_roster: r.draft_roster, bundles_taken: r.bundles_taken });
   });
 
   it("accepts I's DraftResult and the state-variable spelling", () => {

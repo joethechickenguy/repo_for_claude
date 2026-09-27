@@ -15,15 +15,17 @@ export interface DraftOutcome {
 
 /** The draft.yaml defaults with no interaction (DESIGN.md: the player "can depart at once"). */
 export function defaultDraftOutcome(tree: Tree): DraftOutcome {
+  // buildResult already returns this exact shape (I's model.ts DraftResult is this DraftOutcome).
   const r = buildResult(tree, defaultDraftState(tree));
-  return { draft_roster: { ...r.draftRoster }, bundles_taken: { ...r.bundlesTaken } };
+  return { draft_roster: { ...r.draft_roster }, bundles_taken: { ...r.bundles_taken } };
 }
 
 const isMap = (v: unknown): v is Record<string, number> => !!v && typeof v === "object" && !Array.isArray(v);
 
 /**
- * Whatever the draft screen hands to Depart: I's `DraftResult` ({draftRoster, bundlesTaken}) or the
- * state-variable spelling ({draft_roster, bundles_taken}). Missing parts fall back to the defaults.
+ * Whatever the draft screen hands to Depart: I's `DraftResult` (this same `DraftOutcome` shape,
+ * `{draft_roster, bundles_taken}`) or, defensively, an older `{draftRoster, bundlesTaken}` spelling.
+ * Missing parts fall back to the defaults.
  */
 export function outcomeFrom(tree: Tree, x: unknown): DraftOutcome {
   const d = defaultDraftOutcome(tree);
