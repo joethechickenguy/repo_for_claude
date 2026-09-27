@@ -67,6 +67,11 @@ workshops:
          effect: "Direct: Luna-style, tight windows, no restart. Parking orbit: an upper-stage restart in orbit, more windows, needs inertial guidance",
          basis: "Luna 2/9 flew direct; Apollo used parking orbits"}
     outputs: [dv_total_km_s, dv_margin_km_s, liftoff_mass_t, flaws_expected]
+    play:
+      payload_t: 1.6                 # the capsule and pilot until the capsule node sets capsule_mass_t (its 1.6 t pressure hull)
+      default_propellant_t: [420, 95, 22, 5]   # the first design on the screen: the interface mockup's vehicle (short of the Moon)
+      margin_deductions_km_s: {midcourse_correction: 0.1, crew_safety: 0.15}   # margin those nodes spend (their effects)
+      dv_bar_km_s: 18                # the Δv bar's full width (the mockup's)
 
   - id: test_campaign
     name: Test campaign

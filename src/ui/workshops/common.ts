@@ -117,8 +117,10 @@ export interface ScreenSpec {
   /** A click on a `[data-act]` button inside the body. */
   act(action: string, button: HTMLElement): void;
   history(): readonly HistoryEntry[];
-  /** Optional widget above the dials (e.g. the rocket's stage tabs); redraws with the body. */
+  /** Optional widget above the dials; redraws with the body. */
   top?(): string;
+  /** A `change` on an input or select inside the body carrying `data-field` (e.g. the rocket's stage table). */
+  field?(field: string, value: string): void;
 }
 
 /**
@@ -156,7 +158,10 @@ export function mountScreen(el: HTMLElement, game: Game, spec: ScreenSpec): () =
       drawBody();
     });
   };
-  const drawBody = (): void => {
+  const drawBody = (fromTick = false): void => {
+    // Don't pull a field out from under the player's cursor on a day tick; the next change redraws.
+    const a = doc.activeElement as HTMLElement | null;
+    if (fromTick && a && (a.tagName === "INPUT" || a.tagName === "SELECT") && (body.contains(a) || top.contains(a))) return;
     if (spec.top) top.innerHTML = spec.top();
     body.innerHTML = spec.body();
     hist.innerHTML = `<h3>${esc(WS.frame.history)}</h3>` + historyHTML(spec.history());
@@ -171,16 +176,25 @@ export function mountScreen(el: HTMLElement, game: Game, spec: ScreenSpec): () =
     redrawDials?.(spec.values());
     drawBody();
   };
+  const onChange = (ev: Event): void => {
+    const t = ev.target as HTMLInputElement | HTMLSelectElement;
+    const f = t.dataset?.field;
+    if (!f || !spec.field || !body.contains(t)) return;
+    spec.field(f, t.value);
+    drawBody();
+  };
   wrap.addEventListener("click", onClick);
   top.addEventListener("click", onClick);
+  body.addEventListener("change", onChange);
   drawDials();
   drawBody();
   const off = game.engine.onTick(() => {
     drawDials();
-    drawBody();
+    drawBody(true);
   });
   return () => {
     off();
+    body.removeEventListener("change", onChange);
     wrap.removeEventListener("click", onClick);
     top.removeEventListener("click", onClick);
     el.replaceChildren();

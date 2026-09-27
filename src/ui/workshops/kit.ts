@@ -21,6 +21,8 @@ export interface DialView {
   kind: "range" | "options" | "both";
   range?: [number, number];
   options?: string[];
+  /** Slider step for a range (default a hundredth of the range); typed values snap to it. */
+  step?: number;
   /** Options shown but not yet usable, with the one-line reason (e.g. "needs Pot bellows"). */
   locked?: Record<string, string>;
 }
@@ -92,7 +94,7 @@ export function mountDials(
       if (num !== null && d.range) h += ` <input class="wk-num num" type="text" inputmode="decimal" value="${num}" aria-label="${esc(d.name)}">`;
       h += `</div>`;
       if (num !== null && d.range) {
-        const step = (d.range[1] - d.range[0]) / 100;
+        const step = d.step ?? (d.range[1] - d.range[0]) / 100;
         h += `<input class="wk-range" type="range" min="${d.range[0]}" max="${d.range[1]}" step="${step}" value="${num}" aria-label="${esc(d.name)}">`;
       }
       if (opt !== null && d.options) {
@@ -116,7 +118,8 @@ export function mountDials(
   };
   const withNumber = (d: DialView, n: number): DialValue => {
     const [lo, hi] = d.range!;
-    const x = Math.max(lo, Math.min(hi, n));
+    const snapped = d.step ? lo + Math.round((n - lo) / d.step) * d.step : n;
+    const x = Math.max(lo, Math.min(hi, snapped));
     const v = cur[d.id] ?? defaultDialValue(d);
     return typeof v === "object" ? { ...v, value: x } : x;
   };

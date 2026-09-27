@@ -297,3 +297,12 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     store minus the next firing's need; one stand (test_stand's "a second stand doubles throughput"
     isn't counted). Roughness on the pressure trace is a picture of the stability margin, not a flaw:
     flaws, their discovery and fixes are package H's; the screen says so.
+58. **The rocket workshop's vehicle.** Per-stage dials (propellant mass, propellants, tanks, feed)
+    are the columns of the mockup's stage table; `stage_count` and `route` are the vehicle's. The
+    first design on the screen is the mockup's (`play.default_propellant_t`, short of the Moon).
+    Propellants are locked to what the chemistry has made (`has_ethanol`, `has_kerosene`,
+    `has_hypergolics`), aluminum tanks to `has_duralumin`. Adopting a design is instant (Stage 6 is
+    "almost no construction"); `vehicle_design` holds it as members `stageN:<t>t:<propellants>:<tank>:<feed>`
+    (sets are lists or number maps), and `dv_margin_km_s` is recomputed daily so the capsule's mass and
+    the margin midcourse correction (0.1) and crew safety (0.15) spend follow it. Isp stays the play
+    values (question 12/36), not the engine the colony fired in E5.

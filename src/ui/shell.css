@@ -238,3 +238,10 @@ details p{margin:4px 0 0}
 .wk-dv i.s0{background:var(--ink)} .wk-dv i.s1{background:var(--pencil)} .wk-dv i.s2{background:var(--blue)} .wk-dv i.s3{background:var(--rule)}
 .wk-dv b{position:absolute; top:-4px; bottom:-14px; border-left:2px solid var(--red)}
 .wk-dv b span{position:absolute; top:28px; left:4px; font-size:11px; font-weight:400; color:var(--red); white-space:nowrap}
+.tablewrap{overflow-x:auto}
+.wk-table{border-collapse:collapse; width:100%; font-size:15px}
+.wk-table td, .wk-table th{text-align:left; padding:3px 8px 3px 0; vertical-align:middle}
+.wk-table th{font-weight:600; border-bottom:1px solid var(--ink); font-size:14px}
+.wk-table .r{text-align:right}
+.wk-table .wk-num{width:5em}
+.wk-dv{margin-top:26px}
