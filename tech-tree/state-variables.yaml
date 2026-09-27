@@ -27,6 +27,11 @@ variables:
   tolerance_mm: {type: number, unit: mm, description: "Best routine machining fit. Hand 1.0; flat reference 0.5; lead screw 0.25; gauges 0.1; micrometer 0.02; grinding 0.01."}
   known_flaws: {type: set, description: "Flaws revealed by testing (failure-modes.md)."}
 
+  # ---- Labor control ---------------------------------------------------------------------------------
+  labor_tier: {type: enum, values: [people, works, departments], description: "How the player assigns labor. Unlocked by the foremen and departments nodes."}
+  jobs_active: {type: count, description: "Jobs with at least one person; triggers foremen."}
+  works_active: {type: count, description: "Facilities with a target set; triggers departments."}
+
   # ---- Land, scars -----------------------------------------------------------------------------------
   coppice_area: {type: number, unit: ha, description: "Managed coppice; sets a sustainable charcoal ceiling."}
   river_sites: {type: count, description: "Usable water-power sites. Caps wheels and hydro."}

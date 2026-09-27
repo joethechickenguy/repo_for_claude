@@ -5,6 +5,7 @@ stage: 5
 name: Precision and propulsion
 opening_problem: "You can make liquid oxygen by the ton, but nobody here has ever built a machine that burns it on purpose."
 heartbeat: stand_time
+labor_tier: departments      # unlocked by the departments node in beat 1
 gate:
   id: gate_engine
   name: A booster-class engine fires
@@ -69,6 +70,30 @@ workshops:
 nodes:
 
   # ---- Beat 1: bearings and grinding ------------------------------------------------------------------------------------------
+  - id: departments
+    name: Departments
+    stage: 5
+    beat: 1
+    kind: project
+    critical_path: true
+    problem: "Twelve works and an oxygen plant, and you're still setting furnace targets by hand while the engine program waits."
+    requires:
+      nodes: [gate_liquid_oxygen]
+      state: ["works_active >= 10"]
+      labor_person_days: 100000
+    unlocks:
+      effects: ["Labor tier: departments. Five priority sliders (metals, power, chemistry, propulsion, testing) staff the works beneath them. Works and jobs stay one expander away"]
+    writes_state: [labor_tier]
+    pages_bundle: none
+    without_pages: "No penalty"
+    numbers_status: "Game structure"
+    sources: []
+    tags: [substantive]
+    notebook: >
+      A rocket program is a management problem before it is an engineering one. Peenemunde and
+      Huntsville ran as departments with budgets and priorities, and the director's job was deciding
+      what got the people this year. From here, so is yours.
+
   - id: precision_grinding
     name: Precision grinding and ball bearings
     stage: 5

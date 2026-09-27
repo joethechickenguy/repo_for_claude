@@ -25,7 +25,10 @@ E6. I can start any time after B. J is last and iterative.
 
 **Delivers.** A deterministic tick loop (one tick = one day; 1×/5×/20× and auto-pause), the state
 store (every variable in `state-variables.yaml`, typed), jobs (assign people in blocks; each job has
-inputs, outputs, tool use, skill), pull-based production (consumers set demand; producers fill it;
+inputs, outputs, tool use, skill), the three labor tiers (`DESIGN.md`, Labor: a works has a target
+output and is staffed from the pool in priority order; a department has a priority and staffs its
+works; pinned rows are never touched; every assignment the engine makes is recorded so the UI can show
+it), pull-based production (consumers set demand; producers fill it;
 surplus piles visibly), tool wear, training (idle people accumulate skill in the trade the player
 picks; trained counts are state), spoilage for wood/charcoal/clay only, save/load.
 
@@ -75,9 +78,11 @@ value". **Done when** each model has tests pinning the worked examples in the st
 **Delivers.** The frame every stage uses: header (stage, year/day, speed, energy number),
 slide-rule meter with gates, stores (pull-based: stock, rate, demand), people (jobs, ± blocks, idle,
 training), projects (visible nodes with problem, cost, Why-this-works, Start, progress, milestones),
-log, the notebook screen (entries fill as nodes complete), and the pressure bars strip (heartbeat
+log, the notebook screen (entries fill as nodes complete), the pressure bars strip (heartbeat
 always visible; others appear at their `introduced_in_beat`). Auto-pause with a one-line reason when
-a bar goes red, a project completes, or a new node appears. Phone width works.
+a bar goes red, a project completes, or a new node appears. The people panel is **one recursive
+control** used at every tier and in the draft: a row with name, number, ±, an expander, and a pin;
+children spread the parent's allocation by size unless pinned. Phone width works.
 
 **Done when.** Stage 1 is playable end to end with content from G1 and looks like the prototype.
 

@@ -9,6 +9,7 @@ stage: 2
 name: Iron
 opening_problem: "Copper and bronze keep your crews working, but copper ore is scarce and iron ore is everywhere, if you can get a fire hot enough."
 heartbeat: fuel_balance
+labor_tier: people
 gate:
   id: gate_steam
   name: A working steam engine

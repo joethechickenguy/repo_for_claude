@@ -5,6 +5,7 @@ stage: 3
 name: Steam and steel
 opening_problem: "You have engine power, but every part is still shaped by hand, one at a time, and no two fit."
 heartbeat: shop_hours
+labor_tier: works            # unlocked by the foremen node in beat 1
 gate:
   id: gate_generator
   name: Electric power from a generator
@@ -98,6 +99,30 @@ workshops:
 nodes:
 
   # ---- Beat 1: rotative power -----------------------------------------------------------------------------
+  - id: foremen
+    name: Foremen
+    stage: 3
+    beat: 1
+    kind: project
+    critical_path: true
+    problem: "Forty jobs, and half your day is moving people between them."
+    requires:
+      nodes: [gate_steam]
+      state: ["jobs_active >= 20"]
+      labor_person_days: 100000
+    unlocks:
+      effects: ["Labor tier: works. Each facility gets a target output; foremen staff it from the pool and report the crew it took. Jobs stay one expander away and can be pinned"]
+    writes_state: [labor_tier]
+    pages_bundle: none
+    without_pages: "No penalty"
+    numbers_status: "Game structure"
+    sources: []
+    tags: [substantive]
+    notebook: >
+      No one at a nineteenth-century works assigned individuals. A foreman ran a furnace or a shop
+      against a target and found the hands. Delegation is a technology too, and this colony has been
+      at it long enough to have people who are good at it.
+
   - id: rotative_engine_shafting
     name: Rotative engines and line shafting
     stage: 3

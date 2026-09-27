@@ -204,6 +204,7 @@ Heartbeat: `shop_hours`. Gate: Electric power from a generator.
 
 | Beat | Node | Kind | Substantive | Problem |
 | --- | --- | --- | --- | --- |
+| 1 | `foremen` | project | yes | Forty jobs, and half your day is moving people between them. |
 | 1 | `rotative_engine_shafting` | project |  | Engines only pump up and down, but lathes, hammers and bellows need to turn. |
 | 2 | `bearings_lubrication` | project | yes | Shafts running in wooden blocks with tallow heat up, wear oval, and seize at speed. |
 | 2 | `measurement` | project | yes | Workshops disagree on what a millimeter is, and the furnace crew judges heat by color. |
@@ -229,6 +230,8 @@ Heartbeat: `shop_hours`. Gate: Electric power from a generator.
 
 ```mermaid
 flowchart TD
+  foremen["Foremen"]
+  gate_steam --> foremen
   rotative_engine_shafting["Rotative engines and line shafting"]
   gate_steam --> rotative_engine_shafting
   surface_plates["Flat surfaces"]
@@ -295,7 +298,7 @@ flowchart TD
   stone_molds("Stone molds (S1)")
   tin_bronze("Tin bronze (S1)")
   classDef crit stroke-width:3px
-  class rotative_engine_shafting,surface_plates,screw_cutting_lathe,measurement,bearings_lubrication,bessemer_converter,mineral_prospecting,glassworks,sulfuric_acid,wire_drawing,electrical_laboratory,dynamo,gate_generator crit
+  class foremen,rotative_engine_shafting,surface_plates,screw_cutting_lathe,measurement,bearings_lubrication,bessemer_converter,mineral_prospecting,glassworks,sulfuric_acid,wire_drawing,electrical_laboratory,dynamo,gate_generator crit
 ```
 
 ## Stage 4: Electricity and chemistry
@@ -399,6 +402,7 @@ Heartbeat: `stand_time`. Gate: A booster-class engine fires.
 
 | Beat | Node | Kind | Substantive | Problem |
 | --- | --- | --- | --- | --- |
+| 1 | `departments` | project | yes | Twelve works and an oxygen plant, and you're still setting furnace targets by hand while the engine program waits. |
 | 1 | `precision_grinding` | project |  | Shafts at thousands of rpm seize in plain bearings, and cutting tools can't finish hardened steel. |
 | 2 | `electronics_lab` | project |  | Once a rocket leaves the ground, you won't know what it's doing or why it failed. |
 | 2 | `instrumentation` | project | yes | Engines on test will blow up in a fraction of a second, and nobody will see what happened first. |
@@ -422,6 +426,8 @@ Heartbeat: `stand_time`. Gate: A booster-class engine fires.
 
 ```mermaid
 flowchart TD
+  departments["Departments"]
+  gate_liquid_oxygen --> departments
   precision_grinding["Precision grinding and ball bearings"]
   gate_liquid_oxygen --> precision_grinding
   alloy_steels --> precision_grinding
@@ -502,7 +508,7 @@ flowchart TD
   vacuum_and_dewar("High vacuum and insulated flasks (S4)")
   welding("Welding (S4)")
   classDef crit stroke-width:3px
-  class precision_grinding,electronics_lab,instrumentation,gyroscopes,test_stand,first_liquid_rocket,regenerative_cooling,injector_design,pressure_fed_booster_engine,launch_complex,tracking_network,gate_engine crit
+  class departments,precision_grinding,electronics_lab,instrumentation,gyroscopes,test_stand,first_liquid_rocket,regenerative_cooling,injector_design,pressure_fed_booster_engine,launch_complex,tracking_network,gate_engine crit
 ```
 
 ## Stage 6: The rocket

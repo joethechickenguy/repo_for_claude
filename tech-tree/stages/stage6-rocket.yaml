@@ -6,6 +6,7 @@ stage: 6
 name: The rocket
 opening_problem: "One engine fires on a pad. You need a vehicle of several stages, a way to steer it, a capsule that keeps someone alive, and a lander that sets down gently on a world with no air."
 heartbeat: calendar
+labor_tier: departments
 gate:
   id: gate_landing
   name: A living pilot on the Moon

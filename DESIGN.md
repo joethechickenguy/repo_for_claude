@@ -94,10 +94,25 @@ marked. Heat processes count the fuel burned; engines and electricity count the 
 (so a better engine is never punished). Muscle isn't counted. Details and calibration in
 `tech-tree/energy.md`.
 
-**Labor.** 10,000 people assigned to jobs in blocks. Idle people are always in **training**: anyone
-can learn any trade (immortality), so idle labor converts to skill, and trained counts
-(`machinists_trained`, `welders_trained`, ...) gate later nodes. Big projects have **milestones** so
-a long build unlocks something halfway.
+**Labor, in three tiers.** 10,000 people. How the player controls them is itself unlocked, so the
+bookkeeping never outgrows the decisions:
+
+| Tier | Stages | The player sets | The engine does |
+| --- | --- | --- | --- |
+| People | 1-2 | People per job, ± blocks | Nothing |
+| Works | 3-4 | A target output per facility ("furnace 2: 1 t/day"; the machine-shop queue order) | Staffs each works from the pool to hit its target and shows the crew it took |
+| Departments | 5-6 | A priority per department (metals, power, chemistry, propulsion, testing) plus the test campaign | Staffs works within departments to the priorities |
+
+Each tier arrives as a node when the previous one has become a chore (`foremen`, Stage 3 beat 1;
+`departments`, Stage 5 beat 1). The people panel is one recursive control at every tier: a row with
+± and an expander, the same pin-and-spread rule as the draft's specialties and topics. Expand a
+department to its works, a works to its jobs, pin anything by hand. Auto-staffing is deliberately
+dumb (fill targets in priority order, show what it assigned) so cause and effect stay visible. What
+never disappears: the heartbeat bar, the pressures, the idle count, and each works' output vs target.
+
+Idle people are always in **training**: anyone can learn any trade (immortality), so idle labor
+converts to skill, and trained counts (`machinists_trained`, `welders_trained`, ...) gate later
+nodes. Big projects have **milestones** so a long build unlocks something halfway.
 
 **Production is pull-based.** Furnaces consume at the rate they run; mining beyond that piles up
 visibly. Only wood, charcoal and clay spoil. No storage caps.

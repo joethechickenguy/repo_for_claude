@@ -5,6 +5,7 @@ stage: 1
 name: Fire and stone
 opening_problem: "Ten thousand people on a hillside in eastern Anatolia, holding paper. Nobody has a knife."
 heartbeat: tool_wear
+labor_tier: people
 starting_jobs: [gather_wood, knap_flint, build]
 gate:
   id: gate_reliable_smelting

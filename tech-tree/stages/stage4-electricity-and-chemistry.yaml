@@ -5,6 +5,7 @@ stage: 4
 name: Electricity and chemistry
 opening_problem: "You can make current, but only next to the engine that makes it, and your chemists still can't make most of what a rocket is built from."
 heartbeat: power_balance
+labor_tier: works
 gate:
   id: gate_liquid_oxygen
   name: Liquid oxygen on tap

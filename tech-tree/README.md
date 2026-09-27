@@ -22,6 +22,7 @@ stage: 2
 name: Iron
 opening_problem: "One sentence the player reads on entering."
 heartbeat: fuel_balance            # id of the pressure that's always on screen
+labor_tier: people                 # people | works | departments (DESIGN.md, Labor)
 gate:
   id: gate_steam
   name: A working steam engine

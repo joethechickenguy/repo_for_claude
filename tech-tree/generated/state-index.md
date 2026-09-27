@@ -22,6 +22,9 @@
 | `iron_quality` | count | `bessemer_converter`, `blast_furnace`, `deposit_choice` | `bloom_smithing`, `gate_steam` |
 | `tolerance_mm` | number | `measurement`, `precision_grinding`, `surface_plates` | `claude_expander`, `compressors`, `gate_generator`, `gyroscopes`, `precision_grinding` |
 | `known_flaws` | set | `test_campaign` | `gate_landing` |
+| `labor_tier` | enum | `departments`, `foremen` | (gates, pressures or UI) |
+| `jobs_active` | count | (simulation / draft) | (gates, pressures or UI) |
+| `works_active` | count | (simulation / draft) | (gates, pressures or UI) |
 | `coppice_area` | number | `coppicing` | `blast_furnace` |
 | `river_sites` | count | (simulation / draft) | `water_turbine`, `water_wheels` |
 | `haul_distance_days` | number | `coal_seam_choice`, `deposit_choice`, `shallow_pits`, `trail_green_stones` | `rails_wagonways` |

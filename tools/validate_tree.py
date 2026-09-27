@@ -131,6 +131,8 @@ def validate(stages, state_vars, bundles, resources):
             for a in pr.get("answers") or []:
                 if a not in nodes and a not in workshops:
                     errors.append(f"{fname}: pressure {pr['id']} answer {a!r} is not a node or workshop")
+        if data.get("labor_tier") not in ("people", "works", "departments"):
+            errors.append(f"{fname}: labor_tier must be people | works | departments")
         hb = data.get("heartbeat")
         if hb and hb not in {p["id"] for p in data.get("pressures") or []}:
             errors.append(f"{fname}: heartbeat {hb!r} is not one of the stage's pressures")
