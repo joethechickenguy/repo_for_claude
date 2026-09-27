@@ -173,7 +173,18 @@ controls. Levers: labor costs, rates, pressure slopes, beat thresholds. Record e
 Tick when done; add 3-5 lines of what shipped and what was left open.
 
 - [ ] A engine core
-- [ ] B stage loader
+- [x] B stage loader
+  - `npm run content` compiles tech-tree/ (stages, state-variables, resources, draft) into typed
+    `src/content/tree.json`; import `tree` and the types from `src/content`. Workshops come with
+    `extends` merged, gate numbers become conditions, and conditions are pre-parsed.
+  - `requires.state` parser/evaluator (`expr.ts`, `evaluate.ts`) with seeded property tests. Node
+    logic in `nodes.ts` is pure functions over `StateView` + `NodeBook`: visibility, affordability,
+    Build labor, milestones, writes_state, page tiers, jobs, dials, gates.
+  - Agrees with `tools/validate_tree.py`: same references and 30 mutations that both reject.
+    Stage 1 completes headless on A's engine (tests/loader-engine.test.ts).
+  - Open: open-questions 18-24 (undeclared condition names, `geological_survey`, enum writes
+    and state defaults missing from YAML). Job rates are still only YAML comments (`Job.rateNote`).
+    Nothing wires the node logic into the running engine yet (D or F).
 - [ ] C simulation models
 - [ ] D shell UI
 - [ ] E1 furnace · [ ] E2 engine · [ ] E3 machine shop · [ ] E4 liquefier · [ ] E5 rocket engine · [ ] E6 rocket
