@@ -21,6 +21,11 @@ export interface StagePlan {
   only?: string[];
   /** Never build these. */
   skip?: string[];
+  /**
+   * Workshops whose results are decision moments in this stage (Stage 6: each test result asks "test
+   * more, fix, or launch?"). Counted with the trade-off nodes for the decision-gap measure.
+   */
+  decisionWorkshops?: string[];
   /** The job the bot staffs up when the gate's energy check is what's missing. */
   energyJob?: string;
   /** Run once a day before the tick: workshops, dials. */
@@ -216,6 +221,7 @@ export function playRun(plans: Record<number, StagePlan>, untilStage: number, ma
         const k = `${x.kind}:${x.subject ?? ""}`;
         rep.slowdownKinds[k] = (rep.slowdownKinds[k] ?? 0) + 1;
         if (x.kind === "node_complete") rep.completed.push({ id: x.subject ?? "", day: day - rep.startDay });
+        if (x.kind === "workshop_done" && plan.decisionWorkshops?.includes(x.subject ?? "")) rep.decisions.push({ id: `${x.subject}:result`, day: day - rep.startDay });
       }
       for (const x of reasons)
         if (x.kind === "node_revealed" && !recentReasons.some((y) => REASON_KINDS.has(y.kind))) rep.unexplained.push(x.subject ?? "");

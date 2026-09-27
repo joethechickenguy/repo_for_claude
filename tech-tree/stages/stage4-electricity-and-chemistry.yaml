@@ -13,6 +13,7 @@ gate:
     energy_w_per_person: 2500
     state: ["lox_kg_per_day >= 500"]
   routes: [A_linde, B_claude, T_cascade]
+  banner: "Liquid oxygen by the half ton, every day. The colony can bottle the air it breathes and burn anything in it."
 
 # Job rates per worker-day (G4; all estimates). Electrical loads are in the power bar's model.
 jobs:
@@ -148,6 +149,7 @@ nodes:
     critical_path: true
     problem: "Every workshop needs its own engine and dynamo, because current can't travel far from the machine that makes it."
     tradeoff: "The whole colony on one grid, and a power bar to balance; thirty tons of copper in the wires."
+    log: "Copper on poles carries the station's power across the colony."
     requires:
       nodes: [gate_generator]
       resources: {copper_kg: 30000, iron_kg: 15000, glass_kg: 2000}
@@ -336,6 +338,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "Riveted seams leak under pressure and add weight; thin tanks and pipes need continuous joints."
+    log: "A welder draws a bead along a seam, and two plates become one."
     requires:
       nodes: [arc_furnace]
       resources: {steel_kg: 3000, copper_kg: 1000}
@@ -418,6 +421,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "You can't hold gas at a hundred atmospheres; single-stage pumps overheat and leak."
+    log: "Air at two hundred atmospheres, held in welded steel."
     requires:
       nodes: [welding, bearings_lubrication]
       state: ["tolerance_mm <= 0.1"]
@@ -476,6 +480,7 @@ nodes:
     critical_path: true
     problem: "Air won't liquefy until about -190 C, and nothing you have gets close."
     tradeoff: "Liquid air this year, a few liters a day; it can never make tons."
+    log: "A few drops of pale blue liquid in a silvered flask: liquid air."
     requires:
       nodes: [compressors, vacuum_and_dewar]
       resources: {steel_kg: 3000, copper_kg: 1000}
@@ -503,6 +508,7 @@ nodes:
     critical_path: true
     problem: "Throttling compressed air cools it only slightly. Unless the cold is kept and reused, it never adds up."
     tradeoff: "Simple and continuous, nothing moving in the cold; about twice the electricity per kilogram."
+    log: "The plant runs day and night; nothing moves in the cold end but the air."
     requires:
       nodes: [cascade_liquefier]
       resources: {copper_kg: 3000, steel_kg: 8000}
@@ -530,6 +536,7 @@ nodes:
     critical_path: false
     problem: "Throttling through a valve wastes most of the cooling that compressed air could give."
     tradeoff: "Half the electricity per kilogram; needs alloy steel and a 0.05 mm piston that works at -150 C."
+    log: "A piston runs at a hundred and fifty below and the plant makes twice as much for the same power."
     requires:
       nodes: [cascade_liquefier, alloy_steels]
       state: ["tolerance_mm <= 0.05"]
@@ -556,6 +563,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "Liquid air is four-fifths nitrogen, and a rocket burning it would lose most of its punch."
+    log: "Oxygen boils last; the column gives it back pure."
     requires:
       any_of: [[linde_liquefier], [claude_expander]]
       resources: {copper_kg: 5000, steel_kg: 5000}
@@ -584,6 +592,7 @@ nodes:
     critical_path: false
     problem: "A preview of the rocket workshop shows a steel vehicle about two and a half times the mass of an aluminum one."
     tradeoff: "Aluminum tanks for the rocket (lighter by a third); needs half a megawatt spare and three years of builders."
+    log: "The first ingot of aluminum, light as wood and bright as silver."
     requires:
       nodes: [chlor_alkali, arc_furnace]
       state: ["mineral_sites has bauxite", "power_balance_kw > 500"]
@@ -617,6 +626,7 @@ nodes:
     critical_path: false
     problem: "Your chemists want a liquid fuel that doesn't need farmland, and the survey marks oil seeps to the southeast."
     tradeoff: "Kerosene, the denser rocket fuel, and mineral oil for bearings; needs rails to the seeps and three years."
+    log: "The rig strikes oil at the seeps."
     requires:
       nodes: [open_hearth]
       state: ["mineral_sites has oil_seeps", "rail_km > 0"]

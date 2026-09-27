@@ -165,6 +165,9 @@ variables:
   has_radar_altimeter: {type: flag}
   landing_tolerance: {type: number, unit: m/s}
   fixed_flaws: {type: set}
+  crewed_landing_survived: {type: flag, description: "Stage 6 gate: a crewed landing with the pilot alive (test campaign launch)."}
+  landing_year: {type: number, description: "In-game year of the successful landing: the score."}
+  pilots_lost: {type: count, description: "Pilots lost at launch; each costs two years (new vehicle, new pilot)."}
 
   # ---- Stage 1 route flags ----------------------------------------------------------------------------------------
   has_bellows: {type: flag, description: "Portable forced draft."}

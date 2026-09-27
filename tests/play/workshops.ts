@@ -9,7 +9,9 @@ import "../../src/ui/workshops/furnace";
 import { liquefierDesign, liquefierDials, startLiquefier } from "../../src/ui/workshops/liquefier";
 import { PROPELLANTS } from "../../src/models";
 import { enginePropellants, queueFiring, ROCKET_ENGINE, rocketEngineDesign, rocketEngineDials, rocketEngineResult } from "../../src/ui/workshops/rocketEngine";
-import "../../src/ui/workshops/rocket";
+import { adoptRocket, currentRocket, marginDeductions, payloadT, ROCKET, rocketAllDials, routeOf } from "../../src/ui/workshops/rocket";
+import { adoptedVehicle, CAMPAIGN, launch, launchBlocked, startFix, startTest, testBlocked, testSpecs, vehicleFlaws } from "../../src/ui/workshops/campaign";
+import { missionBudgetKmS, optimalStaging, stageIsp, stageStructuralFraction, type RocketStageDials } from "../../src/models";
 
 type Data = { dials: Record<string, JsonValue>; [k: string]: JsonValue };
 const data = (g: Game, ws: string): Data | null => (workshopSystem<JsonValue>(g, ws)?.data as Data | undefined) ?? null;
@@ -129,4 +131,64 @@ export function rocketEngineHabit(g: Game): void {
   if (rec && !(best.burn > rec.burn_s + 1e-9 || (best.burn >= rec.burn_s - 1e-9 && best.thrust > rec.thrust_kn + 1))) return;
   d.dials = best.v;
   queueFiring(g);
+}
+
+/** Rocket workshop: size the stages for the budget plus a margin with the best chemistry and tanks open; re-adopt when that changes. */
+export function rocketHabit(g: Game): void {
+  const all = rocketAllDials(g);
+  if (!all.length) return;
+  const d = data(g, ROCKET) as (Data & { stages: Record<string, JsonValue>[] }) | null;
+  if (!d) return;
+  const pick = (id: string, pref: string[]) => {
+    const x = all.find((y) => y.id === id)!;
+    return pref.find((o) => x.options?.includes(o) && !x.locked?.[o]) ?? x.options![0]!;
+  };
+  const fuel = pick("propellants", ["kerosene_lox", "ethanol_lox"]);
+  const lander = pick("propellants", ["hypergolic", fuel]);
+  const tank = pick("tank_material", ["aluminum", "steel"]);
+  const routeDial = all.find((x) => x.id === "route");
+  if (routeDial) d.dials = { ...d.dials, route: pick("route", ["parking_orbit", "direct_ascent"]), stage_count: 4 };
+  else d.dials = { ...d.dials, stage_count: 4 };
+  const kinds: RocketStageDials[] = [0, 1, 2, 3].map((i) => ({
+    propellant_mass: 1,
+    propellants: (i === 3 ? lander : fuel) as RocketStageDials["propellants"],
+    tank_material: tank as RocketStageDials["tank_material"],
+    feed: i === 3 ? "pressure_fed" : "turbopump",
+  }));
+  const route = routeOf(g, d.dials);
+  const target = missionBudgetKmS(route ?? undefined) + marginDeductions(g) + 0.45;
+  const o = optimalStaging(kinds.map((k) => ({ isp_s: stageIsp(k), structural_fraction: stageStructuralFraction(k) })), payloadT(g), target);
+  if (!o) return;
+  const stages = kinds.map((k, i) => ({ ...k, propellant_mass: Math.ceil(o.propellant_mass_t[i]!) }));
+  const want = JSON.stringify(stages);
+  const cur = adoptedVehicle(g);
+  if (cur && JSON.stringify(cur.stages) === want && (cur.route ?? null) === (route ?? null)) return;
+  d.stages = stages as unknown as Record<string, JsonValue>[];
+  const { design } = currentRocket(g, d as never);
+  if (design.dv_margin_km_s < 0) return;
+  adoptRocket(g);
+}
+
+const TEST_PLAN: [string, number][] = [
+  ["static_fire", 3], ["tanking_hold", 2], ["vacuum_chamber", 2], ["orbital_flight", 1], ["impactor", 1], ["uncrewed_landing", 1],
+];
+
+/** Test campaign: cover every kind of test, fix what's found (worst first), launch when nothing known is unfixed. */
+export function campaignHabit(g: Game): void {
+  const d = data(g, CAMPAIGN) as (Data & { testsDone: Record<string, number>; known: string[]; fixed: string[]; test: JsonValue; fix: JsonValue }) | null;
+  if (!d || !Object.keys(testSpecs(g)).length || !adoptedVehicle(g) || !rocketAllDials(g).length) return;
+  if (!g.book.completed.includes(CAMPAIGN)) return;
+  const table = new Map(vehicleFlaws(g).map((f) => [f.id, f]));
+  const open = d.known.filter((id) => table.has(id) && !d.fixed.includes(id));
+  if (!d.fix && open.length) {
+    const rank = { fatal: 0, mission_loss: 1, survivable: 2 } as const;
+    open.sort((a, b) => rank[table.get(a)!.severity] - rank[table.get(b)!.severity]);
+    startFix(g, open[0]!);
+  }
+  if (!d.test) {
+    const next = TEST_PLAN.find(([t, k]) => (d.testsDone[t] ?? 0) < k && testBlocked(g, t) === null);
+    if (next) startTest(g, next[0]);
+  }
+  const planDone = TEST_PLAN.every(([t, k]) => (d.testsDone[t] ?? 0) >= k);
+  if (planDone && !open.length && !d.fix && !d.test && launchBlocked(g) === null) launch(g);
 }

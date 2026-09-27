@@ -17,6 +17,7 @@ gate:
     energy_w_per_person: 600
     state: ["mine_drained_by_engine == true", "mine_water_m < 0"]   # built AND the mine really drained (2026-09-27)
   routes: [A_newcomen, B_watt, C_high_pressure, T_savery]
+  banner: "The engine keeps the mine dry. For the first time, coal does work that people did."
 
 # Job rates per worker-day (open question 25; owner playtest 2026-09-27: Stage 2 had none, so nothing
 # past the bloomery could ever be made). All estimates unless noted; sources in the node comments.
@@ -334,6 +335,7 @@ nodes:
     workshop: furnace_workshop
     critical_path: true
     problem: "Iron doesn't melt until 1,538 C, far beyond what your copper furnaces reach."
+    log: "The first bloom comes out hissing, a lump of iron and slag the size of a loaf."
     requires:
       any_of: [[bog_iron, pot_bellows], [bog_iron, wind_furnaces], [hillside_ore, pot_bellows], [hillside_ore, wind_furnaces]]
       resources: {clay_kg: 40000, charcoal_kg: 10000}
@@ -392,6 +394,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "The bloom is a spongy lump full of slag that crumbles if you try to use it."
+    log: "Hammered and folded, the bloom becomes bar iron."
     requires:
       nodes: [bloomery]
       state: ["bloom_kg > 500"]
@@ -480,6 +483,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "The forest can't feed both the charcoal kilns and the furnaces."
+    log: "Black stone that burns: the seam is open."
     requires:
       nodes: [bloom_smithing]   # was iron_prospecting + "forest_cover < 50 OR fuel_balance < 0": a good player
                                 # never met it, and beat gating held beats 5-7 behind it (owner playtest 2026-09-27)
@@ -620,6 +624,7 @@ nodes:
     workshop: furnace_workshop
     critical_path: true
     problem: "A bloomery makes 30 kg a day and wastes most of the iron in slag. You need tons."
+    log: "The tall furnace runs day and night, and iron pours out of it like water."
     requires:
       nodes: [bloom_smithing, lime_burning]
       resources: {stone_kg: 100000, clay_kg: 60000, iron_kg: 2000}   # was 400,000 stone and a cumulative-iron condition nothing measured; estimates
@@ -786,6 +791,7 @@ nodes:
     critical_path: false
     problem: "Pumpers are a tenth of the colony and the water still gains in the wet season."
     tradeoff: "A tunnel to the valley: a huge dig, then the mine drains itself forever with no fuel and no pumpers."
+    log: "The tunnel breaks through to the valley and the mine drains out of its own mouth."
     requires:
       nodes: [mine_drainage_manual]
       state: ["terrain_allows_adit == true"]
@@ -881,6 +887,7 @@ nodes:
     route: [A_newcomen]
     critical_path: true
     problem: "Steam can make a vacuum; a piston in a cylinder can turn that vacuum into a pumping stroke, at any depth."
+    log: "The engine heaves once every five seconds, and the water in the mine starts to fall."
     requires:
       nodes: [sand_casting, mine_drainage_manual]
       any_of: [[near_seam], [far_seam]]   # an engine eats coal
@@ -916,6 +923,7 @@ nodes:
     route: [B_watt]
     problem: "Cast cylinders come out oval and tapered, so a tight piston jams in one place and leaks steam in another."
     tradeoff: "True cylinders: the path to the condensing engine, four times the work from the same coal."
+    log: "The mill bores a cylinder true to the thickness of a coin."
     requires:
       nodes: [sand_casting]
       any_of: [[water_wheels], [newcomen_engine]]

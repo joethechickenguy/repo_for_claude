@@ -22,7 +22,7 @@ export const STAGE2: StagePlan = {
   skip: ["savery_pump"],
 };
 
-import { dynamoHabit, liquefierHabit, rocketEngineHabit, shopHabit } from "./workshops";
+import { campaignHabit, dynamoHabit, liquefierHabit, rocketEngineHabit, rocketHabit, shopHabit } from "./workshops";
 
 /** Stage 3: iron tools and coal free people from wood, flint and clay; the new works get crews. */
 const STAGE3_PEOPLE: [string, number][] = [
@@ -80,5 +80,19 @@ export const STAGE5: StagePlan = {
     dynamoHabit(g);
     liquefierHabit(g);
     rocketEngineHabit(g);
+  },
+};
+
+export const STAGE6: StagePlan = {
+  ...STAGE5,
+  picks: ["radio_command_guidance"],
+  decisionWorkshops: ["test_campaign"],
+  daily(g) {
+    shopHabit(g);
+    dynamoHabit(g);
+    liquefierHabit(g);
+    rocketEngineHabit(g);
+    rocketHabit(g);
+    campaignHabit(g);
   },
 };

@@ -8,3 +8,4 @@ export * from "./machineShop";
 export * from "./liquefier";
 export * from "./rocketEngine";
 export * from "./rocket";
+export * from "./flaws";

@@ -183,6 +183,8 @@ export interface TreeNode {
   choice?: string;
   /** One line on what this option gives up or gains, shown on its card (node `tradeoff:`). */
   tradeoff?: string;
+  /** The log's line when the node completes, in the colony's voice (node `log:`). */
+  log?: string;
   /** Engine modifiers applied for good when the node completes (node `modifiers:`, same shape as `red_modifiers`). */
   modifiers?: PressureModifier[];
   /** Added to a pressure's per-day drift once the node is complete (node `pressure_per_day:`). */
@@ -257,6 +259,8 @@ export interface Gate {
   condition: Condition[];
   routes: string[];
   score?: string;
+  /** One or two sentences shown and logged when the gate is reached (gate `banner:`). */
+  banner?: string;
 }
 
 export interface Stage {

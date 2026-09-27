@@ -13,6 +13,7 @@ gate:
     energy_w_per_person: 1500
     state: ["dynamo_output_kw >= 50"]
   routes: [A_steam_dynamo, B_water_turbine, T_magneto]
+  banner: "A dynamo lights the works. Current can go where shafts and belts can't."
 
 # Job rates per worker-day (G3; all estimates unless noted).
 jobs:
@@ -209,6 +210,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "Engines only pump up and down, but lathes, hammers and bellows need to turn."
+    log: "Belts and shafts run the length of the works, all from one engine."
     requires:
       nodes: [gate_steam]
       resources: {iron_kg: 30000, wood_kg: 20000}
@@ -237,6 +239,7 @@ nodes:
     workshop: machine_shop
     critical_path: true
     problem: "Nobody can make or check a truly flat surface, so every machine slide is a little crooked and parts don't fit."
+    log: "Three plates, scraped against each other in turn: there is now such a thing as flat."
     requires:
       nodes: [rotative_engine_shafting]
       resources: {iron_kg: 2000}
@@ -263,6 +266,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "Hand-filed screws are all different, so every nut must be matched to its bolt."
+    log: "The lathe cuts a screw true enough to build a better lathe."
     requires:
       nodes: [surface_plates]
       state: ["has_steel_edges == true OR iron_tools > 5000"]
@@ -291,6 +295,7 @@ nodes:
     critical_path: true
     problem: "Workshops disagree on what a millimeter is, and the furnace crew judges heat by color."
     tradeoff: "Gauges and micrometers: the tolerance compressors and rockets need, and thermometers for the furnaces."
+    log: "A micrometer reads a fiftieth of a millimeter, and the fitters stop arguing."
     requires:
       nodes: [screw_cutting_lathe]
       resources: {iron_kg: 500, copper_kg: 200}
@@ -371,6 +376,7 @@ nodes:
     critical_path: false
     problem: "Carting coal and ore on dirt tracks takes more workers than mining it."
     tradeoff: "Rails carry ore, coal and later oil fast and anywhere, but eat 200 t of iron; canals are cheap and slow and never reach the oil."
+    log: "The first rails carry ore from the mine to the furnace."
     requires:
       nodes: [rotative_engine_shafting]
       state: ["haul_workers > 1500"]
@@ -403,6 +409,7 @@ nodes:
     critical_path: false
     problem: "Carting coal and ore on dirt tracks takes more workers than mining it."
     tradeoff: "Cheap: one horse tows fifty tons on still water. Slow, fixed to the valleys, and no rails for the oil fields later."
+    log: "Barges move down the new cut, fifty tons behind one horse."
     requires:
       nodes: [rotative_engine_shafting]
       state: ["haul_workers > 1500"]
@@ -432,6 +439,7 @@ nodes:
     workshop: furnace_workshop
     critical_path: true
     problem: "Fined iron comes a few hundred kilograms at a time, and real steel is still a luxury."
+    log: "Air roars through molten iron, and twenty minutes later it is steel."
     requires:
       nodes: [measurement]
       state: ["iron_kg_total > 200000"]
@@ -675,6 +683,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "Static sparks are useless for work; the engineers need a steady current to test anything."
+    log: "A magnet pushed through a coil twitches the needle: current from motion."
     requires:
       nodes: [wire_drawing, sulfuric_acid]
       resources: {zinc_kg: 500, copper_kg: 1000, iron_kg: 500}
@@ -789,6 +798,7 @@ nodes:
     route: [A_steam_dynamo, B_water_turbine]
     critical_path: true
     problem: "Batteries and magnetos give watts; your works needs tens of kilowatts."
+    log: "The first arc lamp blazes over the yard at night."
     requires:
       nodes: [electrical_laboratory, bearings_lubrication]
       any_of: [[steam_engine_house], [water_turbine]]

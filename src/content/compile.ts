@@ -329,6 +329,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     if (n.numbers_status !== undefined) node.numbersStatus = String(n.numbers_status);
     if (n.trap_lesson !== undefined) node.trapLesson = String(n.trap_lesson);
     if (n.tradeoff !== undefined) node.tradeoff = String(n.tradeoff);
+    if (n.log !== undefined) node.log = String(n.log);
     if (n.modifiers !== undefined) node.modifiers = parseModifiers(n.modifiers, `${nid}: modifiers`, errors);
     if (n.pressure_per_day !== undefined) {
       const ppd: Record<string, number> = {};
@@ -415,6 +416,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     }
     if (!rawNodes.has(g.id)) errors.push(`${file}: gate ${g.id} is not a node`);
     const gate: Stage["gate"] = { id: String(g.id), name: String(g.name ?? g.id), condition: gateConds, routes: arr(g.routes).map(String) };
+    if (g.banner !== undefined) gate.banner = String(g.banner);
     if (g.score !== undefined) gate.score = String(g.score);
 
     stages.push({

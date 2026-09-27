@@ -62,6 +62,8 @@ export function rocketAllDials(game: Game): DialView[] {
       hypergolic: needs("has_hypergolics", "hypergolic_propellants"),
     }),
     tank_material: drop({ aluminum: needs("has_duralumin", "aluminum") }),
+    // A parking orbit needs an onboard platform: the ground can't command a restart it can't see.
+    route: drop({ parking_orbit: isDone(game, "inertial_guidance") ? undefined : fill(WS.frame.needs, { name: nodeName(game, "inertial_guidance") }) }),
   });
 }
 

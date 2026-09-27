@@ -6,10 +6,10 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { SaveGame } from "../../src/engine";
 import { playRun, summarize, type StagePlan, type StageReport } from "./bot";
-import { STAGE1, STAGE2, STAGE3, STAGE4, STAGE5 } from "./plans";
+import { STAGE1, STAGE2, STAGE3, STAGE4, STAGE5, STAGE6 } from "./plans";
 
 const YEAR = 365;
-const PLANS: Record<number, StagePlan> = { 1: STAGE1, 2: STAGE2, 3: STAGE3, 4: STAGE4, 5: STAGE5 };
+const PLANS: Record<number, StagePlan> = { 1: STAGE1, 2: STAGE2, 3: STAGE3, 4: STAGE4, 5: STAGE5, 6: STAGE6 };
 
 /**
  * Options to try at each stage, one variant per list. The first is the stage's main variant: it must
@@ -29,6 +29,7 @@ const VARIANTS: Record<number, string[][]> = {
     ["gas_generator_turbopump", "hypergolic_propellants", "differential_analyzer"],
     ["hydrogen_peroxide", "solid_motors", "human_computers"],
   ],
+  6: [["radio_command_guidance"], ["inertial_guidance"]],
 };
 
 /** What each stage's gate proves, beyond reaching it. */
@@ -39,6 +40,10 @@ const PROOF: Record<number, (r: ReturnType<typeof playRun>) => void> = {
     expect(r.game.engine.get("engine_static_fire_s")).toBeGreaterThanOrEqual(60);
     expect(r.game.engine.get("engine_thrust_kn")).toBeGreaterThanOrEqual(250);
     expect(r.game.engine.get("has_launch_pad")).toBe(true);
+  },
+  6: (r) => {
+    expect(r.game.engine.get("crewed_landing_survived")).toBe(true);
+    expect(r.game.engine.state.getNumber("dv_margin_km_s")).toBeGreaterThanOrEqual(0);
   },
 };
 
@@ -56,14 +61,14 @@ describe("the campaign, played by a middling bot", () => {
   beforeAll(() => {
     // One run through the main variants; each stage's start is saved for the variants.
     let from: SaveGame | undefined;
-    for (const stage of [2, 3, 4, 5]) {
+    for (const stage of [2, 3, 4, 5, 6]) {
       const r = playRun(PLANS, stage, 20 * YEAR, from);
       from = r.game.engine.save();
       starts[stage + 1] = from;
     }
   }, 600_000);
 
-  for (const stage of [3, 4, 5])
+  for (const stage of [3, 4, 5, 6])
     VARIANTS[stage]!.forEach((picks, i) =>
       it(`Stage ${stage} reaches its gate taking ${picks.join(", ")}`, () => {
         const r = playRun({ ...PLANS, [stage]: { ...PLANS[stage]!, picks } }, stage, 12 * YEAR, starts[stage]);

@@ -28,6 +28,7 @@ gate:
   name: A working steam engine
   condition: {energy_w_per_person: 600, state: ["mine_drained_by_engine == true"]}
   routes: [A_newcomen, B_watt, C_high_pressure, T_savery]   # T_ = trap
+  banner: "Optional: one or two sentences shown and logged when the gate is reached"
 
 choices:                           # optional: exclusive either/ors; starting one option closes the rest
   - id: air_supply
@@ -86,6 +87,7 @@ nodes:
       jobs: [tend_engine]                      # per-worker-day rate in a comment
       effects: ["..."]
     tradeoff: "One line: what this option gains and gives up (shown on its card)"
+    log: "Optional: the log's line when it completes, in the colony's voice"
     modifiers: {rate: {smelt_copper: 2}, toolLife: {blades: 2.5}}   # optional: applied for good on completion
     pressure_per_day: {wood_distance: 0.07}    # optional: added to that bar's model per_day once complete
     adjusts_state: {iron_quality: -1}          # optional: shifts a number once on completion (sources add up)

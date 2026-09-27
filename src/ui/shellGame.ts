@@ -757,10 +757,15 @@ export class Game {
       const stamp = fill(STRINGS.log.stamp, { year, day });
       let text: string;
       if (l.kind === "opening") text = this.tree.stages.find((x) => String(x.stage) === l.subject)?.openingProblem ?? "";
-      else if (l.kind === GATE_PAUSE) text = fill(STRINGS.log.gate, { n: l.subject ?? "" });
-      else {
+      else if (l.kind === GATE_PAUSE) {
+        const banner = this.tree.stages.find((x) => String(x.stage) === l.subject)?.gate.banner;
+        text = fill(STRINGS.log.gate, { n: l.subject ?? "" }) + (banner ? ` ${banner}` : "");
+      } else {
         const t = (STRINGS.log as Record<string, string>)[l.kind] ?? "{name}";
         text = fill(t, { name: this.subjectName(l.kind, l.subject) });
+        // A completed node may carry its own line in the colony's voice (G1-G6).
+        const own = l.kind === "node_complete" ? this.tree.nodes[l.subject ?? ""]?.log : undefined;
+        if (own) text += ` ${own}`;
       }
       return { stamp, text, kind: l.kind };
     });
@@ -771,7 +776,10 @@ export class Game {
     const order = [GATE_PAUSE, "node_complete", "pressure_red", "workshop_open", "workshop_done", "milestone", "node_revealed"];
     const sorted = [...reasons].filter((r) => r.kind !== INTRO_PAUSE).sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
     const parts = sorted.map((r) => {
-      if (r.kind === GATE_PAUSE) return fill(STRINGS.pause.gate, { n: r.subject ?? "" });
+      if (r.kind === GATE_PAUSE) {
+        const banner = this.tree.stages.find((x) => String(x.stage) === r.subject)?.gate.banner;
+        return fill(STRINGS.pause.gate, { n: r.subject ?? "" }) + (banner ? `. ${banner}` : "");
+      }
       const t = (STRINGS.pause as Record<string, string>)[r.kind] ?? "{name}";
       return fill(t, { name: this.subjectName(r.kind, r.subject) });
     });

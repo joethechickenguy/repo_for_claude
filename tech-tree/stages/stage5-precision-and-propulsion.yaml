@@ -13,6 +13,7 @@ gate:
     energy_w_per_person: 3500
     state: ["engine_static_fire_s >= 60", "engine_thrust_kn >= 250", "has_launch_pad == true"]
   routes: [A_steam_turbopump, B_gas_generator, T_pressure_fed_booster]
+  banner: "A booster-class engine fires for a full minute on its stand, next to a finished pad. Now it has to fly, and carry someone."
 
 # Job rates per worker-day (G5; all estimates).
 jobs:
@@ -135,6 +136,7 @@ nodes:
     critical_path: false
     problem: "Nobody here has built a rocket, and the engineers who will have to are learning from pages."
     tradeoff: "A club of enthusiasts firing small rockets on a field: rocket engineers trained years early, for builders the grinding shop could use."
+    log: "The enthusiasts' first little rocket clears the trees, and the field cheers."
     requires:
       nodes: [gate_liquid_oxygen]
       resources: {steel_kg: 2000, lox_kg: 500}
@@ -162,6 +164,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "Shafts at thousands of rpm seize in plain bearings, and cutting tools can't finish hardened steel."
+    log: "Steel balls ground round to a hundredth of a millimeter."
     requires:
       nodes: [gate_liquid_oxygen, alloy_steels]
       resources: {alloy_steel_kg: 5000, steel_kg: 10000}
@@ -189,6 +192,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "Once a rocket leaves the ground, you won't know what it's doing or why it failed."
+    log: "A glowing filament in a vacuum turns a whisper into a shout."
     requires:
       nodes: [vacuum_and_dewar]
       resources: {glass_kg: 500, copper_kg: 1000, tungsten_kg: 5}
@@ -274,6 +278,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "You have to fire engines somewhere they can explode without killing anyone, while measuring every second."
+    log: "The stand's concrete is poured; the bunker faces it across the flame trench."
     requires:
       nodes: [portland_cement, welding]
       resources: {steel_kg: 30000, cement_kg: 200000}
@@ -325,6 +330,7 @@ nodes:
     workshop: rocket_engine_workshop
     critical_path: true
     problem: "Nobody on your team has ever lit an engine that burns liquid oxygen."
+    log: "The first engine fires for four seconds, then burns through its own wall."
     requires:
       nodes: [test_stand]
       any_of: [[oil], [fuel_alcohol]]
@@ -381,6 +387,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "Chamber walls melt within seconds; the flame is hotter than any metal."
+    log: "Fuel runs through the chamber wall on its way to burn, and the wall stays cool."
     requires:
       nodes: [first_liquid_rocket]
       state: ["engine_static_fire_s > 0"]
@@ -603,6 +610,7 @@ nodes:
     critical_path: true
     problem: "A fueled rocket weighs hundreds of tons, needs tons of liquid oxygen in its last hours, and would destroy the test stand when it lights."
     tradeoff: "The biggest build in the game; start it early and let it run beside the engine work."
+    log: "The pad, the trench and the blockhouse are finished. Something will stand there soon."
     requires:
       nodes: [test_stand, air_separation]
       state: ["engine_thrust_kn > 50"]

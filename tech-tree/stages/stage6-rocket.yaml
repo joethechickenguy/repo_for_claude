@@ -14,6 +14,7 @@ gate:
     state: ["crewed_landing_survived == true"]
   score: "In-game year of the successful landing. A pilot's death costs two years (new vehicle, new pilot) and the run continues."
   routes: [A_direct, B_parking_orbit, T_single_stage]
+  banner: "A pilot stands on the Moon, alive. The run ends here, and the year is the score."
 
 pressures:
   - id: calendar
@@ -42,6 +43,12 @@ pressures:
     answers: [test_campaign]
     introduced_in_beat: 6
 
+# Either/or decisions (G6). Starting one option closes the other for good.
+choices:
+  - id: guidance
+    prompt: "Who decides when the engines cut off: the ground, by radio, or a platform of gyros riding in the rocket?"
+    options: [radio_command_guidance, inertial_guidance]
+
 workshops:
   - id: rocket_workshop
     name: Rocket workshop
@@ -51,7 +58,7 @@ workshops:
       - {id: stage_count, name: "Stages", range: [1, 4], added_by: rocket_workshop,
          effect: "One stage cannot reach orbit with this era's structures; the screen shows why. Two reaches orbit; three or four reach the Moon",
          basis: "Δv = v_e ln(m0/mf); staging resets the mass ratio"}
-      - {id: propellant_mass, name: "Propellant per stage (t)", range: [1, 1000], added_by: rocket_workshop,
+      - {id: propellant_mass, name: "Propellant per stage (t)", range: [1, 5000], added_by: rocket_workshop,   # 5,000: steel tanks on alcohol need ~4,200 t in the first stage (G6)
          effect: "The logarithm: doubling propellant never doubles Δv",
          basis: "Rocket equation"}
       - {id: propellants, name: "Propellants", options: [ethanol_lox, kerosene_lox, hypergolic], added_by: rocket_workshop,
@@ -90,6 +97,45 @@ workshops:
          effect: "Lists every known unfixed flaw with severity, and the categories no test has covered. Then flies",
          basis: "The final skill decision"}
     outputs: [flaws_revealed, months_spent, categories_covered]
+    play:
+      days_per_month: 30
+      # Each test: months of the campaign's calendar and liquid oxygen from the stores (estimates).
+      tests:
+        static_fire: {months: 2, lox_kg: 20000}
+        tanking_hold: {months: 1, lox_kg: 10000}
+        vacuum_chamber: {months: 2, lox_kg: 0}
+        orbital_flight: {months: 6, lox_kg: 150000, flight: true}
+        impactor: {months: 6, lox_kg: 200000, flight: true}
+        uncrewed_landing: {months: 9, lox_kg: 250000, flight: true}
+      instrumentation_cut: 2          # tests saved per instrumentation level (H: three instrumented static fires find instability)
+      skilled_engineers: 200          # rocket_engineers_trained at or above this read a test well...
+      skilled_cut: 1                  # ...and need one test fewer
+      strike_chance: 0.5              # an unknown or non-fatal unfixed flaw strikes at launch with this chance (seeded)
+      survivable_margin_km_s: 0.3     # the dv_margin bar's red line: guidance errors absorbed at or above it, with midcourse
+      death_penalty_days: 730         # "A pilot's death costs two years (new vehicle, new pilot)"
+      loss_penalty_days: 365          # a lost vehicle, pilot saved: a year to build another (estimate)
+      # The flaw table (failure-modes.md). `when` is a condition over state and the adopted vehicle:
+      # vehicle_stages, turbopump_stages, lox_stages, largest_stage_t, lox_lander.
+      flaws:
+        - {id: combustion_instability, category: engine, when: "injector_quality < 2", revealed_by: [static_fire, orbital_flight], exposure: 5, fix_months: 9, severity: fatal, phase: booster}
+        - {id: hard_start, category: engine, when: "rocket_engineers_trained < 150", revealed_by: [static_fire], exposure: 2, fix_months: 2, severity: fatal, phase: booster}
+        - {id: turbopump_cavitation, category: feed, when: "turbopump_stages > 0 AND turbopump_quality < 2", revealed_by: [static_fire, orbital_flight], exposure: 3, fix_months: 4, severity: mission_loss, phase: booster}
+        - {id: turbine_bearing_seizure, category: feed, when: "turbopump_stages > 0 AND bearing_quality < 3", revealed_by: [static_fire], exposure: 3, fix_months: 4, severity: mission_loss, phase: booster}
+        - {id: peroxide_decomposition, category: feed, when: "feed_system == peroxide_turbopump", revealed_by: [static_fire], exposure: 2, fix_months: 2, severity: fatal, phase: booster}
+        - {id: pogo, category: structure, when: "turbopump_stages > 0", revealed_by: [orbital_flight, impactor], exposure: 1, fix_months: 4, severity: mission_loss, phase: booster}
+        - {id: tank_weld_crack, category: structure, when: "welders_trained < 150 OR plate_quality == hammered", revealed_by: [tanking_hold, static_fire], exposure: 2, fix_months: 2, severity: fatal, phase: booster}
+        - {id: lox_line_icing, category: cryogenic, when: "lox_stages > 0", revealed_by: [tanking_hold, static_fire], exposure: 1, fix_months: 1, severity: mission_loss, phase: booster}
+        - {id: aero_instability, category: flight, when: "vehicle_stages > 0", revealed_by: [orbital_flight, impactor], exposure: 1, fix_months: 3, severity: mission_loss, phase: booster}
+        - {id: slosh, category: flight, when: "largest_stage_t > 100", revealed_by: [orbital_flight, impactor], exposure: 1, fix_months: 3, severity: mission_loss, phase: flight}
+        - {id: separation_recontact, category: flight, when: "has_solids == false", revealed_by: [orbital_flight, impactor], exposure: 1, fix_months: 2, severity: mission_loss, phase: flight}
+        - {id: gyro_drift, category: guidance, when: "guidance_mode == inertial AND guidance_quality < 3", revealed_by: [orbital_flight, impactor], exposure: 2, fix_months: 3, severity: survivable, phase: flight}
+        - {id: cutoff_signal_delay, category: guidance, when: "guidance_mode == radio_command", revealed_by: [impactor], exposure: 1, fix_months: 2, severity: survivable, phase: flight}
+        - {id: capsule_leak, category: capsule, when: "welders_trained < 300", revealed_by: [vacuum_chamber], exposure: 2, fix_months: 2, severity: fatal, phase: capsule}
+        - {id: co2_scrubber_saturation, category: capsule, when: "life_support_days < 6", revealed_by: [vacuum_chamber], exposure: 1, fix_months: 1, severity: fatal, phase: capsule}
+        - {id: engine_restart_failure, category: lander, when: "lox_lander == true", revealed_by: [vacuum_chamber, uncrewed_landing], exposure: 2, fix_months: 4, severity: fatal, phase: landing}
+        - {id: lox_boiloff, category: cryogenic, when: "lox_lander == true", revealed_by: [tanking_hold], exposure: 2, fix_months: 3, severity: mission_loss, phase: landing}
+        - {id: radar_lockon_failure, category: lander, when: "has_radar_altimeter == true", revealed_by: [uncrewed_landing], exposure: 1, fix_months: 3, severity: fatal, phase: landing}
+        - {id: landing_boulder_field, category: lander, when: "lander_throttle == false", revealed_by: [uncrewed_landing], exposure: 1, fix_months: 3, severity: fatal, phase: landing}
 
 nodes:
 
@@ -102,9 +148,10 @@ nodes:
     workshop: rocket_workshop
     critical_path: true
     problem: "Engines and tanks exist, but nobody has worked out how big each stage must be to reach the Moon."
+    log: "Stage by stage, the vehicle exists on paper."
     requires:
       nodes: [gate_engine]
-      labor_person_days: 200000
+      labor_person_days: 50000   # x0.12 like Stage 5 (G6, open question 59); estimate
     unlocks:
       effects: ["Mission budget 15.3 km/s: ~9.4 to orbit incl. losses, ~3.1 toward the Moon, ~2.8 to brake and land. Single-stage and black-powder attempts are shown inside the workshop as what-ifs, not built"]
     reads_state: [feed_system, has_duralumin, has_kerosene, has_ethanol, has_hypergolics, calc_hours]
@@ -127,10 +174,12 @@ nodes:
     kind: project
     critical_path: true
     problem: "A spent stage must let go cleanly, in thin air, at high speed, without hitting the stage above."
+    tradeoff: "Bolts and retro motors between the stages; with no solid motors, black-powder bolts and springs that can bump."
+    log: "The bolts fire on the bench and the stages spring apart."
     requires:
       nodes: [rocket_workshop]
       resources: {steel_kg: 2500}
-      labor_person_days: 600000
+      labor_person_days: 50000   # x0.12 like Stage 5 (G6, open question 59); estimate
     unlocks:
       effects: ["Explosive bolts plus solid retro and ullage motors (if has_solids; else black-powder bolts and springs with separation_recontact risk)"]
     reads_state: [has_solids]
@@ -147,26 +196,23 @@ nodes:
 
   # ---- Beat 2: guidance -----------------------------------------------------------------------------------------------------
   - id: guidance_choice
-    name: Guidance
+    name: Guidance group
     stage: 6
     beat: 2
-    kind: decision_option
+    kind: project
     route: [A_direct, B_parking_orbit]
     critical_path: true
-    problem: "Your gyroscopes drift, and beyond the horizon the ground can't see the rocket."
+    problem: "Your gyroscopes drift, and beyond the horizon the ground can't see the rocket; someone has to own the problem."
     requires:
       nodes: [rocket_workshop, tracking_network, gyroscopes]
       resources: {copper_kg: 3000, alloy_steel_kg: 500}
-      labor_person_days: 2000000
+      labor_person_days: 100000   # the group, not the hardware: the options carry the build (G6); estimate
     unlocks:
-      effects:
-        - "Radio command: the ground measures speed by Doppler and radios the cutoff. Precise near Earth; direct-ascent only. Hidden flaw cutoff_signal_delay"
-        - "Inertial platform: onboard, works anywhere, needs bearing_quality and calc_hours. Enables the parking-orbit route. Hidden flaw gyro_drift"
-        - "Adds the route dial"
+      effects: ["A guidance group joins the trackers and the gyroscope shop. Then choose: radio command from the ground, or an inertial platform on board. Adds the route dial"]
     reads_state: [guidance_quality, bearing_quality, calc_hours]
-    writes_state: [guidance_mode]
+    writes_state: []
     pages_bundle: guidance
-    without_pages: "Inertial costs 4x labor"
+    without_pages: "No penalty (the inertial option carries the 4x)"
     numbers_status: "Luna 1's late cutoff (+175 m/s, missed by ~5,900 km) sourced"
     sources: ["https://en.wikipedia.org/wiki/Luna_1"]
     tags: [substantive]
@@ -175,6 +221,60 @@ nodes:
       second meant it missed the Moon by nearly 6,000 km and became the first spacecraft to orbit the
       Sun. An inertial platform carries the measurement onboard, and carries its own drift.
 
+  - id: radio_command_guidance
+    name: Radio command guidance
+    stage: 6
+    beat: 3
+    kind: decision_option
+    route: [A_direct]
+    critical_path: false
+    problem: "The rocket can't tell how fast it's going, but the ground can, by the Doppler shift of its radio."
+    tradeoff: "The ground measures speed and radios the cutoff: precise near Earth, direct ascent only, and a late command misses the Moon."
+    requires:
+      nodes: [guidance_choice]
+      resources: {copper_kg: 2000}
+      labor_person_days: 100000   # estimate
+    unlocks:
+      effects: ["guidance_mode: radio_command. Direct ascent only. Hidden flaw cutoff_signal_delay; impactor flights reveal it"]
+    reads_state: [has_tracking]
+    writes_state: [guidance_mode]
+    pages_bundle: guidance
+    without_pages: "No penalty"
+    numbers_status: "Luna 1 (1959) sourced"
+    sources: ["https://en.wikipedia.org/wiki/Luna_1"]
+    tags: [substantive]
+    notebook: >
+      Early Soviet lunar probes were steered from the ground. Radars and Doppler receivers measured
+      the rocket's speed, and a radio command shut the engine off when it was right. The trouble is
+      the chain: measure, compute, transmit, all while the rocket gains hundreds of meters per second.
+
+  - id: inertial_guidance
+    name: Inertial guidance
+    stage: 6
+    beat: 3
+    kind: decision_option
+    route: [B_parking_orbit]
+    critical_path: false
+    problem: "Beyond the horizon the ground can't see the rocket, so the rocket has to know where it is itself."
+    tradeoff: "An onboard gyro platform works anywhere and allows a parking orbit; it drifts, and costs more to build and to trust."
+    requires:
+      nodes: [guidance_choice]
+      resources: {alloy_steel_kg: 1000, copper_kg: 1000}
+      labor_person_days: 250000   # estimate
+    unlocks:
+      effects: ["guidance_mode: inertial. Enables the parking-orbit route. Hidden flaw gyro_drift (less with guidance_quality)"]
+    reads_state: [guidance_quality, bearing_quality, calc_hours]
+    writes_state: [guidance_mode]
+    pages_bundle: guidance
+    without_pages: "4x labor"
+    numbers_status: "V-2 and later inertial platforms sourced"
+    sources: ["https://en.wikipedia.org/wiki/Inertial_navigation_system"]
+    tags: [substantive]
+    notebook: >
+      Spin a wheel fast and it holds its direction in space. Mount gyroscopes on gimbals, add
+      accelerometers, integrate what they measure, and a rocket knows its speed and heading without
+      looking outside. Every bearing's friction and every imbalance becomes a slow drift.
+
   - id: midcourse_correction
     name: Midcourse correction
     stage: 6
@@ -182,11 +282,12 @@ nodes:
     kind: upgrade
     critical_path: false
     problem: "A small error at cutoff grows into thousands of kilometers by the Moon."
+    tradeoff: "A small burn halfway fixes the aim, so guidance errors are survivable; costs 0.1 km/s of margin."
     requires:
       nodes: [guidance_choice]
       state: ["has_hypergolics == true OR has_solids == true"]
       resources: {steel_kg: 200}
-      labor_person_days: 500000
+      labor_person_days: 50000   # x0.12 like Stage 5 (G6, open question 59); estimate
     unlocks:
       effects: ["A small burn halfway corrects the aim: guidance flaws become survivable with margin. Costs ~0.1 km/s of margin"]
     reads_state: [has_tracking]
@@ -208,11 +309,12 @@ nodes:
     kind: project
     critical_path: true
     problem: "Above about 18 km the fluids in a body boil at body temperature; the pilot needs a sealed vessel of air, and it fills with carbon dioxide within hours."
+    log: "The capsule holds its air through a night in the vacuum chamber."
     requires:
       nodes: [rocket_workshop, welding]
       state: ["has_caustic == true"]
       resources: {steel_kg: 800, glass_kg: 50, caustic_kg: 200}
-      labor_person_days: 1500000
+      labor_person_days: 200000   # x0.12 like Stage 5 (G6, open question 59); estimate
     milestones:
       - {at: 0.5, id: pressure_hull, effect: "1.6 t sealed capsule (1.3 t if has_duralumin)"}
       - {at: 1.0, id: life_support, effect: "Four days of oxygen and hydroxide CO2 absorbers; thermal control for lunar day or night"}
@@ -220,6 +322,7 @@ nodes:
       effects: ["The workshop's payload. Vacuum-chamber tests reveal capsule_leak and co2_scrubber_saturation"]
     reads_state: [has_duralumin, welders_trained, has_lox]
     writes_state: [capsule_mass_t, life_support_days]
+    writes_values: {capsule_mass_t: 1.6, life_support_days: 4}   # the pressure hull; four days of oxygen
     pages_bundle: life_support
     without_pages: "2x labor; leaks found in testing"
     numbers_status: "Armstrong limit ~18 km (6.3 kPa) sourced; masses are the mockup's"
@@ -237,15 +340,16 @@ nodes:
     kind: upgrade
     critical_path: false
     problem: "If the capsule leaks, or the booster fails climbing out, the pilot dies with it."
+    tradeoff: "A suit and an escape tower: booster failures cost a vehicle, not a pilot; 0.15 km/s of margin."
     requires:
       nodes: [capsule]
       any_of: [[solid_motors], [chlor_alkali]]
       resources: {steel_kg: 600, rubber_substitute_kg: 30}
-      labor_person_days: 1000000
+      labor_person_days: 100000   # x0.12 like Stage 5 (G6, open question 59); estimate
     unlocks:
       effects: ["Suit: a leak isn't fatal. Escape tower (needs solids): booster failures before staging cost a vehicle, not a pilot. Both add payload mass: dv_margin -0.15 km/s"]
     reads_state: [has_solids]
-    writes_state: [has_pressure_suit, has_escape_system, dv_margin_km_s]
+    writes_state: [has_pressure_suit, has_escape_system]
     pages_bundle: life_support
     without_pages: "2x labor"
     numbers_status: "Mercury, Apollo, Soyuz escape towers documented"
@@ -264,11 +368,12 @@ nodes:
     kind: project
     critical_path: true
     problem: "The Moon has no air to slow you down; every meter per second of arrival speed must be cancelled by an engine, and the pilot can't judge height over a gray featureless surface."
+    log: "The lander's legs crush on the test drop, exactly as designed."
     requires:
       nodes: [rocket_workshop, electronics_lab]
       any_of: [[hypergolic_propellants], [regenerative_cooling]]
       resources: {steel_kg: 3000, copper_kg: 100}
-      labor_person_days: 2500000
+      labor_person_days: 300000   # x0.12 like Stage 5 (G6, open question 59); estimate
     milestones:
       - {at: 0.4, id: braking_engine, effect: "~2.8 km/s braking stage; pressure-fed is right here. LOX version adds lox_boiloff and engine_restart_failure risks"}
       - {at: 0.7, id: radar_altimeter, effect: "Radio pulse timing gives height and descent rate; triggers the burn"}
@@ -277,6 +382,7 @@ nodes:
       effects: ["The workshop's final stage. Throttle is a separate upgrade"]
     reads_state: [has_hypergolics, has_duralumin, has_tubes]
     writes_state: [lander_design, has_radar_altimeter, landing_tolerance]
+    writes_values: {landing_tolerance: 3}   # crushable legs: 3 m/s
     pages_bundle: liquid_rocket_engines
     without_pages: "2x labor"
     numbers_status: "Luna 9: braked from ~2.6 km/s in 46 s, radar-triggered at 75 km (sourced)"
@@ -294,11 +400,12 @@ nodes:
     kind: upgrade
     critical_path: false
     problem: "An engine that only runs at full thrust overshoots to zero speed high above the ground or slams into it."
+    tradeoff: "A throttle to hover and divert: no boulder field, for a finer injector and more builders."
     requires:
       nodes: [lander_stage]
       state: ["injector_quality >= 1"]
       resources: {alloy_steel_kg: 200}
-      labor_person_days: 800000
+      labor_person_days: 100000   # x0.12 like Stage 5 (G6, open question 59); estimate
     unlocks:
       effects: ["Hover and divert: removes landing_boulder_field; landing margin needed falls"]
     reads_state: [injector_quality]
@@ -322,7 +429,9 @@ nodes:
     workshop: test_campaign
     critical_path: true
     problem: "Every design hides flaws you can't see on paper."
+    log: "The test campaign begins: every test is a question the design has to answer."
     requires:
+      any_of: [[radio_command_guidance], [inertial_guidance]]
       nodes: [rocket_workshop, stage_separation, capsule, lander_stage, guidance_choice]
     unlocks:
       effects: ["Opens the test campaign. Flaws are deterministic from the design and state, hidden until the right test type exposes them. Uncrewed flights cost a vehicle and months and reveal the most"]
