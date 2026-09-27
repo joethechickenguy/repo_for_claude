@@ -71,6 +71,9 @@ workshops:
          effect: "Zero trays: liquid air, 21% oxygen. Each tray separates a little more: 30+ trays give 99% oxygen",
          basis: "Oxygen boils at -183 C, nitrogen at -196 C"}
     outputs: [liters_per_day, kwh_per_kg, purity_pct, days_to_first_drop]
+    play:
+      compressor_kw: 100             # the plant's compressor: a Linde plant this size makes ~1 t/day (estimate)
+      trial_days: 30                 # a run that never liquefies is given up after this long (estimate)
 
 nodes:
 

@@ -282,3 +282,9 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     `tolerance_mm` and `bearing_quality`; until the player retools, the shop holds hand tolerance.
     Hardened-steel bearings wait for precision_grinding; the without-pages "two plates first" route
     isn't modelled.
+56. **Liquefier plant size and the gate.** No dial sets the plant's size (question 38), so the
+    compressor is `liquefier_workshop.play.compressor_kw` (100 kW, estimate: a good Linde design
+    makes ~1 t/day, twice the gate). A running plant counts oxygen into `lox_kg_per_day` and the
+    stores only with a column and air_separation built; without them it makes liquid air
+    (`has_liquid_air`, `cryo_process`). The compressor's draw isn't yet a load on the Stage 4 power
+    balance (G4/F). A plant that never liquefies is given up after `play.trial_days`.

@@ -207,3 +207,25 @@ export function progressHTML(what: string, day: number, days: number): string {
 export function noteHTML(text: string, bad = false): string {
   return text ? `<p class="small ${bad ? "red" : "muted"}">${esc(text)}</p>` : "";
 }
+
+/** A small line chart (the liquefier's cool-down, a firing's pressure trace) as inline SVG. */
+export function lineChartSVG(
+  points: ReadonlyArray<readonly [number, number]>,
+  opts: { title: string; xMax: number; yMin: number; yMax: number; hline?: { y: number; label: string }; now?: number; bad?: boolean },
+): string {
+  const W = 320;
+  const H = 140;
+  const L = 34;
+  const B = 16;
+  const x = (v: number) => L + ((W - L - 6) * Math.max(0, Math.min(opts.xMax, v))) / Math.max(1e-9, opts.xMax);
+  const y = (v: number) => 6 + ((H - B - 6) * (opts.yMax - Math.max(opts.yMin, Math.min(opts.yMax, v)))) / Math.max(1e-9, opts.yMax - opts.yMin);
+  const path = points.map(([a, b], i) => `${i ? "L" : "M"}${x(a).toFixed(1)} ${y(b).toFixed(1)}`).join(" ");
+  let s = `<svg class="wk-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.title)}"><title>${esc(opts.title)}</title>`;
+  s += `<path class="ax" d="M${L} 6 V${H - B} H${W - 6}"/>`;
+  s += `<text x="${L - 4}" y="12" text-anchor="end">${esc(fmtSmart(opts.yMax))}</text><text x="${L - 4}" y="${H - B}" text-anchor="end">${esc(fmtSmart(opts.yMin))}</text>`;
+  s += `<text x="${W - 6}" y="${H - 3}" text-anchor="end">${esc(fmtSmart(opts.xMax))}</text><text x="${L}" y="${H - 3}">0</text>`;
+  if (opts.hline) s += `<path class="ax" stroke-dasharray="3 3" d="M${L} ${y(opts.hline.y).toFixed(1)} H${W - 6}"/><text x="${W - 8}" y="${(y(opts.hline.y) - 3).toFixed(1)}" text-anchor="end">${esc(opts.hline.label)}</text>`;
+  if (points.length) s += `<path class="ln${opts.bad ? " bad" : ""}" d="${path}"/>`;
+  if (opts.now !== undefined) s += `<path class="ax" d="M${x(opts.now).toFixed(1)} 6 V${H - B}"/>`;
+  return s + `</svg>`;
+}
