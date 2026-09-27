@@ -145,8 +145,11 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
   nbView.hidden = true;
   const mapView = el("div", "tmap");
   mapView.hidden = true;
+  // A workshop's own screen (packages E1-E6), full width like the notebook and the map.
+  const wsView = el("div", "wsview");
+  wsView.hidden = true;
 
-  wrap.append(top, energy, goal, ruleWrap, banner, strip, cols, nbView, mapView);
+  wrap.append(top, energy, goal, ruleWrap, banner, strip, cols, nbView, mapView, wsView);
 
   // ---- Meter (static ticks, moving cursor) ----
   const m0 = game.meter();
@@ -191,11 +194,18 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
       dirty();
     };
   // Three screens share the page: the colony, the notebook and the tech map.
-  let view: "colony" | "notebook" | "map" = "colony";
+  let view: "colony" | "notebook" | "map" | "workshop" = "colony";
+  let wsUnmount: (() => void) | null = null;
   const setView = (v: typeof view): void => {
+    if (view === "workshop" && v !== "workshop") {
+      wsUnmount?.();
+      wsUnmount = null;
+      wsView.replaceChildren();
+    }
     view = v;
     nbView.hidden = v !== "notebook";
     mapView.hidden = v !== "map";
+    wsView.hidden = v !== "workshop";
     cols.hidden = v !== "colony";
     strip.hidden = v !== "colony";
     nbBtn.textContent = v === "notebook" ? S.header.back : S.header.notebook;
@@ -210,6 +220,26 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
   };
   let mapStage = game.stage;
   let mapKey = "";
+  /** Open a workshop's screen: its registered mount draws into the full-width view. */
+  const openWorkshop = (id: string): void => {
+    const mount = workshopMounts.get(id);
+    const w = game.workshops().find((x) => x.id === id);
+    if (!mount || !w) return;
+    setView("workshop");
+    const head = el("div", "ws-head", `<h2>${esc(w.name)}</h2><p class="muted">${esc(w.loop)}</p>`);
+    const back = el("button", "", esc(S.header.back));
+    back.type = "button";
+    back.onclick = () => setView("colony");
+    head.appendChild(back);
+    const body = el("div", "ws-body");
+    wsView.replaceChildren(head, body);
+    const off = mount(body, game);
+    wsUnmount = typeof off === "function" ? off : null;
+  };
+  wsBox.addEventListener("click", (ev) => {
+    const b = (ev.target as HTMLElement).closest("button[data-open-ws]") as HTMLButtonElement | null;
+    if (b) openWorkshop(b.dataset.openWs!);
+  });
   mapView.addEventListener("click", (ev) => {
     const b = (ev.target as HTMLElement).closest("button[data-map-stage]") as HTMLButtonElement | null;
     if (!b) return;
@@ -543,8 +573,9 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
         wsBox.appendChild(el("h2", "", esc(S.projects.workshopsHeading))).style.marginTop = "16px";
         for (const w of ws) {
           const d = el("div", "ws", `<h3>${esc(w.name)}</h3><p class="muted">${esc(w.loop)}</p>`);
+          if (workshopMounts.has(w.id))
+            d.appendChild(el("p", "", `<button type="button" data-open-ws="${esc(w.id)}">${esc(S.projects.openWorkshop)}</button>`));
           wsBox.appendChild(d);
-          workshopMounts.get(w.id)?.(d, game);
         }
       }
     }
@@ -599,6 +630,7 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
     game.clock.stop();
     offTick();
     offDecision();
+    wsUnmount?.();
     removeEventListener("beforeunload", onUnload);
     removeEventListener("resize", onResize);
     tree.destroy();

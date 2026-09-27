@@ -188,3 +188,25 @@ details p{margin:4px 0 0}
 .stuck h3{color:var(--red); margin-bottom:4px}
 .stuck p{margin:0 0 6px}
 .stuck .dead{font-weight:600}
+
+/* A workshop's own screen (packages E1-E6). */
+.wsview{margin-top:18px}
+.ws-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 16px; border-bottom:1px solid var(--rule); padding-bottom:8px; margin-bottom:12px}
+.ws-head h2{margin:0}
+.ws-head p{flex:1 1 20em; margin:0}
+
+/* Workshop kit (src/ui/workshops/kit.ts): dials, outputs, history. */
+.wk-dials{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px 24px}
+.wk-dial{border-top:1px solid var(--rule); padding-top:8px}
+.wk-dial-head{display:flex; align-items:baseline; justify-content:space-between; gap:8px}
+.wk-num{font:inherit; width:6em; text-align:right; color:var(--ink); background:var(--paper); border:1px solid var(--rule); border-radius:0; padding:0 4px}
+.wk-range{width:100%; accent-color:var(--blue)}
+.wk-opts{display:flex; flex-wrap:wrap; gap:4px; margin:4px 0}
+.wk-dial p{margin:4px 0}
+.wk-outputs{display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:2px 24px; margin:12px 0}
+.wk-out{display:flex; justify-content:space-between; gap:8px; border-bottom:1px solid var(--rule); padding:3px 0}
+.wk-out.bad b{color:var(--red)}
+.wk-out.good b{color:var(--blue)}
+.wk-history{list-style:none; padding:0; margin:8px 0; font-size:14px}
+.wk-history li{border-top:1px solid var(--rule); padding:5px 0}
+.wk-history li.bad b{color:var(--red)}

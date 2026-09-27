@@ -423,6 +423,11 @@ export class Engine implements StateView {
   // ---- Systems -------------------------------------------------------------------------------------
 
   /** Register a per-tick system. If the engine was loaded from a save, the system's data is restored. */
+  /** A system added to this run, by id (workshops find their own saved state this way). */
+  systemById(id: string): EngineSystem | undefined {
+    return this.systems.find((s) => s.id === id);
+  }
+
   addSystem(system: EngineSystem): void {
     if (this.systems.some((s) => s.id === system.id)) throw new EngineError(`system '${system.id}' already added`);
     this.systems.push(system);

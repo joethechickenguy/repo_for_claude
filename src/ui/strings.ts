@@ -91,6 +91,7 @@ export const STRINGS = {
     choseOver: "Chosen over {list}.",
     or: " or ",
     workshopsHeading: "Workshops",
+    openWorkshop: "Open the workshop",
   },
   pressures: {
     heading: "Pressures",
@@ -128,6 +129,11 @@ export const STRINGS = {
     backTo: "Back to {n}×",
     ok: "Got it",
     newHere: "New",
+  },
+  workshop: {
+    why: "Why",
+    noHistory: "Nothing tried yet. Set the dials and run.",
+    when: "Year {year}, day {day}.",
   },
   stuck: {
     heading: "Nothing to build right now",

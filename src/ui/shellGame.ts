@@ -22,6 +22,7 @@ import {
   Clock,
   DECISION_SPEED,
   Engine,
+  type EngineSystem,
   EnergySystem,
   ENERGY_METRIC,
   loadFromStorage,
@@ -214,6 +215,17 @@ export function tradeLabel(id: string): string {
   return id.replace(/^trained_|_trained$/g, "").replace(/_/g, " ");
 }
 
+/**
+ * Engine systems packages add to every run (workshops E1-E6: campaigns, builds, test runs), made when
+ * a Game is created or loaded so they tick with the screen closed and their data saves with the run.
+ * Register at import time; `src/main.ts` imports every `src/ui/workshops/*.ts` before any Game exists.
+ */
+export type GameSystemFactory = (game: Game) => EngineSystem;
+const gameSystemFactories: GameSystemFactory[] = [];
+export function registerGameSystem(make: GameSystemFactory): void {
+  gameSystemFactories.push(make);
+}
+
 /** What needs the player right now, for the banner. */
 export interface PauseView {
   line: string;
@@ -258,6 +270,7 @@ export class Game {
     this.engine.addSystem(this.pressures);
     this.engine.addSystem(this.intro);
     this.engine.addSystem(this.log);
+    for (const make of gameSystemFactories) this.engine.addSystem(make(this));
     this.clock = new Clock(this.engine);
     this.clock.onDecision((e) => this.noteDecision(e.reasons, e.fromSpeed));
     // A dead end, or a long stretch with nothing to build, is a decision moment too: slow down and

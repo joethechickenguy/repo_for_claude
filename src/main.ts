@@ -71,6 +71,10 @@ async function showDraft(app: HTMLElement, onDepart: (o: DraftOutcome) => void):
   app.appendChild(box);
 }
 
+// Workshop screens (packages E1-E6) register themselves and their game systems on import; load them
+// all before any Game is created or loaded.
+import.meta.glob("./ui/workshops/*.ts", { eager: true });
+
 function boot(): void {
   applyTheme();
   const app = document.getElementById("app")!;
