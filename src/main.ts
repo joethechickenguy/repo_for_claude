@@ -75,6 +75,28 @@ async function showDraft(app: HTMLElement, onDepart: (o: DraftOutcome) => void):
 // all before any Game is created or loaded.
 import.meta.glob("./ui/workshops/*.ts", { eager: true });
 
+/**
+ * For playtesting later stages (dev server only; tree-shaken from builds): the headless bot of
+ * tests/play/bot.ts plays the default draft on its main plans up to Stage `n`'s start, a stage at a
+ * time so the page can say where it is. About half a minute a stage.
+ */
+async function skipTo(app: HTMLElement, n: number): Promise<Game> {
+  const { playRun } = await import("../tests/play/bot");
+  const P = await import("../tests/play/plans");
+  const plans = { 1: P.STAGE1, 2: P.STAGE2, 3: P.STAGE3, 4: P.STAGE4, 5: P.STAGE5, 6: P.STAGE6 };
+  const note = document.createElement("p");
+  note.className = "hook muted";
+  app.replaceChildren(note);
+  const last = Math.min(n, tree.stages.length);
+  let from: ReturnType<Game["engine"]["save"]> | undefined;
+  for (let s = 1; s < last; s++) {
+    note.textContent = `Dev: the bot is playing Stage ${s} to reach Stage ${last}...`;
+    await new Promise((r) => setTimeout(r, 50)); // let the note paint
+    from = playRun(plans, s, 20 * 365, from).game.engine.save();
+  }
+  return new Game(tree, { save: from! });
+}
+
 function boot(): void {
   applyTheme();
   const app = document.getElementById("app")!;
@@ -98,6 +120,19 @@ function boot(): void {
       if (store) game.save(store);
       play(game);
     });
+  }
+
+  // Dev server only: `/?stage=N` starts at Stage N, played there by the headless bot.
+  if (import.meta.env.DEV) {
+    const n = Number(new URLSearchParams(location.search).get("stage"));
+    if (n >= 2) {
+      void skipTo(app, n).then((game) => {
+        history.replaceState(null, "", location.pathname);
+        if (store) game.save(store);
+        play(game);
+      });
+      return;
+    }
   }
 
   let saved: Game | null = null;

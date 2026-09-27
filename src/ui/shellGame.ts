@@ -53,7 +53,7 @@ import {
 } from "./pressures";
 import { fuelsFromTree, gameContent, workFromTree } from "./shellContent";
 import { defaultDraftOutcome, type DraftOutcome } from "./shellDraft";
-import { fmt, fmtRound, yearDay } from "./shellFormat";
+import { fmt, fmtRound, fmtSmart, yearDay } from "./shellFormat";
 import { GATE_PAUSE, GateSystem, LogSystem, StandInCampaigns, SUPPLIED_METRICS, TiersSystem } from "./shellSystems";
 import { fill, STRINGS } from "./strings";
 
@@ -190,7 +190,7 @@ function conditionText(x: Expr, label: (ref: string) => string): string | null {
         return x.value === (x.op === "==") ? label(x.ref) : fill(T.not, { cond: label(x.ref) });
       const op = (T.ops as Record<string, string>)[x.op];
       if (!op) return null;
-      const v = typeof x.value === "number" ? fmt(x.value) : String(x.value);
+      const v = typeof x.value === "number" ? fmtSmart(x.value) : String(x.value); // tool_wear < 0.8 is not "below 0"
       return fill(T.cond, { name: label(x.ref), op, value: v });
     }
     case "flag":
@@ -473,7 +473,7 @@ export class Game {
           const x = c.expr;
           const now = x.kind === "cmp" ? this.engine.get(x.ref) : undefined;
           const text = conditionText(x, (r) => this.labelFor(r)) ?? c.text;
-          return typeof now === "number" ? fill(STRINGS.goal.now, { text, n: fmtRound(now) }) : text;
+          return typeof now === "number" ? fill(STRINGS.goal.now, { text, n: fmtSmart(now) }) : text;
         });
     // The gate's route requirement (any_of): none of its groups complete yet.
     const g = this.tree.nodes[s.gate.id];

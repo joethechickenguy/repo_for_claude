@@ -35,6 +35,8 @@ describe("stuck", () => {
     expect(g.clock.speed).toBe(0.5);
     expect(g.logLines().filter((l) => l.kind === STUCK_PAUSE)).toHaveLength(1);
     expect(g.stuck()!.waiting.find((w) => w.id === "digging_sticks")!.needs).toContain("Wood (kg) above 300");
+    // A fractional threshold keeps its decimals (it read "Tools below 0").
+    expect(g.stuck()!.waiting.find((w) => w.id === "ground_stone_axes")!.needs).toContain("Tools below 0.8");
   });
 
   it("a dead end says the build can't make it, slows the game at once and logs it once", () => {
