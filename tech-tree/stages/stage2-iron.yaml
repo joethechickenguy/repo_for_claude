@@ -231,6 +231,9 @@ workshops:
          basis: "Watt 1765; ~75% fuel saving ([Watt engine](https://en.wikipedia.org/wiki/Watt_steam_engine))"}
     outputs: [water_lifted_per_day, coal_per_day, iron_cost_kg, safety_margin, years_to_failure]
     failure_rule: "Deterministic: years_to_failure = f(safety_margin, plate type). Shown before building. A burst kills the crew, destroys the engine, and adds 1 to boiler_explosions."
+    play:
+      build_days: 180                # "costs iron and months": casting, boring and erecting an engine (estimate)
+      savery_iron_kg: 2000           # a Savery fire engine's iron, as savery_pump's own cost
 
 # ---------------------------------------------------------------------------------------------
 # Nodes

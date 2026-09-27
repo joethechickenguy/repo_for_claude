@@ -78,6 +78,9 @@ workshops:
       - {id: generator, name: "Generator", options: [none, permanent_magnet, self_excited], added_by: dynamo,
          effect: "Permanent magnet caps at a few hundred watts. Self-excited: 50-100 kW per machine, limited by bearing_quality and shaft speed",
          basis: "Siemens and Wheatstone 1867"}
+    play:
+      water_turbine_kw: 60           # shaft power of a water turbine at one river site (estimate)
+
   - id: machine_shop
     name: Machine shop
     opens_with: surface_plates

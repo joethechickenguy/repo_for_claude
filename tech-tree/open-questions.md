@@ -260,3 +260,14 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     A campaign's results the nodes leave to the simulation (`coke_rate`, `iron_quality`,
     `steel_quality`) are written when it finishes. Workshop loop numbers (campaign days, charges,
     heat size) live in a new `play:` block on the workshop (tech-tree/README.md).
+54. **The engine workshop's running engine.** One engine at a time: a finished build replaces the
+    running one. Its design sets `engine_type`, `coal_per_engine_kw`, `dynamo_output_kw`,
+    `factory_power_kw`, `grid_kw` and `power_station_efficiency`, and the `tend_engine` job's yield
+    becomes the design's coal-to-work (250 kg -> 10 kWh at the job's rate), replacing the Watt and
+    high-pressure nodes' fixed factors while it runs (question 52). A steam turbine has no size dial,
+    so it takes the piston design's shaft power at turbine efficiency; a water turbine gives
+    `play.water_turbine_kw` per river site (estimate). The prime-mover dial arrives in Stage 4, so in
+    Stage 3 a colony that built the water turbine and no rotative engine drives its dynamo with it.
+    A burst adds 1 to `boiler_explosions` and loses the engine; "kills the crew" isn't modelled
+    (people are immortal and nothing removes them yet). Boiler pressure stays at or below 2 atm until
+    the high-pressure engine; the turbine needs steel_quality 2 (the dial's own text).

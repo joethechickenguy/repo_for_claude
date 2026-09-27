@@ -51,6 +51,8 @@ workshops:
       - {id: prime_mover, name: "Prime mover", options: [piston, turbine, water_turbine], added_by: steam_turbine,
          effect: "Turbine: about twice the electricity per ton of coal, needs steel_quality 2+ and good bearings. Water turbine: no fuel, river sites only",
          basis: "Parsons 1884"}
+    play:
+      grid_km: 2                     # one-way distance from the station to the colony's loads (estimate)
   - id: liquefier_workshop
     name: Liquefier workshop
     opens_with: cascade_liquefier
