@@ -268,8 +268,36 @@ Tick when done; add 3-5 lines of what shipped and what was left open.
   - Stage 1 has models for forest and outcrop (estimates) and tool_wear's `red_when` is an expression.
   - Open: the done-criterion's scripted Stage 2 run needs G2 (Stage 2 bars' `red_when` is prose and
     no Stage 2 job has rates); open questions 41, 42, 45.
-- [ ] G1 · [ ] G2 · [ ] G3 · [ ] G4 · [ ] G5 · [ ] G6
-- [ ] H test campaign
+- [x] G1 · [x] G2 · [x] G3 · [x] G4 · [x] G5 · [x] G6
+  - Every stage is playable end to end: a middling bot (`tests/play/bot.ts`, habits in
+    `tests/play/workshops.ts`) plays the whole campaign through the shell and lands a pilot in year ~26;
+    `tests/play/campaign.test.ts` replays each of Stages 3-6 from the same start with opposite options.
+    Every stage reaches its gate with no dead end, at most two new controls per slowdown, and (main
+    routes) a new decision at least once a year. Playtest notes: `docs/playtests/2026-09-27-stage*-bot.md`
+    (`npx vite-node scripts/playtest.ts`).
+  - Stages 3-6 content: job rates for everything a node needs (steel, glass, acid, cement, minerals,
+    power, alloy, soda, caustic, crude, kerosene, alcohol); 10 new exclusive choices with new nodes
+    (rails/canals, engine house/water turbine, tool/heat-resistant steel, Linde/Claude, computing,
+    storable propulsion, turbopumps, guidance) and a rocket society and second test stand; heartbeat bars
+    as expressions over what the workshops write (shop hours, kilowatts, stand days, LOX); effects as
+    modifiers and values; labor scaled (question 59). Gate banners and 45 log lines for all six stages.
+  - Code for it: workshops open by any of their nodes; per-state pressure terms; beat gating skips
+    optional-only beats and never holds a gate; bars don't re-slow within 90 days; resources a workshop
+    makes (LOX); an engine that burns its own coal and counts as energy; machinists at the lathes; late
+    parts slow their jobs; firings burn fuel; a second stand.
+  - Open: questions 59-62: the game is ~2.6 hours at 1x (the design says 10), the bot's lulls reach ~290
+    days (target 3 minutes), Stage 2's bot run has a 443-day gap, and the hauling bar flickers in Stage 4.
+    Works and departments tiers still have no works in content.
+- [x] H test campaign
+  - `src/models/flaws.ts` (pure: exposure, severity with escape tower/suit/margin, seeded launch) and
+    `src/ui/workshops/campaign.ts` (screen and system: tests with months and LOX, reveals by kind,
+    fixes, the launch section with known flaws, severities and untested areas, the two-year penalty,
+    the landing year as the score). The flaw table is content (`test_campaign.play.flaws`, 19 flaws).
+  - Done criteria pinned: `injector_quality: 0` always carries combustion instability and three
+    instrumented static fires reveal it; a known fatal flaw always kills; the same run gives the same
+    launch (`tests/models/flaws.test.ts`, `tests/ui/workshops/campaign.test.ts`).
+  - Open: question 61 (readings: known fatal flaws always strike; seed from the draft; escape tower
+    needs solids). Flight tests don't lose vehicles yet, and nothing spends `calc_hours`.
 - [x] I draft
   - `src/ui/draft/` (`mountDraft(el, onDepart)`, found by D's `main.ts` hook): two `PeopleTree` panels
     (D's control) for the 9 roster pools > specialties and 8 page categories > topics, a weakest-area

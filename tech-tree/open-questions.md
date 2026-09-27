@@ -306,3 +306,36 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     (sets are lists or number maps), and `dv_margin_km_s` is recomputed daily so the capsule's mass and
     the margin midcourse correction (0.1) and crew safety (0.15) spend follow it. Isp stays the play
     values (question 12/36), not the engine the colony fired in E5.
+
+## Stage content and the test campaign (packages G1-G6, H)
+
+59. **Stage length.** Stages 1-2 were trimmed to 3-5 years by the owner's playtest (a decision every
+    year). Stages 3-6 follow: labor x0.25 (Stage 3), x0.175 (Stage 4), x0.12 (Stages 5-6), a few
+    critical builds trimmed further so no year passes without a decision. A middling bot reaches
+    each gate in 3.4-5.8 years, 21-36 minutes at 1x (docs/playtests/2026-09-27-stage*-bot.md): the
+    game is ~26 in-game years and ~2.6 hours at 1x, against DESIGN.md's 100-200 years and 10 hours
+    (question 50). Owner's call: longer stages with more decisions in them, or a shorter game.
+    Mineral prospecting finds every site in reach (the "missing ones use substitutes" mechanic isn't
+    modelled). The works and departments tiers still have no works in content, so foremen and
+    departments change nothing yet (question 30).
+60. **Beat gating and optional beats.** A beat waits on the nearest lower beat that has a
+    critical-path node, and a gate only on its own requirements: Stage 4's gate waited ~600 days for
+    oil (its only beat-7 node, optional, and impossible on the canals route). Nodes moved to the beat
+    their prerequisites allow: Stage 5's computing, tracking and storable propulsion (3-4), the
+    launch complex (5, "runs alongside engine development"). A bar that goes red again within 90
+    days doesn't slow the game again (the brownout flickered daily).
+61. **The test campaign's readings.** Flaws, their `when` conditions, exposures and fix times are
+    in the Stage 6 file's `test_campaign.play.flaws` (from failure-modes.md; exposures, test costs
+    and the vehicle facts `vehicle_stages`, `turbopump_stages`, `lox_stages`, `largest_stage_t`,
+    `lox_lander` are estimates). At launch a known flaw whose severity is fatal always strikes (H's
+    done criterion; the screen says so); any other unfixed flaw strikes with `strike_chance` (0.5),
+    rolled in mission order from a seed fixed by the draft (question 4: shown and seeded, not a free
+    roll). An escape tower counts only with solid motors. Guidance errors are survivable with a
+    midcourse burn and 0.3 km/s of margin, fatal without. A lost pilot costs two years, a lost
+    vehicle one. Launch LOX is each stage's propellant at its oxidizer share: a big steel vehicle
+    needs years of LOX, which is the case for aluminum, kerosene and the plant scale-up.
+62. **What counts as a decision in the playtests.** Nodes with a `tradeoff` line (every option of a
+    choice, and optional nodes that compete for builders), plus, in Stage 6 only, each test-campaign
+    result ("test more, fix, or launch?"). The bot is middling on purpose: it never misreads a card,
+    builds optional projects only when fewer than two builds are underway, adds people to whatever a
+    stalled project lacks, and runs the workshops with fixed habits (tests/play/workshops.ts).

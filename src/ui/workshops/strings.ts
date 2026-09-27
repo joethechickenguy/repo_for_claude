@@ -213,6 +213,7 @@ export const WS = {
     none: "No flaws found yet. That tells you only about the areas you've tested.",
     undiscovered: "Undiscovered flaws: unknown.",
     fix: "Fix ({months} months)",
+    fixOne: "Fix (1 month)",
     fixed: "fixed",
     severity: { fatal: "fatal", mission_loss: "loses the mission", survivable: "survivable" } as Record<string, string>,
     covered: "Areas tested",

@@ -298,7 +298,7 @@ function knownHTML(game: Game, d: CampaignData): string {
       const sev = S.severity[effectiveSeverity(f, safety)] ?? "";
       const done = d.fixed.includes(id);
       h += `<li class="${!done && effectiveSeverity(f, safety) === "fatal" ? "bad" : ""}"><span class="grow"><b>${esc(words(id))}</b> <span class="small muted">${esc(`${f.category} · ${sev}`)}</span></span>`;
-      h += done ? `<span class="small blue">${esc(S.fixed)}</span>` : `<button type="button" data-act="fix:${esc(id)}"${d.fix ? " disabled" : ""}>${esc(fill(S.fix, { months: f.fixMonths }))}</button>`;
+      h += done ? `<span class="small blue">${esc(S.fixed)}</span>` : `<button type="button" data-act="fix:${esc(id)}"${d.fix ? " disabled" : ""}>${esc(f.fixMonths === 1 ? S.fixOne : fill(S.fix, { months: f.fixMonths }))}</button>`;
       h += `</li>`;
     }
     h += `</ol>`;
