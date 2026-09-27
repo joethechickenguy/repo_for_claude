@@ -35,6 +35,9 @@ export const STRINGS = {
   },
   goal: {
     line: "{name}: {unmet}.",
+    now: "{text} (now {n})",
+    route: "{name}: finish one route: {list}.",
+    routeJoiner: " or ",
     reached: "Gate reached: {name}.",
     joiner: ", ",
   },

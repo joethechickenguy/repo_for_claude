@@ -275,11 +275,23 @@ export class Game {
   }
 
   /** The current stage's gate: name, the checks still unmet (their text), and whether it's done. */
-  gate(): { stage: number; name: string; unmet: string[]; done: boolean } {
+  gate(): { stage: number; name: string; unmet: string[]; routes: string[]; done: boolean } {
     const s = this.tree.stages.find((x) => x.stage === this.stage)!;
     const done = this.projects.isComplete(s.gate.id);
-    const unmet = done ? [] : gateStatus(this.tree, s.stage, this.engine).unmet.map((c) => c.text);
-    return { stage: s.stage, name: s.gate.name, unmet, done };
+    const unmet = done
+      ? []
+      : gateStatus(this.tree, s.stage, this.engine).unmet.map((c) => {
+          const x = c.expr;
+          const now = x.kind === "cmp" ? this.engine.get(x.ref) : undefined;
+          return typeof now === "number" ? fill(STRINGS.goal.now, { text: c.text, n: fmtRound(now) }) : c.text;
+        });
+    // The gate's route requirement (any_of): none of its groups complete yet.
+    const g = this.tree.nodes[s.gate.id];
+    const book = this.projects.book;
+    const groups = g?.requires.anyOf ?? [];
+    const routeMet = groups.length === 0 || groups.some((grp) => grp.every((id) => book.completed.includes(id)));
+    const routes = done || routeMet ? [] : groups.map((grp) => grp.map((id) => this.tree.nodes[id]?.name ?? id).join(" + "));
+    return { stage: s.stage, name: s.gate.name, unmet, routes, done };
   }
 
   /** Is a stage's gate complete? */
@@ -533,8 +545,11 @@ export class Game {
 
   /** Tool users and tools (the heartbeat's numbers in words). */
   tools(): { tools: number; users: number; coverage: number } {
-    const r = this.engine.report;
-    return { tools: r?.toolStock ?? 0, users: r?.toolUsers ?? 0, coverage: r?.toolCoverage ?? 1 };
+    const e = this.engine;
+    const tools = e.content.tools.reduce((s, t) => s + e.stock(t.resource), 0);
+    const assigned = e.staffing().assigned;
+    const users = e.unlockedJobs().reduce((s, j) => s + (j.tool ? (assigned[j.id] ?? 0) : 0), 0);
+    return { tools, users, coverage: users > 0 ? Math.min(1, tools / users) : 1 };
   }
 
   private worksRowPeople(worksId: string, jobId: string): number {

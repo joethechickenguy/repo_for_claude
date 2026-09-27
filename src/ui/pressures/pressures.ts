@@ -125,7 +125,13 @@ export function barViews(
   shownNodes: readonly string[],
   currentStage: number,
 ): BarView[] {
-  const bars = openPressures(tree, book).filter((p) => pressureArrived(tree, p, book) && shownControl(pressureControl(p.id)));
+  // The current stage's bars; an earlier stage's bar only while it is red (it still bites).
+  const bars = openPressures(tree, book).filter(
+    (p) =>
+      pressureArrived(tree, p, book) &&
+      shownControl(pressureControl(p.id)) &&
+      (p.stage === currentStage || isRed(tree, p, engine)),
+  );
   bars.sort((a, b) => rank(b) - rank(a));
   function rank(p: Pressure): number {
     return (p.stage === currentStage ? 2 : 0) + (p.heartbeat ? 1 : 0) + p.stage / 100;
