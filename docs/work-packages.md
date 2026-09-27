@@ -239,7 +239,26 @@ Tick when done; add 3-5 lines of what shipped and what was left open.
     no Stage 2 job has rates); open questions 41, 42, 45.
 - [ ] G1 · [ ] G2 · [ ] G3 · [ ] G4 · [ ] G5 · [ ] G6
 - [ ] H test campaign
-- [ ] I draft
+- [x] I draft
+  - `src/ui/draft/` (`mountDraft(el, onDepart)`, found by D's `main.ts` hook): two `PeopleTree` panels
+    (D's control) for the 9 roster pools > specialties and 8 page categories > topics, a weakest-area
+    line and an always-enabled Depart. `model.ts` is the pure state: `builders` is the roster's only
+    unpinned pool (absorbs the remainder), pages are budget-capped rather than forced to sum to it;
+    specialty/topic edits reallocate their parent's fixed total and cascade to the parent's own ± when
+    no sibling is free to absorb the change (a single-topic category, or every sibling pinned by hand).
+  - Built on D's `src/ui/controls/spread.ts` (already on the branch); `buildResult()` returns D's own
+    `shellDraft.ts` `DraftOutcome` shape directly (`draft_roster` carries both pool and specialty ids,
+    matching `defaultDraftOutcome`'s convention) so Depart needs no translation layer.
+  - 16 tests (`tests/ui/draft/model.test.ts`, `tests/ui/draft/dom.test.ts`): defaults + Depart with no
+    interaction; a 500-step seeded-PRNG property test (mulberry32) plus a 200-step pin-toggle variant
+    keeping totals exact after every action; three hand-computed weakest-area allocations including a
+    three-way tie exercising the earliest-area rule; a pinned topic/specialty surviving a category/pool
+    change, checked at both the model and the real DOM; `DraftResult` checked against
+    `bundleCoverage`/`pagesTier` from `src/content`.
+  - Open: open-questions 47-49 (which pool is the remainder isn't a declared flag; pools/categories
+    have no one-line text or hover-nodes of their own in draft.yaml, so a pool shows its `absent` text
+    and a category shows none; single-topic categories need the cascade rule). No design system data
+    for hover-nodes on roster specialties (only pages have a `pages_bundle` link to nodes).
 - [ ] J tuning
 
 ## Conventions for all packages
