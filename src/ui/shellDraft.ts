@@ -1,12 +1,12 @@
-// What the draft (package I, Stage 0) hands the game at Depart, and the default draft used when no
-// draft screen is mounted: every pool and category at its draft.yaml default, spread over
-// specialties and topics by `full` with the shared pin-and-spread rule.
+// What the draft (package I, Stage 0) hands the game at Depart, and the default draft used when the
+// player departs without touching anything. The defaults come from I's draft model
+// (src/ui/draft/model.ts), so there is one implementation of the draft rules.
 import type { Tree } from "../content";
-import { spread } from "./controls/spread";
+import { buildResult, defaultDraftState } from "./draft/model";
 
 /**
- * The state the draft writes (state-variables.yaml): `draft_roster` pool -> people (specialty ids
- * may be included too), `bundles_taken` topic -> page coverage (pages / full; the loader caps at 1).
+ * The state the draft writes (state-variables.yaml): `draft_roster` pool -> people, `bundles_taken`
+ * topic -> page coverage (0-1).
  */
 export interface DraftOutcome {
   draft_roster: Record<string, number>;
@@ -15,17 +15,23 @@ export interface DraftOutcome {
 
 /** The draft.yaml defaults with no interaction (DESIGN.md: the player "can depart at once"). */
 export function defaultDraftOutcome(tree: Tree): DraftOutcome {
-  const d = tree.draft;
-  const roster: Record<string, number> = {};
-  for (const pool of d.roster) {
-    roster[pool.id] = pool.default;
-    const s = spread(pool.default, pool.specialties.map((x) => ({ id: x.id, weight: x.full })));
-    for (const [id, n] of Object.entries(s.values)) roster[id] = n;
-  }
-  const bundles: Record<string, number> = {};
-  for (const cat of d.pages) {
-    const s = spread(cat.default, cat.topics.map((t) => ({ id: t.id, weight: t.full })));
-    for (const t of cat.topics) bundles[t.id] = t.full > 0 ? (s.values[t.id] ?? 0) / t.full : 0;
-  }
-  return { draft_roster: roster, bundles_taken: bundles };
+  const r = buildResult(tree, defaultDraftState(tree));
+  return { draft_roster: { ...r.draftRoster }, bundles_taken: { ...r.bundlesTaken } };
+}
+
+const isMap = (v: unknown): v is Record<string, number> => !!v && typeof v === "object" && !Array.isArray(v);
+
+/**
+ * Whatever the draft screen hands to Depart: I's `DraftResult` ({draftRoster, bundlesTaken}) or the
+ * state-variable spelling ({draft_roster, bundles_taken}). Missing parts fall back to the defaults.
+ */
+export function outcomeFrom(tree: Tree, x: unknown): DraftOutcome {
+  const d = defaultDraftOutcome(tree);
+  const o = (x ?? {}) as Record<string, unknown>;
+  const roster = o.draft_roster ?? o.draftRoster;
+  const bundles = o.bundles_taken ?? o.bundlesTaken;
+  return {
+    draft_roster: isMap(roster) ? { ...roster } : d.draft_roster,
+    bundles_taken: isMap(bundles) ? { ...bundles } : d.bundles_taken,
+  };
 }

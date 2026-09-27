@@ -6,7 +6,7 @@ import { tree } from "./content";
 import type { SaveStorage } from "./engine";
 import { DEFAULT_SAVE_KEY } from "./engine";
 import { mountShell } from "./ui/shell";
-import { defaultDraftOutcome, type DraftOutcome } from "./ui/shellDraft";
+import { defaultDraftOutcome, outcomeFrom, type DraftOutcome } from "./ui/shellDraft";
 import { Game } from "./ui/shellGame";
 import { STRINGS } from "./ui/strings";
 
@@ -32,30 +32,28 @@ function applyTheme(): void {
   }
 }
 
-/** Whatever the draft hands over; missing parts fall back to the draft.yaml defaults. */
-function outcomeFrom(x: unknown): DraftOutcome {
-  const d = defaultDraftOutcome(tree);
-  const o = (x ?? {}) as Partial<DraftOutcome>;
-  return {
-    draft_roster: o.draft_roster && typeof o.draft_roster === "object" ? { ...o.draft_roster } : d.draft_roster,
-    bundles_taken: o.bundles_taken && typeof o.bundles_taken === "object" ? { ...o.bundles_taken } : d.bundles_taken,
-  };
-}
-
 type MountDraft = (el: HTMLElement, onDepart: (outcome: unknown) => void) => unknown;
 
 /**
- * HOOK for package I: if `src/ui/draft.ts` exists and exports `mountDraft(el, onDepart)`, it is the
- * first screen of a new run. Until it lands, a one-line screen departs with the default draft.
+ * HOOK for package I: the first module of `src/ui/draft.ts`, `src/ui/draft/index.ts` or
+ * `src/ui/draft/screen.ts` that exports `mountDraft(el, onDepart)` is the first screen of a new run.
+ * Until one lands, a one-line screen departs with the default draft.
  */
-const draftModules = import.meta.glob<{ mountDraft?: MountDraft }>("./ui/draft.ts");
+const draftModules = import.meta.glob<{ mountDraft?: MountDraft }>(["./ui/draft.ts", "./ui/draft/index.ts", "./ui/draft/screen.ts"]);
 
 async function showDraft(app: HTMLElement, onDepart: (o: DraftOutcome) => void): Promise<void> {
-  const load = draftModules["./ui/draft.ts"];
-  const mod = load ? await load() : null;
+  let mountDraft: MountDraft | undefined;
+  for (const path of ["./ui/draft.ts", "./ui/draft/index.ts", "./ui/draft/screen.ts"]) {
+    const load = draftModules[path];
+    const mod = load ? await load() : null;
+    if (mod?.mountDraft) {
+      mountDraft = mod.mountDraft;
+      break;
+    }
+  }
   app.replaceChildren();
-  if (mod?.mountDraft) {
-    mod.mountDraft(app, (o) => onDepart(outcomeFrom(o)));
+  if (mountDraft) {
+    mountDraft(app, (o) => onDepart(outcomeFrom(tree, o)));
     return;
   }
   const box = document.createElement("div");
