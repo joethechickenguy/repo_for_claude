@@ -21,6 +21,7 @@ from bare hands to a one-way crewed lunar landing, in a form a developer can loa
 | [`tech-tree/failure-modes.md`](tech-tree/failure-modes.md) | Hidden late-stage flaws and trap options that teach |
 | [`tech-tree/labor-sinks.md`](tech-tree/labor-sinks.md) | Jobs and projects that absorb thousands of workers |
 | [`tech-tree/open-questions.md`](tech-tree/open-questions.md) | Where history, physics or fun are unclear or in conflict |
+| [`tech-tree/design-review.md`](tech-tree/design-review.md) | Critical review of the play experience and the tree, with ranked changes |
 | [`tech-tree/generated/`](tech-tree/generated/) | Mermaid dependency graphs, bundle discount lists, state index, summary (generated) |
 | [`tools/validate_tree.py`](tools/validate_tree.py) | Validator and generator |
 
