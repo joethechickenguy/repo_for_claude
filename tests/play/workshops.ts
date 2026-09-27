@@ -6,7 +6,7 @@ import { buildEngine, ENGINE_WS, engineDesign, engineDials, runningEngine } from
 import { workshopSystem } from "../../src/ui/workshops/kit";
 import { SHOP, shopDials, shopSetup, startRetool } from "../../src/ui/workshops/machineShop";
 import "../../src/ui/workshops/furnace";
-import "../../src/ui/workshops/liquefier";
+import { liquefierDesign, liquefierDials, startLiquefier } from "../../src/ui/workshops/liquefier";
 import "../../src/ui/workshops/rocketEngine";
 import "../../src/ui/workshops/rocket";
 
@@ -69,8 +69,24 @@ export function dynamoHabit(g: Game): void {
     }
   if (!design) return;
   const e = engineDesign(g, design);
-  if (!want(Math.min(e.dynamo?.dynamo_output_kw ?? 0, 1e9))) return;
+  // Rebuild for more output, or when a new dial (transmission, prime mover) would change the design.
+  const newDial = run && ((e.line_loss_pct !== null && run.design.line_loss_pct === null) || (e.mover !== run.design.mover && e.station_efficiency !== null));
+  if (!want(e.dynamo?.dynamo_output_kw ?? 0) && !newDial) return;
   if (g.engine.stock("iron_kg") < e.iron_cost_kg) return;
   d.dials = design;
   buildEngine(g);
+}
+
+/** Liquefier: run the best plant the dials allow; restart only when a better design becomes possible. */
+export function liquefierHabit(g: Game): void {
+  const dials = liquefierDials(g);
+  const m = dials.find((x) => x.id === "method");
+  const d = data(g, "liquefier_workshop") as (Data & { run: { design: JsonValue } | null }) | null;
+  if (!m || !d) return;
+  const method = ["expansion_engine", "throttle_regenerative", "cascade"].find((o) => !m.locked?.[o])!;
+  const values: Record<string, JsonValue> = { method, pressure: method === "expansion_engine" ? 40 : 200, exchanger_length: 10, column: 30 };
+  const want = JSON.stringify(liquefierDesign(g, values));
+  if (d.run && JSON.stringify(d.run.design) === want) return;
+  d.dials = values;
+  startLiquefier(g);
 }

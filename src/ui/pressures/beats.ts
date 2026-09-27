@@ -5,6 +5,10 @@
 // Readings (open question 41): "beat N-1" is the nearest lower beat that has nodes in that stage (a
 // stage may skip a beat number); the lowest beat of a stage is always open (the stage itself opens
 // with the previous gate, which B already checks).
+//
+// G4 (open question 60): a beat of optional nodes only (oil, aluminum; rails or canals) mustn't hold
+// the rest of the stage hostage, so a beat waits on the nearest lower beat that has a critical-path
+// node; and a gate waits only on its own requirements.
 import { isComplete, type NodeBook, type Tree } from "../../content";
 
 /** Beats that have nodes in a stage, ascending. */
@@ -21,7 +25,8 @@ export function stageBeats(tree: Tree, stage: number): number[] {
 export function beatOpen(tree: Tree, stage: number, beat: number, book: Readonly<NodeBook>): boolean {
   const lower = stageBeats(tree, stage).filter((b) => b < beat);
   if (lower.length === 0) return true;
-  const prev = lower[lower.length - 1]!;
+  const critical = lower.filter((b) => tree.nodeOrder.some((id) => tree.nodes[id]!.stage === stage && tree.nodes[id]!.beat === b && tree.nodes[id]!.criticalPath));
+  const prev = (critical.length ? critical : lower)[(critical.length ? critical : lower).length - 1]!;
   return tree.nodeOrder.some((id) => {
     const n = tree.nodes[id]!;
     return n.stage === stage && n.beat === prev && isComplete(book as NodeBook, id);
@@ -31,6 +36,7 @@ export function beatOpen(tree: Tree, stage: number, beat: number, book: Readonly
 /** The gate the projects system applies: a node's beat must be open. */
 export function nodeBeatOpen(tree: Tree, id: string, book: Readonly<NodeBook>): boolean {
   const n = tree.nodes[id];
+  if (n?.kind === "gate") return true;
   return !!n && beatOpen(tree, n.stage, n.beat, book);
 }
 

@@ -46,8 +46,9 @@ pressures:                         # bars the simulation moves
     introduced_in_beat: 6
     model: {per_unit_produced: {wood_kg: -0.0000006}, per_day: 0.01, min: 0, max: 100}   # optional: how drives moves
     red_modifiers: {rate: {gather_wood: 0.667}}   # optional: effect_when_red as engine modifiers
-    # model may also take per_worker: {job: delta per effective worker-day} and flow: true (restarts at 0
-    # each day: a bar of today's net, like fuel made minus fuel used)
+    # model may also take per_worker: {job: delta per effective worker-day}, per_state: {numeric state
+    # variable: factor} (e.g. generation a workshop writes) and flow: true (restarts at 0 each day: a bar
+    # of today's net, like fuel made minus fuel used)
 
 workshops:                         # design screens; a base definition once, `extends: true` later
   - id: engine_workshop

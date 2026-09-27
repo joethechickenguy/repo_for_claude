@@ -391,7 +391,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
         effectWhenRed: String(pr.effect_when_red ?? ""),
         answers: arr(pr.answers).map(String),
         introducedInBeat: Number(pr.introduced_in_beat ?? 1),
-        ...pressureExtras(pr, `${file}: pressure ${pr.id}`, errors),
+        ...pressureExtras(pr, `${file}: pressure ${pr.id}`, errors, stateVariables),
       };
     });
     const hb = d.heartbeat;
@@ -578,7 +578,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
 const MODIFIER_KINDS: readonly PressureModifier["kind"][] = ["rate", "yield", "toolLife", "training"];
 
 /** A pressure's optional `model:` and `red_modifiers:` (package F; see PressureModel). */
-function pressureExtras(pr: Y, where: string, errors: string[]): { model?: PressureModel; redModifiers?: PressureModifier[] } {
+function pressureExtras(pr: Y, where: string, errors: string[], stateVariables: Record<string, StateVariable>): { model?: PressureModel; redModifiers?: PressureModifier[] } {
   const out: { model?: PressureModel; redModifiers?: PressureModifier[] } = {};
   const nums = (v: Y, what: string): Record<string, number> => {
     const r: Record<string, number> = {};
@@ -596,6 +596,10 @@ function pressureExtras(pr: Y, where: string, errors: string[]): { model?: Press
       perDay: typeof m.per_day === "number" ? m.per_day : 0,
     };
     if (m.per_worker !== undefined) model.perWorker = nums(m.per_worker, "model.per_worker");
+    if (m.per_state !== undefined) {
+      model.perState = nums(m.per_state, "model.per_state");
+      for (const k of Object.keys(model.perState)) if (!(k in stateVariables)) errors.push(`${where}: model.per_state.${k} is not a declared state variable`);
+    }
     if (typeof m.min === "number") model.min = m.min;
     if (typeof m.max === "number") model.max = m.max;
     if (m.flow === true) model.flow = true;

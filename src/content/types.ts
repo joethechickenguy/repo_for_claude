@@ -232,6 +232,8 @@ export interface PressureModel {
   perUnitConsumed: Record<string, number>;
   /** + this per effective worker-day of a job (people x efficiency x modifiers x the fraction that ran). */
   perWorker?: Record<string, number>;
+  /** + this x a numeric state variable's value (e.g. generation a workshop writes, `grid_kw: 1`). */
+  perState?: Record<string, number>;
   perDay: number;
   min?: number;
   max?: number;

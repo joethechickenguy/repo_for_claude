@@ -6,24 +6,38 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { SaveGame } from "../../src/engine";
 import { playRun, summarize, type StagePlan, type StageReport } from "./bot";
-import { STAGE1, STAGE2, STAGE3 } from "./plans";
+import { STAGE1, STAGE2, STAGE3, STAGE4 } from "./plans";
 
 const YEAR = 365;
-const PLANS: Record<number, StagePlan> = { 1: STAGE1, 2: STAGE2, 3: STAGE3 };
+const PLANS: Record<number, StagePlan> = { 1: STAGE1, 2: STAGE2, 3: STAGE3, 4: STAGE4 };
 
-/** Options to try at each stage, one variant per list. */
+/**
+ * Options to try at each stage, one variant per list. The first is the stage's main variant: it must
+ * meet a decision every year. The others must reach the gate; their gaps go in the playtest notes
+ * (a route the draft carried no pages for can be a long build by design).
+ */
 const VARIANTS: Record<number, string[][]> = {
   3: [
     ["rails_wagonways", "steam_engine_house"],
     ["canals", "water_turbine"],
   ],
+  4: [
+    ["linde_liquefier", "tool_steel"],
+    ["claude_expander", "heat_resistant_steel"],
+  ],
 };
 
-function checkStage(s: StageReport | undefined, maxYears: number): void {
+/** What each stage's gate proves, beyond reaching it. */
+const PROOF: Record<number, (r: ReturnType<typeof playRun>) => void> = {
+  3: (r) => expect(r.game.engine.state.getNumber("dynamo_output_kw")).toBeGreaterThanOrEqual(50),
+  4: (r) => expect(r.game.engine.state.getNumber("lox_kg_per_day")).toBeGreaterThanOrEqual(500),
+};
+
+function checkStage(s: StageReport | undefined, maxYears: number, main: boolean): void {
   expect(s, "stage played").toBeDefined();
   expect(s!.gateDay, "gate reached").not.toBeNull();
   expect(s!.deadEndDays).toBe(0);
-  expect(s!.longestDecisionGapDays, s!.decisions.map((d) => `${d.id}@${d.day}`).join(" ")).toBeLessThanOrEqual(YEAR);
+  if (main) expect(s!.longestDecisionGapDays, s!.decisions.map((d) => `${d.id}@${d.day}`).join(" ")).toBeLessThanOrEqual(YEAR);
   expect(s!.maxControlsPerSlowdown).toBeLessThanOrEqual(2);
   expect(s!.gateDay!).toBeLessThan(maxYears * YEAR);
 }
@@ -31,16 +45,23 @@ function checkStage(s: StageReport | undefined, maxYears: number): void {
 describe("the campaign, played by a middling bot", () => {
   const starts: Record<number, SaveGame> = {};
   beforeAll(() => {
-    const r = playRun(PLANS, 2);
-    starts[3] = r.game.engine.save();
-  }, 300_000);
+    // One run through the main variants; each stage's start is saved for the variants.
+    let from: SaveGame | undefined;
+    for (const stage of [2, 3, 4]) {
+      const r = playRun(PLANS, stage, 20 * YEAR, from);
+      from = r.game.engine.save();
+      starts[stage + 1] = from;
+    }
+  }, 600_000);
 
-  for (const picks of VARIANTS[3]!)
-    it(`Stage 3 reaches its gate taking ${picks.join(", ")}`, () => {
-      const r = playRun({ ...PLANS, 3: { ...STAGE3, picks } }, 3, 12 * YEAR, starts[3]);
-      const s = r.stages.find((x) => x.stage === 3);
-      checkStage(s, 8);
-      for (const p of picks) expect(r.game.projects.status(p), summarize(r)).toBe("complete");
-      expect(r.game.engine.state.getNumber("dynamo_output_kw")).toBeGreaterThanOrEqual(50);
-    }, 300_000);
+  for (const stage of [3, 4])
+    VARIANTS[stage]!.forEach((picks, i) =>
+      it(`Stage ${stage} reaches its gate taking ${picks.join(", ")}`, () => {
+        const r = playRun({ ...PLANS, [stage]: { ...PLANS[stage]!, picks } }, stage, 12 * YEAR, starts[stage]);
+        const s = r.stages.find((x) => x.stage === stage);
+        checkStage(s, 8, i === 0);
+        for (const p of picks) expect(r.game.projects.status(p), summarize(r)).toBe("complete");
+        PROOF[stage]!(r);
+      }, 300_000),
+    );
 });

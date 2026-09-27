@@ -133,8 +133,15 @@ function title(d: LiquefierDials): string {
   return bits.join(", ");
 }
 
+/** Output fraction today: a brownout (the power bar red) cuts it. */
+export function powerFactor(game: Game): number {
+  return game.engine.state.has("power_balance_kw") && game.engine.state.getNumber("power_balance_kw") < 0 ? playNum(game, LIQUEFIER, "brownout_factor") : 1;
+}
+
 function tickLiquefier(game: Game, ctx: TickContext, sys: WorkshopSystem<LiquefierData & JsonValue>): void {
   const run = sys.data.run;
+  // The compressor is a load on the grid while the plant runs.
+  setState(game, "liquefier_kw", run ? playNum(game, LIQUEFIER, "compressor_kw") : 0);
   if (!run) return;
   const today = ctx.day + 1;
   const t = today - run.start;
@@ -155,7 +162,7 @@ function tickLiquefier(game: Game, ctx: TickContext, sys: WorkshopSystem<Liquefi
     ctx.pause(doneReason(LIQUEFIER));
   }
   if (run.producing) {
-    const lox = loxPerDay(game, run.design, r);
+    const lox = loxPerDay(game, run.design, r) * powerFactor(game);
     if (lox > 0) ctx.engine.addStock("lox_kg", lox);
     setState(game, "lox_kg_per_day", lox);
   }
@@ -184,7 +191,8 @@ registerWorkshop(LIQUEFIER, (el, game) => {
         if (!d.run.producing) {
           const total = rr.days_to_first_drop ?? playNum(game, LIQUEFIER, "trial_days");
           h += progressHTML(S.cooling, t, Math.max(1, Math.ceil(total)));
-        } else h += noteHTML(fill(S.running, { kg: n(rr.kg_per_day), o2: n(loxPerDay(game, d.run.design, rr)) }));
+        } else h += noteHTML(fill(S.running, { kg: n(rr.kg_per_day), o2: n(loxPerDay(game, d.run.design, rr) * powerFactor(game)) }));
+        if (powerFactor(game) < 1) h += noteHTML(S.brownout, true);
         h += outputsBlock([{ label: S.temp, value: n(temperatureAtDay(rr, t), "°C") }], "");
         h += chart(game, rr, t);
         h += actionHTML("stop", S.stop, null);

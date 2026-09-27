@@ -133,6 +133,7 @@ export const WS = {
     firstDropAt: "First drop: {kg} kg of liquid a day at {pur}% oxygen.",
     stopped: "Stopped.",
     chart: "Cold-end temperature, °C, by day",
+    brownout: "Brownout: the power bar is red, and the compressor runs at half.",
   },
   rocketEngine: {
     design: "This engine",

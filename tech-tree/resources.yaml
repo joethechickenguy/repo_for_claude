@@ -31,6 +31,9 @@ resources:
   engine_work_kwh:   {produced_by: tend_engine, name: "Engine work (kWh)", work: true}
   steel_kg:          {produced_by: blow_steel, name: "Steel (kg)"}
   acid_kg:           {produced_by: make_sulfuric_acid, name: "Sulfuric acid (kg)"}
+  soda_ash_kg:       {produced_by: make_soda_ash, name: "Soda ash (kg)"}
+  # Electricity sent to the grid, 1 kWh per unit; counted x2.5 in the energy number (energy.md rule 5).
+  electricity_kwh:   {produced_by: run_power_station, name: "Electricity (kWh)", work: true}
   alloy_steel_kg:    {produced_by: make_alloy_steel, name: "Alloy steel (kg)"}
   glass_kg:          {produced_by: make_glass, name: "Glass (kg)"}
   cement_kg:         {produced_by: make_cement, name: "Cement (kg)"}

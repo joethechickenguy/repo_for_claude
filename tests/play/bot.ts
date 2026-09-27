@@ -5,7 +5,7 @@ import "./workshops";
 // workshops run by a small script. It records what a playtest note needs: days to each gate,
 // decisions met (nodes with a trade-off line), slowdowns and how many new controls each brought, the
 // longest stretch with no slowdown, and nodes that appeared with nothing visible to explain them.
-import { tree } from "../../src/content";
+import { producers, tree } from "../../src/content";
 import type { PauseReason, SaveGame } from "../../src/engine";
 import { INTRO_PAUSE, introControls } from "../../src/ui/pressures";
 import { Game, PEOPLE_BLOCK } from "../../src/ui/shellGame";
@@ -21,6 +21,8 @@ export interface StagePlan {
   only?: string[];
   /** Never build these. */
   skip?: string[];
+  /** The job the bot staffs up when the gate's energy check is what's missing. */
+  energyJob?: string;
   /** Run once a day before the tick: workshops, dials. */
   daily?(game: Game, day: number): void;
 }
@@ -44,6 +46,10 @@ export interface StageReport {
   longestDecisionGapDays: number;
   maxControlsPerSlowdown: number;
   slowdowns: number;
+  /** Slowdowns by pause kind and subject (what keeps interrupting). */
+  slowdownKinds: Record<string, number>;
+  /** Day (from the stage's start) each of its nodes completed. */
+  completed: { id: string; day: number }[];
   /** Nodes revealed on a day with nothing finished, no red bar, milestone or workshop result nearby. */
   unexplained: string[];
   deadEndDays: number;
@@ -55,6 +61,15 @@ export interface RunReport {
   game: Game;
   days: number;
 }
+
+/** Every this many days the bot looks at what stalled projects are missing and staffs its producers. */
+const REBALANCE_DAYS = 60;
+/** People added to a producer per look, and the most it adds to one job over the run. */
+const BOOST_STEP = 50;
+const BOOST_MAX = 600;
+
+/** The bot starts an optional project only while fewer than this many builds are underway. */
+const OPTIONAL_WHEN_BUILDS_BELOW = 2;
 
 /** Days of context that count as "a visible reason" for a node appearing. */
 const REASON_WINDOW_DAYS = 3;
@@ -71,6 +86,20 @@ export function setRow(game: Game, job: string, target: number): void {
   }
 }
 
+function gateWatts(stage: number): number {
+  const s = tree.stages.find((x) => x.stage === stage);
+  const c = s?.gate.condition.find((x) => x.expr.kind === "cmp" && x.expr.ref === "energy_w_per_person");
+  return c && c.expr.kind === "cmp" && typeof c.expr.value === "number" ? c.expr.value : 0;
+}
+
+/** A trap that a non-trap node needs directly (the cascade liquefier is how the workshop opens): build it. */
+function isStepping(id: string): boolean {
+  return tree.nodeOrder.some((x) => {
+    const n = tree.nodes[x]!;
+    return !n.tags.includes("trap") && (n.requires.nodes.includes(id) || n.requires.anyOf.every((g) => g.includes(id)) && n.requires.anyOf.length > 0);
+  });
+}
+
 /** Play from a new run until `untilStage`'s gate (or `maxDays`). */
 export function playRun(plans: Record<number, StagePlan>, untilStage: number, maxDays = 60 * 365, from?: SaveGame): RunReport {
   const game = new Game(tree, from ? { save: from } : {});
@@ -82,6 +111,8 @@ export function playRun(plans: Record<number, StagePlan>, untilStage: number, ma
   // A resumed run starts right after a gate: that is the reason for the first reveals.
   const recentReasons: { day: number; kind: string }[] = from ? [{ day, kind: "gate" }] : [];
   const seenDecision = new Set<string>();
+  /** People the bot has added to producers beyond the plan, by job. */
+  const boost: Record<string, number> = {};
 
   const open = (stage: number): StageReport => ({
     stage,
@@ -93,6 +124,8 @@ export function playRun(plans: Record<number, StagePlan>, untilStage: number, ma
     maxControlsPerSlowdown: 0,
     slowdowns: 0,
     unexplained: [],
+    slowdownKinds: {},
+    completed: [],
     deadEndDays: 0,
     energyAtGate: 0,
   });
@@ -116,11 +149,33 @@ export function playRun(plans: Record<number, StagePlan>, untilStage: number, ma
 
     // People: re-lay the plan when rows change, then everyone idle (beyond trainees) builds.
     const key = `${stage}|${game.peopleRows().map((r) => r.id).join(",")}`;
+    // Stalled projects: staff the main producer of what they're missing (a middling player's habit).
+    if (day % REBALANCE_DAYS === 0) {
+      const missing = new Set<string>();
+      for (const c of game.projectCards()) if (c.status === "available" && !c.affordable) for (const m of c.missing) missing.add(m.resource);
+      // The gate is waiting only on watts per person: more of what burns or generates.
+      const unmet = game.gate().unmet;
+      if (plan.energyJob && unmet.length && game.engine.isJobUnlocked(plan.energyJob) && game.energy() < gateWatts(stage) && (boost[plan.energyJob] ?? 0) < BOOST_MAX) {
+        boost[plan.energyJob] = (boost[plan.energyJob] ?? 0) + BOOST_STEP;
+        layout = "";
+      }
+      for (const r of missing) {
+        const live = producers(tree, r).filter((j) => game.engine.isJobUnlocked(j));
+        if (!live.length) continue;
+        const main = live.sort((a, b) => game.engine.assigned(b) - game.engine.assigned(a))[0]!;
+        if ((boost[main] ?? 0) < BOOST_MAX) {
+          boost[main] = (boost[main] ?? 0) + BOOST_STEP;
+          layout = "";
+        }
+      }
+    }
     if (key !== layout) {
       layout = key;
       setRow(game, "build", 0);
-      for (const [j] of plan.people) setRow(game, j, 0);
-      for (const [j, n] of plan.people) setRow(game, j, n);
+      const want = new Map(plan.people);
+      for (const [j, b] of Object.entries(boost)) want.set(j, (want.get(j) ?? 0) + b);
+      for (const [j] of want) setRow(game, j, 0);
+      for (const [j, n] of want) setRow(game, j, n);
       if (plan.train) game.setTrainingTrade(plan.train.trade);
     }
     const keep = plan.train?.people ?? 0;
@@ -137,8 +192,11 @@ export function playRun(plans: Record<number, StagePlan>, untilStage: number, ma
       const p = plans[n.stage] ?? plan;
       const want = n.choice
         ? p.picks.includes(c.id)
-        : !(p.skip ?? []).includes(c.id) && !n.tags.includes("trap") && (!p.only || p.only.includes(c.id) || n.kind === "gate");
-      if (want && c.status === "available" && c.affordable) game.startProject(c.id);
+        : !(p.skip ?? []).includes(c.id) && (!n.tags.includes("trap") || isStepping(c.id)) && (!p.only || p.only.includes(c.id) || n.kind === "gate");
+      // Optional projects wait until fewer than two builds are underway (a middling player's focus).
+      const optional = !n.choice && !n.criticalPath && n.kind !== "gate";
+      const busy = Object.keys(game.book.building).length >= OPTIONAL_WHEN_BUILDS_BELOW;
+      if (want && c.status === "available" && c.affordable && !(optional && busy)) game.startProject(c.id);
     }
     plan.daily?.(game, day);
 
@@ -154,6 +212,11 @@ export function playRun(plans: Record<number, StagePlan>, untilStage: number, ma
       rep.maxControlsPerSlowdown = Math.max(rep.maxControlsPerSlowdown, controls);
       rep.longestLullDays = Math.max(rep.longestLullDays, day - lastSlow);
       lastSlow = day;
+      for (const x of reasons) {
+        const k = `${x.kind}:${x.subject ?? ""}`;
+        rep.slowdownKinds[k] = (rep.slowdownKinds[k] ?? 0) + 1;
+        if (x.kind === "node_complete") rep.completed.push({ id: x.subject ?? "", day: day - rep.startDay });
+      }
       for (const x of reasons)
         if (x.kind === "node_revealed" && !recentReasons.some((y) => REASON_KINDS.has(y.kind))) rep.unexplained.push(x.subject ?? "");
     }

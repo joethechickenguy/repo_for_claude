@@ -107,7 +107,7 @@ export function shopHours(game: Game, setup: Setup | null): number {
   return shopHoursPerDay(setup?.dials ?? { flat_reference: "none" }, {
     machinists: machinistsAtWork(game),
     has_planer: isDone(game, "planer_milling"),
-    has_tool_steel: isDone(game, "alloy_steels"),
+    has_tool_steel: isDone(game, "tool_steel"),
   });
 }
 

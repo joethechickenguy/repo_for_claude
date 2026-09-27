@@ -14,29 +14,75 @@ gate:
     state: ["lox_kg_per_day >= 500"]
   routes: [A_linde, B_claude, T_cascade]
 
+# Job rates per worker-day (G4; all estimates). Electrical loads are in the power bar's model.
+jobs:
+  run_power_station:
+    name: Run the power station
+    what: "Uses 640 kg coal. Sends 240 kWh to the grid (10 kW)"   # ~5% coal-to-wire with piston engines; the turbine doubles it (estimate)
+    why: "Boilers, engines and dynamos in one building: the colony's power, as long as it's fed coal."
+    inputs: {coal_kg: 640}
+    outputs: {electricity_kwh: 240}
+  run_arc_furnace:
+    name: Run the arc furnace
+    what: "Uses 55 kg iron. Makes 50 kg electric steel. Draws 10 kW"
+    why: "An arc between carbon electrodes melts steel with no fuel in it: clean steel, carbide, ferroalloys."
+    inputs: {iron_kg: 55, graphite_kg: 0.2}
+    outputs: {steel_kg: 50}
+  make_alloy_steel:
+    name: Make alloy steel
+    what: "Uses 50 kg steel, 3 kg chromite and 1 kg acid. Makes 50 kg alloy steel. Draws 5 kW"
+    why: "A few percent chromium, tungsten or nickel: steel that stays hard hot, resists acid, or holds an edge."
+    inputs: {steel_kg: 50, chromium_ore_kg: 3, acid_kg: 1}
+    outputs: {alloy_steel_kg: 50}
+  make_soda_ash:
+    name: Make soda ash
+    what: "Uses 12 kg salt, 10 kg acid, 10 kg coal and 10 kg wood. Makes 10 kg soda ash and 3 kg paper"   # Leblanc; soda pulping (estimate)
+    why: "Salt and sulfuric acid, then limestone and coal: the alkali glass and soap and paper need."
+    inputs: {salt_kg: 12, acid_kg: 10, coal_kg: 10, wood_kg: 10}
+    outputs: {soda_ash_kg: 10, paper_kg: 3}
+    burns: {coal_kg: 10}
+  electrolyze_brine:
+    name: Electrolyze brine
+    what: "Uses 17 kg salt. Makes 11 kg caustic soda, chlorine and hydrogen. Draws 10 kW"   # 2 NaCl -> 2 NaOH by mass (stoichiometry)
+    why: "Current through salt water splits it: caustic at one electrode, chlorine at the other."
+    inputs: {salt_kg: 17}
+    outputs: {caustic_kg: 11, rubber_substitute_kg: 0.2}
+
+# Either/or decisions (G4). Starting one option closes the other for good.
+choices:
+  - id: alloy_use
+    prompt: "The arc furnace makes alloy steel. What do you alloy for first: tools that cut twice as fast, or blades that run hotter?"
+    options: [tool_steel, heat_resistant_steel]
+  - id: liquefier_method
+    prompt: "The cascade proved air can be liquefied, a few liters at a time. Scale it with a throttle and a long exchanger, or with a cold expansion engine?"
+    options: [linde_liquefier, claude_expander]
 pressures:
   - id: power_balance
     name: Power
     drives: power_balance_kw
     heartbeat: true
     rises_with: ["every motor, arc furnace, electrolysis cell, compressor and lamp draws kilowatts; the player chooses what runs"]
-    red_when: "load exceeds generation"
+    red_when: "power_balance_kw < 0"
     effect_when_red: "Brownout: every electrical load runs at the available fraction; the arc furnace freezes its charge"
     answers: [distribution_grid, steam_turbine, water_turbine, power_station_expansion]
     introduced_in_beat: 1
+    model: {per_unit_produced: {electricity_kwh: 0.0416667}, per_worker: {run_arc_furnace: -10, electrolyze_brine: -10, make_alloy_steel: -5}, per_state: {grid_kw: 1, liquefier_kw: -1}, min: -10000, max: 10000, flow: true}   # kW: today's station output + the workshop's grid - loads (estimates)
+    red_modifiers: {rate: {run_arc_furnace: 0.5, electrolyze_brine: 0.5, make_alloy_steel: 0.5}}   # brownout: loads run at half
   - id: alkali_acid_demand
     name: Chemicals
     drives: chemical_balance
     rises_with: ["glass, soap-free cleaning, alumina, caustic for scrubbers all want alkali; every process wants acid"]
-    red_when: "demand exceeds supply for 30 days"
+    red_when: "chemical_balance < 0"
     effect_when_red: "Glass and chemistry jobs stall"
     answers: [soda_ash, chlor_alkali, sulfuric_acid]
     introduced_in_beat: 3
+    model: {per_unit_produced: {acid_kg: 1, caustic_kg: 1, soda_ash_kg: 1}, per_unit_consumed: {acid_kg: -1, caustic_kg: -1, soda_ash_kg: -1}, min: -100000, max: 100000, flow: true}   # kg made minus used today
+    red_modifiers: {rate: {make_alloy_steel: 0.7, make_glass: 0.7}}
   - id: fuel_balance
     name: Fuel
     drives: fuel_balance
     rises_with: ["boilers for the power station and steam heat for chemistry"]
-    red_when: "fuel use exceeds production"
+    red_when: "fuel_balance < 0"
     effect_when_red: "Power station output falls; brownout follows"
     answers: [coal_mining, hot_blast, steam_turbine, water_turbine]
     introduced_in_beat: 1
@@ -64,7 +110,7 @@ workshops:
       - {id: pressure, name: "Compressor pressure (atm)", range: [20, 200], added_by: compressors,
          effect: "Higher pressure: more cooling per pass, more compressor power, thicker vessels (steel_quality read)",
          basis: "Joule-Thomson cooling per bar is small; regenerative exchange multiplies it"}
-      - {id: exchanger_length, name: "Heat exchanger", range: [1, 10], added_by: linde_liquefier,
+      - {id: exchanger_length, name: "Heat exchanger", range: [1, 10], added_by: compressors,   # both Linde and Claude plants need counterflow exchange (G4)
          effect: "Longer counterflow: each pass starts colder. Too short never reaches -190 C; the screen shows the asymptote",
          basis: "Hampson-Linde cycle ([Wikipedia](https://en.wikipedia.org/wiki/Hampson%E2%80%93Linde_cycle))"}
       - {id: column, name: "Rectifying column trays", range: [0, 40], added_by: air_separation,
@@ -74,6 +120,7 @@ workshops:
     play:
       compressor_kw: 100             # the plant's compressor: a Linde plant this size makes ~1 t/day (estimate)
       trial_days: 30                 # a run that never liquefies is given up after this long (estimate)
+      brownout_factor: 0.5           # output while the power bar is red (G4; estimate)
 
 nodes:
 
@@ -86,11 +133,13 @@ nodes:
     workshop: engine_workshop
     critical_path: true
     problem: "Every workshop needs its own engine and dynamo, because current can't travel far from the machine that makes it."
+    tradeoff: "The whole colony on one grid, and a power bar to balance; thirty tons of copper in the wires."
     requires:
       nodes: [gate_generator]
       resources: {copper_kg: 30000, iron_kg: 15000, glass_kg: 2000}
-      labor_person_days: 2500000
+      labor_person_days: 400000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:
+      jobs: [run_power_station]   # 640 kg coal -> 240 kWh per worker-day (estimate)
       effects: ["Engine workshop gains transmission dials: voltage, AC/DC. Power stations can serve the whole colony. Introduces the power balance bar: generation vs the loads you switch on"]
     reads_state: [has_insulated_wire, dynamo_output_kw]
     writes_state: [grid_kw, has_ac, power_balance_kw]
@@ -111,15 +160,17 @@ nodes:
     kind: upgrade
     critical_path: false
     problem: "Piston engines shake and wear at generator speeds, and the power station is out of room."
+    tradeoff: "Twice the electricity from the same coal; needs good steel and bearings, and two years of builders."
     requires:
       nodes: [distribution_grid, open_hearth]
       state: ["power_balance_kw < 0"]
       resources: {steel_kg: 20000, copper_kg: 3000}
-      labor_person_days: 2000000
+      labor_person_days: 350000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:
       effects: ["Power station efficiency about doubles; large smooth output. Reads bearing_quality"]
     reads_state: [steel_quality, bearing_quality]
     writes_state: [power_station_efficiency]
+    modifiers: {yield: {run_power_station: 2}}   # "about twice the electricity per ton of coal"
     pages_bundle: steam_engines
     without_pages: "3x labor; blades fail until balancing is learned"
     numbers_status: "Parsons 1884 sourced; gain is an estimate"
@@ -137,15 +188,17 @@ nodes:
     kind: project
     critical_path: false
     problem: "Every new load you switch on browns out the last one."
+    tradeoff: "Half again the station's output per crew; burns coal accordingly."
     requires:
       nodes: [distribution_grid]
       state: ["power_balance_kw < 0"]
       resources: {iron_kg: 20000, copper_kg: 5000}
-      labor_person_days: 800000
+      labor_person_days: 150000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:
       effects: ["+250 kW generation per build (repeatable). Fuel use rises accordingly; hydro sites give it free"]
     reads_state: [hydro_kw, fuel_balance]
     writes_state: [grid_kw, power_balance_kw]
+    modifiers: {rate: {run_power_station: 1.5}}   # estimate
     pages_bundle: none
     without_pages: "No penalty"
     numbers_status: "Game values"
@@ -166,7 +219,7 @@ nodes:
     requires:
       nodes: [distribution_grid]
       resources: {graphite_kg: 5000, steel_kg: 10000, clay_kg: 20000}
-      labor_person_days: 1200000
+      labor_person_days: 200000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:
       jobs: [run_arc_furnace]
       effects: ["Electric steel; calcium carbide (acetylene for welding); ferroalloys if the ores are found. A 500 kW load"]
@@ -189,16 +242,17 @@ nodes:
     kind: decision_option
     critical_path: false
     problem: "Cutting tools soften at red heat, and turbine parts creep and crack when hot."
+    tradeoff: "Alloy steel for the cold expansion engine and later the rocket engines, and a choice of what to alloy for; the chromite has to be mined."
     requires:
       nodes: [arc_furnace]
       state: ["mineral_sites has chromite OR mineral_sites has tungsten OR mineral_sites has nickel"]
       resources: {chromium_ore_kg: 10000}
-      labor_person_days: 1200000
+      labor_person_days: 200000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:
       jobs: [make_alloy_steel]
-      effects: ["Choose what to alloy for, given the ores found: tool steel (shop hours x2), stainless (acid plant life), heat-resistant (turbines, later injectors). Each is a separate small project"]
+      effects: ["Alloy steel from the arc furnace. Then choose what to alloy for: tool steel (shop hours x2) or heat-resistant steel (hotter turbines and, later, injectors)"]
     reads_state: [mineral_sites]
-    writes_state: [has_alloy_steel, shop_hours_balance]
+    writes_state: [has_alloy_steel]
     pages_bundle: metallurgy_2
     without_pages: "3x labor; many trial heats"
     numbers_status: "High-speed steel 1900, stainless 1910s sourced"
@@ -208,6 +262,59 @@ nodes:
       Carbon steel loses its hardness when hot, so a lathe cutting fast burns its own tool soft.
       Tungsten and chromium give steel carbides that stay hard at red heat. Enough chromium and it
       stops rusting; nickel keeps it tough when cold.
+
+  - id: tool_steel
+    name: Tool steel
+    stage: 4
+    beat: 3
+    kind: decision_option
+    critical_path: false
+    problem: "Lathe tools soften at red heat, so the machinists cut slowly to keep them hard."
+    tradeoff: "Tungsten tool steel: the machine shop cuts twice as fast. The turbines stay as they are."
+    requires:
+      nodes: [alloy_steels]
+      resources: {alloy_steel_kg: 2000}
+      labor_person_days: 100000   # estimate
+    unlocks:
+      effects: ["Machine shop hours x2 (high-speed tool steel)"]
+    reads_state: []
+    writes_state: []
+    pages_bundle: metallurgy_2
+    without_pages: "2x labor"
+    numbers_status: "Taylor and White's high-speed steel (1900) cut several times faster (sourced); x2 is an estimate"
+    sources: ["https://en.wikipedia.org/wiki/High-speed_steel"]
+    tags: [substantive, accelerant]
+    notebook: >
+      In 1900 Frederick Taylor and Maunsel White showed a tungsten-chromium steel, heat-treated
+      almost to melting, that kept its edge while glowing red. Lathes could suddenly cut several
+      times faster, and machine tools had to be rebuilt stiffer to keep up.
+
+  - id: heat_resistant_steel
+    name: Heat-resistant steel
+    stage: 4
+    beat: 3
+    kind: decision_option
+    critical_path: false
+    problem: "Turbine blades creep and crack when they run hot, so the station runs its steam cooler than it could."
+    tradeoff: "Chromium-nickel steel: the station makes a quarter more power from the same coal, and later injectors start from a stronger metal. The shop stays as it is."
+    requires:
+      nodes: [alloy_steels]
+      resources: {alloy_steel_kg: 2000}
+      labor_person_days: 100000   # estimate
+    unlocks:
+      effects: ["Power station output per ton of coal +25% (hotter steam); injector_quality +1 when the injector is designed (Stage 5)"]
+    reads_state: []
+    writes_state: []
+    modifiers: {yield: {run_power_station: 1.25}}   # estimate
+    pages_bundle: metallurgy_2
+    without_pages: "2x labor"
+    numbers_status: "Estimate"
+    sources: ["https://en.wikipedia.org/wiki/Superalloy"]
+    tags: [substantive]
+    notebook: >
+      Metal under load at high temperature slowly stretches, or creeps, even far below its melting
+      point. Chromium and nickel form tough oxide skins and stable crystals that resist it, so blades
+      and chambers can run hotter, and a hotter heat engine turns more of its fuel into work.
 
   - id: welding
     name: Welding
@@ -219,12 +326,13 @@ nodes:
     requires:
       nodes: [arc_furnace]
       resources: {steel_kg: 3000, copper_kg: 1000}
-      labor_person_days: 700000
+      labor_person_days: 150000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:
       jobs: [weld]
       effects: ["Arc welding now; oxy-acetylene once oxygen is available. Thin-wall tanks and pressure pipework. Trains welders; weld flaws in Stage 5-6 read welders_trained"]
     reads_state: [has_carbide]
     writes_state: [welders_trained]
+    adjusts_state: {welders_trained: 100}   # estimate
     pages_bundle: machine_tools
     without_pages: "2x labor; porous welds until fluxes are right"
     numbers_status: "Early arc welding and oxy-acetylene (c. 1903) sourced"
@@ -242,16 +350,17 @@ nodes:
     kind: decision_option
     critical_path: false
     problem: "Glass and chemistry need alkali by the ton, and burning plants for potash eats forest."
+    tradeoff: "Alkali for glass, soap and paper now, by Leblanc: coal-hungry, and its acid fumes kill the coppice around the works."
     requires:
       nodes: [sulfuric_acid]
-      state: ["chemical_balance < 0"]
       resources: {salt_kg: 20000, lime_kg: 10000}
-      labor_person_days: 800000
+      labor_person_days: 150000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:
       jobs: [make_soda_ash]
       effects: ["Leblanc now (fuel-hungry, HCl fumes: scar hcl_pollution) or Solvay if coke-oven ammonia is captured (clean, needs coal_seam_choice). The choice is shown with both costs"]
     reads_state: [has_coke]
     writes_state: [has_soda_ash, hcl_pollution]
+    pressure_per_day: {forest: -0.002}   # hcl_pollution scar: the coppice near the works dies back (estimate)
     pages_bundle: industrial_chemistry
     without_pages: "Leblanc only, 2x labor"
     numbers_status: "Leblanc and Solvay (1861) sourced"
@@ -269,11 +378,11 @@ nodes:
     kind: project
     critical_path: false
     problem: "You need caustic soda, chlorine and hydrogen, and chemistry alone makes them slowly and dirtily."
+    tradeoff: "Caustic, chlorine and hydrogen from salt and current: a 300 kW load on the grid."
     requires:
       nodes: [distribution_grid]
-      state: ["chemical_balance < 0 OR power_balance_kw > 200"]
       resources: {salt_kg: 30000, iron_kg: 5000, graphite_kg: 1000}
-      labor_person_days: 1000000
+      labor_person_days: 200000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:
       jobs: [electrolyze_brine]
       effects: ["Caustic (alumina refining, CO2 scrubbers), chlorine, hydrogen. A 300 kW load"]
@@ -300,7 +409,7 @@ nodes:
       nodes: [welding, bearings_lubrication]
       state: ["tolerance_mm <= 0.1"]
       resources: {steel_kg: 15000}
-      labor_person_days: 1200000
+      labor_person_days: 200000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:
       effects: ["Compressed gas to ~200 atm with intercooling. Adds the pressure dial to the liquefier workshop. A 200 kW load"]
     reads_state: [steel_quality, tolerance_mm]
@@ -322,10 +431,11 @@ nodes:
     kind: project
     critical_path: true
     problem: "Anything colder than ice boils away in minutes in an ordinary container, and no pump gets the air out of glass."
+    tradeoff: "Flasks that keep liquid air, and the vacuum the Stage 5 tubes need."
     requires:
       nodes: [glassworks, distribution_grid]
       resources: {mercury_kg: 200, glass_kg: 1000, silver_kg: 20}
-      labor_person_days: 700000
+      labor_person_days: 150000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     milestones:
       - {at: 0.5, id: mercury_pump, effect: "Sprengel pumps: high vacuum in glass; incandescent lamps as a side effect"}
     unlocks:
@@ -352,10 +462,11 @@ nodes:
     route: [T_cascade]
     critical_path: true
     problem: "Air won't liquefy until about -190 C, and nothing you have gets close."
+    tradeoff: "Liquid air this year, a few liters a day; it can never make tons."
     requires:
       nodes: [compressors, vacuum_and_dewar]
       resources: {steel_kg: 3000, copper_kg: 1000}
-      labor_person_days: 600000
+      labor_person_days: 100000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:
       effects: ["Opens the liquefier workshop with the method dial set to cascade: a few liters a day, proving it can be done. The screen shows why it can't scale"]
     writes_state: [has_liquid_air, cryo_process]
@@ -378,12 +489,13 @@ nodes:
     route: [A_linde]
     critical_path: true
     problem: "Throttling compressed air cools it only slightly. Unless the cold is kept and reused, it never adds up."
+    tradeoff: "Simple and continuous, nothing moving in the cold; about twice the electricity per kilogram."
     requires:
       nodes: [cascade_liquefier]
       resources: {copper_kg: 3000, steel_kg: 8000}
-      labor_person_days: 1200000
+      labor_person_days: 200000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:
-      effects: ["method: throttle_regenerative; adds the exchanger_length dial. Continuous liquid air, no moving parts in the cold, ~2 kWh/kg (estimate)"]
+      effects: ["method: throttle_regenerative; the exchanger dial decides whether it reaches -190 C. Continuous liquid air, no moving parts in the cold, ~2 kWh/kg (estimate)"]
     reads_state: [max_pressure_atm]
     writes_state: [has_liquid_air, cryo_process]
     pages_bundle: cryogenics
@@ -404,11 +516,12 @@ nodes:
     route: [B_claude]
     critical_path: false
     problem: "Throttling through a valve wastes most of the cooling that compressed air could give."
+    tradeoff: "Half the electricity per kilogram; needs alloy steel and a 0.05 mm piston that works at -150 C."
     requires:
       nodes: [cascade_liquefier, alloy_steels]
       state: ["tolerance_mm <= 0.05"]
       resources: {alloy_steel_kg: 4000, copper_kg: 3000}
-      labor_person_days: 2000000
+      labor_person_days: 350000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:
       effects: ["method: expansion_engine. About half the kWh/kg of Linde; needs a precise cold piston and lubricants that don't freeze. Trains machinists"]
     reads_state: [tolerance_mm, bearing_quality]
@@ -433,7 +546,7 @@ nodes:
     requires:
       any_of: [[linde_liquefier], [claude_expander]]
       resources: {copper_kg: 5000, steel_kg: 5000}
-      labor_person_days: 1000000
+      labor_person_days: 200000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:
       jobs: [separate_oxygen]
       effects: ["Adds the column dial. Liquid oxygen above 99%; liquid nitrogen as by-product. lox_kg_per_day is now a number on screen"]
@@ -457,11 +570,12 @@ nodes:
     kind: project
     critical_path: false
     problem: "A preview of the rocket workshop shows a steel vehicle about two and a half times the mass of an aluminum one."
+    tradeoff: "Aluminum tanks for the rocket (lighter by a third); needs half a megawatt spare and three years of builders."
     requires:
       nodes: [chlor_alkali, arc_furnace]
       state: ["mineral_sites has bauxite", "power_balance_kw > 500"]
       resources: {bauxite_kg: 50000, graphite_kg: 10000, steel_kg: 10000}
-      labor_person_days: 3000000
+      labor_person_days: 500000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     milestones:
       - {at: 0.4, id: bayer_alumina, effect: "Caustic digestion of bauxite: pure alumina"}
       - {at: 0.7, id: cryolite, effect: "Synthetic cryolite from fluorite and acid: the solvent for alumina"}
@@ -489,11 +603,12 @@ nodes:
     kind: project
     critical_path: false
     problem: "Your chemists want a liquid fuel that doesn't need farmland, and the survey marks oil seeps to the southeast."
+    tradeoff: "Kerosene, the denser rocket fuel, and mineral oil for bearings; needs rails to the seeps and three years."
     requires:
       nodes: [open_hearth]
       state: ["mineral_sites has oil_seeps", "rail_km > 0"]
       resources: {steel_kg: 40000, wood_kg: 50000}
-      labor_person_days: 3000000
+      labor_person_days: 500000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     milestones:
       - {at: 0.5, id: first_well, effect: "Cable-tool rig strikes oil: crude for burning"}
       - {at: 1.0, id: refinery, effect: "Fractional distillation: kerosene, lubricating oil, fuel oil"}
