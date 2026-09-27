@@ -18,6 +18,7 @@
 import { apportion, spread, setPinned, stepByBlock } from "../controls";
 import type { SpreadChild, SpreadState } from "../controls";
 import type { Draft, DraftCategory, DraftPool, Tree } from "../../content";
+import type { DraftOutcome } from "../shellDraft";
 
 /** The roster pool that absorbs the remainder (tech-tree/open-questions.md, 47). */
 export const BUILDERS_POOL_ID = "builders";
@@ -291,22 +292,27 @@ export function weakestArea(tree: Tree, state: DraftState): WeakestArea {
 }
 
 // ---- the departure result (docs/work-packages.md § I) ------------------------------------------------------------
+//
+// D's shell already has a landing spot for this: `../shellDraft.ts`'s `DraftOutcome` ({draft_roster,
+// bundles_taken}, the state variables' own names) is what `Game`'s constructor takes and writes
+// straight into state with `setIfDeclared`. `mountDraft`'s result reuses that type instead of a
+// competing one, and follows the same convention its `defaultDraftOutcome` set: `draft_roster` holds
+// both pool ids and specialty ids in one flat map (state-variables.yaml only documents "pool ->
+// drafted specialists", but nothing stops a finer key, and D's own default already writes one).
 
-export interface DraftResult {
-  /** Written to state variable `draft_roster`: pool id -> people. */
-  draftRoster: Record<string, number>;
-  /** Written to state variable `bundles_taken`: topic id -> coverage (0-1), read by pagesTier/bundleCoverage. */
-  bundlesTaken: Record<string, number>;
-}
+export type DraftResult = DraftOutcome;
 
 export function buildResult(tree: Tree, state: DraftState): DraftResult {
-  const draftRoster: Record<string, number> = {};
-  for (const r of tree.draft.roster) draftRoster[r.id] = poolValue(state, r.id);
-  const bundlesTaken: Record<string, number> = {};
-  for (const c of tree.draft.pages) {
-    for (const t of c.topics) bundlesTaken[t.id] = t.full > 0 ? Math.min(1, topicValue(state, c.id, t.id) / t.full) : 0;
+  const draft_roster: Record<string, number> = {};
+  for (const r of tree.draft.roster) {
+    draft_roster[r.id] = poolValue(state, r.id);
+    for (const s of r.specialties) draft_roster[s.id] = specialtyValue(state, r.id, s.id);
   }
-  return { draftRoster, bundlesTaken };
+  const bundles_taken: Record<string, number> = {};
+  for (const c of tree.draft.pages) {
+    for (const t of c.topics) bundles_taken[t.id] = t.full > 0 ? Math.min(1, topicValue(state, c.id, t.id) / t.full) : 0;
+  }
+  return { draft_roster, bundles_taken };
 }
 
 export type { Draft };

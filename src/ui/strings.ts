@@ -121,6 +121,14 @@ export const STRINGS = {
   draft: {
     hook: "The draft screen isn't on this build yet. Departing with the default draft.",
     depart: "Depart",
+    title: "The draft",
+    rosterHeading: "Who goes",
+    pagesHeading: "What they carry",
+    ofFull: "of {full}",
+    peopleLine: "{used} of {total} people",
+    pagesLine: "{used} of {budget} pages",
+    weakest: "Weakest area: {name}",
+    changes: "Changes: {list}",
   },
 } as const;
 

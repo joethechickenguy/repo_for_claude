@@ -1,0 +1,92 @@
+/* Stage 0: the draft (DESIGN.md § Stage 0). Copies the Stage 1 prototype's CSS variables verbatim
+   (see the brief: "Copy the CSS variables from the Stage 1 prototype"). If package D has since
+   published its own src/ui/styles.css with the same variables, redefining them here is harmless
+   (same values); this file is what makes the draft screen stand on its own either way. */
+:root {
+  --paper: #faf9f7;
+  --ink: #1c2333;
+  --pencil: #646b7a;
+  --rule: #cdd1d8;
+  --blue: #2447a8;
+  --red: #b3261e;
+  --hi: #eceff6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #16181d;
+    --ink: #e3e5ea;
+    --pencil: #9ca2ae;
+    --rule: #373c47;
+    --blue: #93aaf2;
+    --red: #f0877d;
+    --hi: #212631;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #16181d;
+  --ink: #e3e5ea;
+  --pencil: #9ca2ae;
+  --rule: #373c47;
+  --blue: #93aaf2;
+  --red: #f0877d;
+  --hi: #212631;
+}
+
+.draft-screen {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-variant-numeric: tabular-nums;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 16px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+.draft-screen * {
+  box-sizing: border-box;
+}
+.draft-title {
+  font-size: 1.4rem;
+  margin: 0 0 4px;
+}
+.draft-weakest {
+  color: var(--blue);
+  margin: 8px 0 16px;
+}
+.draft-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 640px) {
+  .draft-columns {
+    grid-template-columns: 1fr;
+  }
+}
+.draft-col h2 {
+  font-size: 1.05rem;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 4px;
+  margin: 0 0 4px;
+}
+.draft-col-line {
+  color: var(--pencil);
+  font-size: 0.9em;
+  margin: 0 0 8px;
+}
+.draft-actions {
+  margin-top: 20px;
+  text-align: right;
+}
+.draft-depart {
+  font: inherit;
+  font-size: 1.05rem;
+  padding: 10px 24px;
+  background: var(--ink);
+  color: var(--paper);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  cursor: pointer;
+}
+.draft-depart:hover {
+  opacity: 0.9;
+}

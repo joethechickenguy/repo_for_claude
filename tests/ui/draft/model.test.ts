@@ -50,12 +50,15 @@ describe("defaults", () => {
   it("Depart builds a result with no interaction (draft_roster and bundles_taken shapes)", () => {
     const state = defaultDraftState(tree);
     const result = buildResult(tree, state);
-    expect(Object.keys(result.draftRoster).sort()).toEqual(tree.draft.roster.map((r) => r.id).sort());
+    // draft_roster carries both pool ids and specialty ids (src/ui/shellDraft.ts's convention).
+    const poolIds = tree.draft.roster.map((r) => r.id);
+    const specialtyIds = tree.draft.roster.flatMap((r) => r.specialties.map((s) => s.id));
+    expect(Object.keys(result.draft_roster).sort()).toEqual([...poolIds, ...specialtyIds].sort());
     const buildersDefault = tree.draft.roster.find((r) => r.id === BUILDERS_POOL_ID)!.default;
-    expect(result.draftRoster[BUILDERS_POOL_ID]).toBe(buildersDefault); // tech-tree/draft.yaml
+    expect(result.draft_roster[BUILDERS_POOL_ID]).toBe(buildersDefault); // tech-tree/draft.yaml
     const allTopicIds = tree.draft.pages.flatMap((c) => c.topics.map((t) => t.id));
-    expect(Object.keys(result.bundlesTaken).sort()).toEqual(allTopicIds.sort());
-    for (const v of Object.values(result.bundlesTaken)) expect(v).toBeGreaterThanOrEqual(0);
+    expect(Object.keys(result.bundles_taken).sort()).toEqual(allTopicIds.sort());
+    for (const v of Object.values(result.bundles_taken)) expect(v).toBeGreaterThanOrEqual(0);
   });
 });
 
@@ -273,12 +276,12 @@ describe("pin survives a category change", () => {
 // ---- shape used by the loader (bundleCoverage/pagesTier/evaluate) ---------------------------------------------------
 
 describe("DraftResult against the loader's own reading of the state", () => {
-  it("bundlesTaken agrees with bundleCoverage/pagesTier for a node with a topic bundle", async () => {
+  it("bundles_taken agrees with bundleCoverage/pagesTier for a node with a topic bundle", async () => {
     const { bundleCoverage, pagesTier } = await import("../../../src/content");
     const state = defaultDraftState(tree);
     const result = buildResult(tree, state);
     const view = {
-      get: (name: string) => (name === "bundles_taken" ? result.bundlesTaken : undefined),
+      get: (name: string) => (name === "bundles_taken" ? result.bundles_taken : undefined),
       stock: () => 0,
     };
     // metallurgy_1 (topic, default 800 of full 800: coverage 1.0 -> "known" per compileDraft's tiers).
@@ -287,11 +290,14 @@ describe("DraftResult against the loader's own reading of the state", () => {
     if (node) expect(["known", "partial", "absent"]).toContain(pagesTier(tree, node.id, view));
   });
 
-  it("draft_roster has every pool, including builders' computed remainder", () => {
+  it("draft_roster has every pool, including builders' computed remainder, and every specialty", () => {
     const state = defaultDraftState(tree);
     const result = buildResult(tree, state);
-    const total = Object.values(result.draftRoster).reduce((a, b) => a + b, 0);
-    expect(total).toBe(tree.draft.peopleTotal);
-    expect(result.draftRoster[BUILDERS_POOL_ID]).toBe(poolValue(state, BUILDERS_POOL_ID));
+    const poolTotal = tree.draft.roster.reduce((a, r) => a + result.draft_roster[r.id]!, 0);
+    expect(poolTotal).toBe(tree.draft.peopleTotal);
+    expect(result.draft_roster[BUILDERS_POOL_ID]).toBe(poolValue(state, BUILDERS_POOL_ID));
+    for (const r of tree.draft.roster) {
+      for (const s of r.specialties) expect(result.draft_roster[s.id]).toBe(specialtyValue(state, r.id, s.id));
+    }
   });
 });
