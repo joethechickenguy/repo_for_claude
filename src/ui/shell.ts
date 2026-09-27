@@ -6,7 +6,7 @@
 import type { SaveStorage } from "../engine";
 import { CLOCK_SPEEDS, type ClockSpeed } from "../engine";
 import { PeopleTree } from "./controls/peopleTree";
-import type { Game, ProjectCard } from "./shellGame";
+import type { Game, ProjectCard, TechMap } from "./shellGame";
 import { fmt, fmtRound, fmtSmart, yearDay } from "./shellFormat";
 import { fill, STRINGS } from "./strings";
 
@@ -65,11 +65,13 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
   });
   const nbBtn = el("button", "", esc(S.header.notebook));
   nbBtn.type = "button";
+  const mapBtn = el("button", "", esc(S.header.map));
+  mapBtn.type = "button";
   const themeBtn = el("button", "", esc(S.header.theme));
   themeBtn.type = "button";
   const newBtn = el("button", "", esc(S.header.reset));
   newBtn.type = "button";
-  speed.append(nbBtn, themeBtn, newBtn);
+  speed.append(mapBtn, nbBtn, themeBtn, newBtn);
   top.append(h1, stageEl, dateEl, speed);
 
   const energy = el("div", "energy num");
@@ -138,8 +140,10 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
 
   const nbView = el("div", "notebook");
   nbView.hidden = true;
+  const mapView = el("div", "tmap");
+  mapView.hidden = true;
 
-  wrap.append(top, energy, goal, ruleWrap, banner, strip, cols, nbView);
+  wrap.append(top, energy, goal, ruleWrap, banner, strip, cols, nbView, mapView);
 
   // ---- Meter (static ticks, moving cursor) ----
   const m0 = game.meter();
@@ -183,13 +187,36 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
       save();
       dirty();
     };
-  nbBtn.onclick = () => {
-    nbView.hidden = !nbView.hidden;
-    cols.hidden = !nbView.hidden;
-    strip.hidden = !nbView.hidden;
-    nbBtn.textContent = nbView.hidden ? S.header.notebook : S.header.back;
+  // Three screens share the page: the colony, the notebook and the tech map.
+  let view: "colony" | "notebook" | "map" = "colony";
+  const setView = (v: typeof view): void => {
+    view = v;
+    nbView.hidden = v !== "notebook";
+    mapView.hidden = v !== "map";
+    cols.hidden = v !== "colony";
+    strip.hidden = v !== "colony";
+    nbBtn.textContent = v === "notebook" ? S.header.back : S.header.notebook;
+    mapBtn.textContent = v === "map" ? S.header.back : S.header.map;
+    mapKey = "";
     dirty();
   };
+  nbBtn.onclick = () => setView(view === "notebook" ? "colony" : "notebook");
+  mapBtn.onclick = () => {
+    if (view !== "map") mapStage = game.stage;
+    setView(view === "map" ? "colony" : "map");
+  };
+  let mapStage = game.stage;
+  let mapKey = "";
+  mapView.addEventListener("click", (ev) => {
+    const b = (ev.target as HTMLElement).closest("button[data-map-stage]") as HTMLButtonElement | null;
+    if (!b) return;
+    mapStage = Number(b.dataset.mapStage);
+    dirty();
+  });
+  const onResize = () => {
+    if (view === "map") drawMapEdges(mapView);
+  };
+  addEventListener("resize", onResize);
   themeBtn.onclick = () => {
     const rootEl = document.documentElement;
     const dark = rootEl.dataset.theme ? rootEl.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
@@ -529,6 +556,17 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
         nbView.innerHTML = h;
       }
     }
+
+    // Tech map: redrawn only when something on it changed.
+    if (view === "map") {
+      const m = game.techMap(mapStage);
+      const key = JSON.stringify(m);
+      if (key !== mapKey) {
+        mapKey = key;
+        mapView.innerHTML = techMapHTML(m);
+        requestAnimationFrame(() => drawMapEdges(mapView));
+      }
+    }
   }
 
   let scheduled = false;
@@ -549,7 +587,84 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
     offTick();
     offDecision();
     removeEventListener("beforeunload", onUnload);
+    removeEventListener("resize", onResize);
     tree.destroy();
     root.replaceChildren();
   };
+}
+
+/** The tech map's markup: the stage chain, then the chosen stage's projects by step (beat). */
+function techMapHTML(m: TechMap): string {
+  const M = STRINGS.map;
+  let h = `<h2>${esc(M.heading)}</h2><p class="small muted">${esc(M.intro)}</p>`;
+  h += `<ol class="tmap-stages">`;
+  for (const s of m.stages) {
+    const cls = `${s.status}${s.stage === m.stage ? " shown" : ""}`;
+    h +=
+      `<li class="${cls}"><button type="button" data-map-stage="${s.stage}" aria-pressed="${s.stage === m.stage}">` +
+      `<span class="n">${esc(fill(M.stage, { n: s.stage }))}${s.status === "current" ? ` · ${esc(M.here)}` : ""}</span>` +
+      `<b>${esc(s.name)}</b>` +
+      `<span>${esc(fill(M.gateLine, { name: s.gate }))}${s.watts !== null ? ` · ${esc(fill(M.watts, { n: fmt(s.watts) }))}` : ""}</span>` +
+      `<span class="c">${esc(fill(M.count, { done: s.done, total: s.total }))}</span></button></li>`;
+  }
+  h += `<li class="moon"><b>${esc(M.moon)}</b></li></ol>`;
+  const legend = (["done", "building", "ready", "closed", "ahead"] as const)
+    .map((k) => `<span class="tnode ${k}">${esc(M[k])}</span>`)
+    .join("");
+  h += `<div class="tmap-legend">${legend}</div>`;
+  h += `<div class="tmap-stage"><svg class="tmap-edges" aria-hidden="true"></svg><div class="tmap-grid">`;
+  // Steps are numbered by position (a stage may skip a beat number).
+  for (const [i, b] of m.beats.entries()) {
+    h += `<div class="tmap-beat${b.here ? " here" : ""}"><h4>${esc(fill(M.beat, { n: i + 1 }))}${b.here ? ` <span>${esc(M.here)}</span>` : ""}</h4>`;
+    for (const n of b.nodes) {
+      const deps = JSON.stringify({ r: n.requires, a: n.anyOf });
+      h +=
+        `<div class="tnode ${n.status}${n.gate ? " gate" : ""}" data-node="${esc(n.id)}" data-deps="${esc(deps)}" title="${esc(M[n.status])}">` +
+        `${esc(n.name)}${n.choice ? `<small>${esc(M.either)}</small>` : ""}</div>`;
+    }
+    h += `</div>`;
+  }
+  h += `</div></div>`;
+  return h;
+}
+
+/** Lines from each project to the ones it needs (dashed: one of an any_of group), after layout. */
+function drawMapEdges(root: HTMLElement): void {
+  const stage = root.querySelector(".tmap-stage") as HTMLElement | null;
+  const svg = root.querySelector(".tmap-edges") as SVGSVGElement | null;
+  if (!stage || !svg) return;
+  const box = stage.getBoundingClientRect();
+  svg.setAttribute("width", String(stage.scrollWidth));
+  svg.setAttribute("height", String(stage.scrollHeight));
+  const at = new Map<string, DOMRect>();
+  for (const e of stage.querySelectorAll<HTMLElement>(".tnode[data-node]")) at.set(e.dataset.node!, e.getBoundingClientRect());
+  let d = "";
+  let dash = "";
+  const line = (from: DOMRect, to: DOMRect): string => {
+    // Side by side: right edge to left edge; stacked (phone): bottom to top.
+    if (to.left >= from.right - 1) {
+      const x1 = from.right - box.left, y1 = from.top + from.height / 2 - box.top;
+      const x2 = to.left - box.left, y2 = to.top + to.height / 2 - box.top;
+      const mx = (x1 + x2) / 2;
+      return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2} `;
+    }
+    const x1 = from.left + from.width / 2 - box.left, y1 = from.bottom - box.top;
+    const x2 = to.left + to.width / 2 - box.left, y2 = to.top - box.top;
+    const my = (y1 + y2) / 2;
+    return `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2} `;
+  };
+  for (const e of stage.querySelectorAll<HTMLElement>(".tnode[data-node]")) {
+    const to = at.get(e.dataset.node!)!;
+    const deps = JSON.parse(e.dataset.deps ?? "{}") as { r?: string[]; a?: string[][] };
+    for (const r of deps.r ?? []) {
+      const from = at.get(r);
+      if (from) d += line(from, to);
+    }
+    for (const g of deps.a ?? [])
+      for (const r of g) {
+        const from = at.get(r);
+        if (from) dash += line(from, to);
+      }
+  }
+  svg.innerHTML = `<path d="${d}" class="req"/><path d="${dash}" class="any"/>`;
 }

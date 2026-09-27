@@ -32,6 +32,7 @@ import {
 import type { TreeRow } from "./controls/peopleTree";
 import {
   barViews,
+  currentBeat,
   introCard,
   introControls,
   IntroSystem,
@@ -109,6 +110,28 @@ export interface MeterView {
   min: number;
   max: number;
   gates: { watts: number; name: string; stage: number }[];
+}
+
+/** The tech map (owner playtest 2026-09-27: "how does the big picture fit together?"). */
+export interface TechMap {
+  /** Every stage in order, with its gate and energy target. */
+  stages: { stage: number; name: string; gate: string; watts: number | null; status: "done" | "current" | "ahead"; done: number; total: number }[];
+  /** The stage being shown. */
+  stage: number;
+  /** Its beats, in order; `here` marks the beat the colony is on. */
+  beats: { beat: number; here: boolean; nodes: TechMapNode[] }[];
+}
+
+export interface TechMapNode {
+  id: string;
+  name: string;
+  status: "done" | "building" | "ready" | "closed" | "ahead";
+  gate: boolean;
+  /** Option of an exclusive choice. */
+  choice: boolean;
+  /** Same-stage prerequisites (all required), and `any_of` groups (one group needed). */
+  requires: string[];
+  anyOf: string[][];
 }
 
 export interface NotebookStage {
@@ -671,6 +694,58 @@ export class Game {
       s.entries.push({ id, name: n.name, text: n.notebook });
     }
     return out.sort((a, b) => a.stage - b.stage);
+  }
+
+  /** The tech map for one stage (default: the current one), plus the chain of every stage. */
+  techMap(stage: number = this.stage): TechMap {
+    const book = this.projects.book;
+    const shown = new Set(this.projects.shown());
+    const watts = new Map(this.meter().gates.map((g) => [g.stage, g.watts]));
+    const stages = this.tree.stages.map((s) => {
+      const ids = s.nodes.filter((id) => this.tree.nodes[id]!.kind !== "gate");
+      return {
+        stage: s.stage,
+        name: s.name,
+        gate: s.gate.name,
+        watts: watts.get(s.stage) ?? null,
+        status: (book.completed.includes(s.gate.id) ? "done" : s.stage === this.stage ? "current" : "ahead") as TechMap["stages"][number]["status"],
+        done: ids.filter((id) => book.completed.includes(id)).length,
+        total: ids.length,
+      };
+    });
+    const st = this.tree.stages.find((s) => s.stage === stage) ?? this.tree.stages[0]!;
+    const here = stage === this.stage ? currentBeat(this.tree, stage, book) : -1;
+    const inStage = new Set(st.nodes);
+    const status = (id: string): TechMapNode["status"] => {
+      const s = this.projects.status(id);
+      if (s === "complete") return "done";
+      if (s === "building") return "building";
+      if (s === "closed") return "closed";
+      return s === "available" && shown.has(id) ? "ready" : "ahead";
+    };
+    const beats = [...new Set(st.nodes.map((id) => this.tree.nodes[id]!.beat))].sort((a, b) => a - b);
+    return {
+      stages,
+      stage: st.stage,
+      beats: beats.map((beat) => ({
+        beat,
+        here: beat === here,
+        nodes: st.nodes
+          .filter((id) => this.tree.nodes[id]!.beat === beat)
+          .map((id) => {
+            const n = this.tree.nodes[id]!;
+            return {
+              id,
+              name: n.name,
+              status: status(id),
+              gate: n.kind === "gate",
+              choice: !!n.choice,
+              requires: n.requires.nodes.filter((r) => inStage.has(r)),
+              anyOf: n.requires.anyOf.map((g) => g.filter((r) => inStage.has(r))).filter((g) => g.length > 0),
+            };
+          }),
+      })),
+    };
   }
 
   /** Tool users and tools (the heartbeat's numbers in words). */

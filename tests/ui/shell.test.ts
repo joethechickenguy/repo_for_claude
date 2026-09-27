@@ -152,5 +152,44 @@ describe("shell", () => {
     expect(info.textContent).toContain("Trained so far: 30 smiths.");
     expect(info.textContent).toContain(`Smiths matter for: ${tree.nodes.crucibles_blowpipes!.name}`);
   });
+
+  it("the tech map shows the stage chain, where you are, and each stage's projects by step", async () => {
+    const { root, game } = mount();
+    (root.querySelector("button[data-speed]") as HTMLButtonElement).click();
+    const mapBtn = [...root.querySelectorAll("button")].find((b) => b.textContent === STRINGS.header.map)!;
+    mapBtn.click();
+    await frame();
+    const map = root.querySelector(".tmap") as HTMLElement;
+    expect(map.hidden).toBe(false);
+    expect((root.querySelector(".cols") as HTMLElement).hidden).toBe(true);
+    const stages = [...map.querySelectorAll(".tmap-stages li")];
+    expect(stages).toHaveLength(tree.stages.length + 1); // six stages and the Moon
+    expect(stages[0]!.className).toContain("current");
+    expect(stages[0]!.textContent).toContain(STRINGS.map.here);
+    // Stage 1's projects, a done/ready/ahead status on each; the choice options are marked.
+    const n = (id: string) => map.querySelector(`.tnode[data-node="${id}"]`) as HTMLElement;
+    expect(n("digging_sticks").className).toContain("ahead");
+    expect(n("hafted_blades").textContent).toContain(STRINGS.map.either);
+    expect(map.querySelector(".tmap-beat.here")).toBeTruthy();
+    // Finish a choice: the taken option is done, the other shows as not taken.
+    (game.projects as unknown as { bookValue: { completed: string[]; building: object; revealed: string[] } }).bookValue = {
+      completed: ["hafted_blades"],
+      building: {},
+      revealed: [],
+    };
+    game.step();
+    await frame();
+    expect(n("hafted_blades").className).toContain("done");
+    expect(n("ground_stone_axes").className).toContain("closed");
+    // Another stage: its projects, all ahead.
+    (map.querySelector('button[data-map-stage="2"]') as HTMLButtonElement).click();
+    await frame();
+    expect(n("bloomery").className).toContain("ahead");
+    expect(n("digging_sticks")).toBeNull();
+    mapBtn.click();
+    await frame();
+    expect(map.hidden).toBe(true);
+    expect((root.querySelector(".cols") as HTMLElement).hidden).toBe(false);
+  });
 });
 

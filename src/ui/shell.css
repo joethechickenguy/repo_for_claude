@@ -141,3 +141,44 @@ details p{margin:4px 0 0}
 .proj .tradeoff{font-size:14px; margin:4px 0}
 .proj.option .tradeoff{border-left:3px solid var(--blue); padding-left:7px}
 .train-info p{margin:0 0 4px}
+
+/* Tech map (owner playtest 2026-09-27): the stage chain, then one stage's projects by step. */
+.tmap{margin-top:18px}
+.tmap-stages{list-style:none; margin:10px 0 12px; padding:0; display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:6px}
+.tmap-stages li{position:relative}
+.tmap-stages li:not(:last-child)::after{content:""; position:absolute; top:50%; right:-6px; width:6px; border-top:1px solid var(--ink)}
+.tmap-stages button{display:flex; flex-direction:column; align-items:flex-start; gap:1px; width:100%; height:100%; text-align:left; padding:6px 8px; font-size:13px; line-height:1.3}
+.tmap-stages button b{font-size:15px}
+.tmap-stages .n{color:var(--pencil)}
+.tmap-stages .c{color:var(--pencil)}
+.tmap-stages .done button{background:var(--ink); color:var(--paper)}
+.tmap-stages .done button .n, .tmap-stages .done button .c{color:var(--paper)}
+.tmap-stages .current button{border:2px solid var(--blue)}
+.tmap-stages .current .n{color:var(--blue)}
+.tmap-stages .ahead button{border-color:var(--rule); color:var(--pencil)}
+.tmap-stages .shown button{outline:2px solid var(--ink); outline-offset:2px}
+.tmap-stages .moon{border:1px dashed var(--rule); padding:6px 8px; font-size:15px; color:var(--pencil); display:flex; align-items:center}
+.tmap-legend{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px}
+.tmap-legend .tnode{font-size:12px; padding:1px 6px}
+.tmap-stage{position:relative; overflow-x:auto}
+.tmap-edges{position:absolute; left:0; top:0; pointer-events:none}
+.tmap-edges path{fill:none; stroke:var(--pencil); stroke-width:1}
+.tmap-edges path.any{stroke-dasharray:3 3}
+.tmap-grid{position:relative; display:grid; grid-auto-flow:column; grid-auto-columns:minmax(118px, 1fr); gap:0 22px; min-width:min-content}
+.tmap-beat h4{font-size:12px; font-weight:400; color:var(--pencil); margin:0 0 6px; border-bottom:1px solid var(--rule)}
+.tmap-beat.here h4{color:var(--blue); border-bottom:2px solid var(--blue)}
+.tmap-beat.here h4 span{font-weight:600}
+.tmap-beat .tnode{margin-bottom:8px}
+.tnode{position:relative; border:1px solid var(--rule); background:var(--paper); padding:4px 6px; font-size:13px; line-height:1.3; color:var(--pencil)}
+.tnode small{display:block; font-size:11px; color:var(--blue)}
+.tnode.done{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.tnode.done small{color:var(--paper)}
+.tnode.building{border:2px solid var(--blue); color:var(--ink)}
+.tnode.ready{border:1px solid var(--blue); color:var(--ink)}
+.tnode.closed{text-decoration:line-through; border-style:dashed}
+.tnode.gate{font-weight:600}
+@media (max-width:900px){
+  .tmap-stages{grid-template-columns:1fr 1fr}
+  .tmap-stages li::after{display:none}
+  .tmap-grid{grid-auto-flow:row; grid-auto-columns:auto; gap:12px}
+}
