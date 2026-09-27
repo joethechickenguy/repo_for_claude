@@ -10,23 +10,15 @@ export type JsonValue = null | boolean | number | string | JsonValue[] | { [key:
 export type StateVarType = "flag" | "number" | "count" | "enum" | "set";
 
 /**
- * A set-typed value. Plain membership sets store `true` per member (`deposits_known`); maps store a
- * value per key (`bundles_taken`: topic -> coverage, `draft_roster`: pool -> people). `has` means the
- * key is present.
+ * A state value, as package B defines it (src/content/types.ts): boolean for flags, number for
+ * numbers and counts, string for enums, and for sets either a member list (`deposits_known`) or a map
+ * member -> share (`bundles_taken`: topic -> coverage). Plain JSON, so saves hold it as-is.
  */
-export type SetValue = { [member: string]: JsonValue };
+export type { StateValue, StateView, StateWrite } from "../content/types";
+import type { StateValue } from "../content/types";
 
-/** The runtime value of a state variable, by declared type. */
-export type StateValue = boolean | number | string | SetValue;
-
-/** Maps a declared type to the TypeScript type of its value. */
-export type StateValueOf<T extends StateVarType> = T extends "flag"
-  ? boolean
-  : T extends "number" | "count"
-    ? number
-    : T extends "enum"
-      ? string
-      : SetValue;
+/** A set variable's value: a member list or a member -> share map. */
+export type SetValue = Extract<StateValue, object>;
 
 /** One entry of `state-variables.yaml`. */
 export interface StateVarDef {
@@ -36,7 +28,7 @@ export interface StateVarDef {
   values?: string[];
   unit?: string;
   description?: string;
-  /** Initial value. Defaults: flag false, number/count 0, enum first member, set {}. */
+  /** Initial value (B's `default`). Defaults: flag false, number/count 0, enum first member, set []. */
   initial?: StateValue;
 }
 

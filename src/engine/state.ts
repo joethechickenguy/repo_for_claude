@@ -1,5 +1,5 @@
 // The typed state store: every variable in state-variables.yaml, checked against its declared type.
-import type { JsonValue, SetValue, StateValue, StateVarDef, StateVarType } from "./types";
+import type { SetValue, StateValue, StateVarDef, StateVarType } from "./types";
 
 export class StateError extends Error {}
 
@@ -15,16 +15,20 @@ export function initialValue(def: StateVarDef): StateValue {
     case "enum":
       return def.values?.[0] ?? "";
     case "set":
-      return {};
+      return [];
   }
 }
 
 function cloneValue(v: StateValue): StateValue {
-  return typeof v === "object" ? (JSON.parse(JSON.stringify(v)) as SetValue) : v;
+  if (Array.isArray(v)) return [...(v as readonly string[])];
+  if (typeof v === "object") return { ...(v as Readonly<Record<string, number>>) };
+  return v;
 }
 
 function isSetValue(v: unknown): v is SetValue {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
+  if (Array.isArray(v)) return v.every((m) => typeof m === "string");
+  if (typeof v !== "object" || v === null) return false;
+  return Object.values(v).every((x) => typeof x === "number" && Number.isFinite(x));
 }
 
 /** Throws StateError if `value` doesn't fit `def`. */
@@ -46,7 +50,7 @@ export function checkValue(def: StateVarDef, value: unknown): asserts value is S
       if (def.values && !def.values.includes(value)) throw bad(`'${value}' not in [${def.values.join(", ")}]`);
       return;
     case "set":
-      if (!isSetValue(value)) throw bad(`expected an object map, got ${JSON.stringify(value)}`);
+      if (!isSetValue(value)) throw bad(`expected a string list or a map of numbers, got ${JSON.stringify(value)}`);
       return;
   }
 }
@@ -111,9 +115,11 @@ export class StateStore {
     return this.typed(id, ["set"]) as SetValue;
   }
 
-  /** `var has member` for set variables. */
+  /** `var has member` for set variables: listed, or present in the map (any share). */
   hasMember(id: string, member: string): boolean {
-    return Object.prototype.hasOwnProperty.call(this.getSet(id), member);
+    const s = this.getSet(id);
+    if (Array.isArray(s)) return (s as readonly string[]).includes(member);
+    return Object.prototype.hasOwnProperty.call(s, member);
   }
 
   set(id: string, value: StateValue): void {
@@ -132,16 +138,30 @@ export class StateStore {
     return v;
   }
 
-  /** Add a member (value `true` unless given) to a set variable. */
-  addMember(id: string, member: string, value: JsonValue = true): void {
-    const s = { ...this.getSet(id), [member]: value };
-    this.set(id, s);
+  /**
+   * Add a member to a set. A list gets the member appended (once); a map gets `share` (default 1).
+   * An empty set becomes a map only when a share is given.
+   */
+  addMember(id: string, member: string, share?: number): void {
+    const s = this.getSet(id);
+    const isMap = !Array.isArray(s) && (Object.keys(s).length > 0 || share !== undefined);
+    if (isMap) {
+      this.set(id, { ...(s as Readonly<Record<string, number>>), [member]: share ?? 1 });
+    } else {
+      const list = Array.isArray(s) ? (s as readonly string[]) : [];
+      if (!list.includes(member)) this.set(id, [...list, member]);
+    }
   }
 
   removeMember(id: string, member: string): void {
-    const s = { ...this.getSet(id) };
-    delete s[member];
-    this.set(id, s);
+    const s = this.getSet(id);
+    if (Array.isArray(s)) {
+      this.set(id, (s as readonly string[]).filter((m) => m !== member));
+    } else {
+      const m = { ...(s as Readonly<Record<string, number>>) };
+      delete m[member];
+      this.set(id, m);
+    }
   }
 
   /** Set a variable only if it's declared; returns whether it was. For engine bindings. */

@@ -16,6 +16,8 @@ import type {
   SaveGame,
   StateBindings,
   StateValue,
+  StateView,
+  StateWrite,
   TickReport,
   ToolDef,
   WorksDef,
@@ -63,7 +65,7 @@ function add(m: ResourceAmounts, k: string, v: number): void {
   m[k] = (m[k] ?? 0) + v;
 }
 
-export class Engine {
+export class Engine implements StateView {
   readonly content: EngineContent;
   readonly params: EngineParams;
   readonly bindings: StateBindings;
@@ -203,31 +205,27 @@ export class Engine {
   // ---- State ---------------------------------------------------------------------------------------
 
   /**
-   * Resolve a name used in a `requires.state` expression: a declared state variable, else a resource
-   * stock, else a metric. Undefined if none. Package B's evaluator calls this.
+   * StateView (package B): a declared state variable, else a metric the engine or a system computes
+   * (energy_w_per_person, campaigns_run). Undefined for unknown names; a condition on one is false.
+   * Resource names go to `stock()` (B's `lookupFor` routes them).
    */
-  resolve(name: string): StateValue | undefined {
+  get(name: string): StateValue | undefined {
     if (this.state.has(name)) return this.state.get(name);
-    if (this.resourceDefs.has(name)) return this.stock(name);
     if (Object.prototype.hasOwnProperty.call(this.s.metrics, name)) return this.s.metrics[name];
     return undefined;
   }
 
   /**
-   * Apply a node's `writes_state` on completion. Variables with a value in `values` get it; flags
-   * without one become true; anything else is left to the simulation. Returns the ids written.
+   * Apply a completed node's `writes_state` (B's StateWrite list). Entries with a value are set;
+   * `value: null` means the simulation owns the variable and nothing is written. Returns the ids written.
    */
-  applyWritesState(ids: readonly string[], values: Record<string, StateValue> = {}): string[] {
+  applyWrites(writes: readonly StateWrite[]): string[] {
     const written: string[] = [];
-    for (const id of ids) {
-      if (!this.state.has(id)) throw new StateError(`writes_state: '${id}' is not declared`);
-      if (Object.prototype.hasOwnProperty.call(values, id)) {
-        this.state.set(id, values[id] as StateValue);
-        written.push(id);
-      } else if (this.state.typeOf(id) === "flag") {
-        this.state.set(id, true);
-        written.push(id);
-      }
+    for (const w of writes) {
+      if (!this.state.has(w.variable)) throw new StateError(`writes_state: '${w.variable}' is not declared`);
+      if (w.value === null) continue;
+      this.state.set(w.variable, w.value);
+      written.push(w.variable);
     }
     return written;
   }
