@@ -54,13 +54,18 @@ import {
 import { fuelsFromTree, gameContent, workFromTree } from "./shellContent";
 import { defaultDraftOutcome, type DraftOutcome } from "./shellDraft";
 import { fmt, fmtRound, yearDay } from "./shellFormat";
-import { GATE_PAUSE, GateSystem, LogSystem, StandInCampaigns, SUPPLIED_METRICS } from "./shellSystems";
+import { GATE_PAUSE, GateSystem, LogSystem, StandInCampaigns, SUPPLIED_METRICS, TiersSystem } from "./shellSystems";
 import { fill, STRINGS } from "./strings";
 
 /** People moved by one ± on a job row (DESIGN.md: "± blocks"; the prototype's block). */
 export const PEOPLE_BLOCK = 100;
-/** A works' target moves by this many units a day per ± (works tier). */
+/** A works' target moves by at least this many units a day per ± (works tier). */
 export const WORKS_TARGET_STEP = 1;
+
+/** ± on a works target: the power of ten below the target (6,000 kg/day moves by 1,000), at least WORKS_TARGET_STEP. */
+export function worksStep(target: number): number {
+  return Math.max(WORKS_TARGET_STEP, Math.pow(10, Math.floor(Math.log10(Math.max(1, target)))));
+}
 /** A department's priority moves by one per ± (departments tier). */
 export const DEPARTMENT_PRIORITY_STEP = 1;
 
@@ -267,6 +272,7 @@ export class Game {
     this.engine.addSystem(new StandInCampaigns());
     this.engine.addSystem(this.projects);
     this.engine.addSystem(new GateSystem(tree, this.projects));
+    this.engine.addSystem(new TiersSystem(tree));
     this.engine.addSystem(this.pressures);
     this.engine.addSystem(this.intro);
     this.engine.addSystem(this.log);
@@ -364,7 +370,9 @@ export class Game {
     const works = e.works().find((w) => w.def.id === path[0]);
     if (works && path.length === 1) {
       const cur = typeof works.target === "number" ? works.target : 0;
-      e.setWorksTarget(works.def.id, Math.max(0, cur + Math.sign(delta) * WORKS_TARGET_STEP));
+      // Going down from a round number steps by the smaller power (1,000 -> 900, not 0).
+      const step = delta < 0 ? worksStep(Math.max(0, cur - 1)) : worksStep(cur);
+      e.setWorksTarget(works.def.id, Math.max(0, cur + Math.sign(delta) * step));
       return;
     }
     if (works && path.length === 2) {
@@ -581,7 +589,7 @@ export class Game {
             value: people,
             detail: short > 0 ? `${target} · ${fill(STRINGS.people.shortfall, { n: fmt(short) })}` : target,
             tone: short > 0 ? "short" : "normal",
-            step: WORKS_TARGET_STEP,
+            step: worksStep(typeof w.target === "number" ? w.target : 0),
             // The number is people at work; ± moves the output target. Typing a target here would
             // be confusing, so works rows take ± only (their job rows are typed).
             editable: false,
@@ -745,7 +753,7 @@ export class Game {
       }
     }
     if (kind === "pressure_red") return this.tree.stages.flatMap((x) => x.pressures).find((p) => p.id === s)?.name ?? s;
-    if (kind === "workshop_open") return this.tree.workshops[s]?.name ?? s;
+    if (kind === "workshop_open" || kind === "workshop_done") return this.tree.workshops[s]?.name ?? s;
     if (kind === GATE_PAUSE || kind === "opening") return this.tree.stages.find((x) => String(x.stage) === s)?.gate.name ?? s;
     return this.tree.nodes[s]?.name ?? s;
   }
@@ -757,10 +765,15 @@ export class Game {
       const stamp = fill(STRINGS.log.stamp, { year, day });
       let text: string;
       if (l.kind === "opening") text = this.tree.stages.find((x) => String(x.stage) === l.subject)?.openingProblem ?? "";
-      else if (l.kind === GATE_PAUSE) text = fill(STRINGS.log.gate, { n: l.subject ?? "" });
-      else {
+      else if (l.kind === GATE_PAUSE) {
+        const banner = this.tree.stages.find((x) => String(x.stage) === l.subject)?.gate.banner;
+        text = fill(STRINGS.log.gate, { n: l.subject ?? "" }) + (banner ? ` ${banner}` : "");
+      } else {
         const t = (STRINGS.log as Record<string, string>)[l.kind] ?? "{name}";
         text = fill(t, { name: this.subjectName(l.kind, l.subject) });
+        // A completed node may carry its own line in the colony's voice (G1-G6).
+        const own = l.kind === "node_complete" ? this.tree.nodes[l.subject ?? ""]?.log : undefined;
+        if (own) text += ` ${own}`;
       }
       return { stamp, text, kind: l.kind };
     });
@@ -768,10 +781,13 @@ export class Game {
 
   /** One line for the pause banner, and the introduction cards the pause carries. */
   pauseView(reasons: readonly PauseReason[] = this.decision): PauseView {
-    const order = [GATE_PAUSE, "node_complete", "pressure_red", "workshop_open", "milestone", "node_revealed"];
+    const order = [GATE_PAUSE, "node_complete", "pressure_red", "workshop_open", "workshop_done", "milestone", "node_revealed"];
     const sorted = [...reasons].filter((r) => r.kind !== INTRO_PAUSE).sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
     const parts = sorted.map((r) => {
-      if (r.kind === GATE_PAUSE) return fill(STRINGS.pause.gate, { n: r.subject ?? "" });
+      if (r.kind === GATE_PAUSE) {
+        const banner = this.tree.stages.find((x) => String(x.stage) === r.subject)?.gate.banner;
+        return fill(STRINGS.pause.gate, { n: r.subject ?? "" }) + (banner ? `. ${banner}` : "");
+      }
       const t = (STRINGS.pause as Record<string, string>)[r.kind] ?? "{name}";
       return fill(t, { name: this.subjectName(r.kind, r.subject) });
     });

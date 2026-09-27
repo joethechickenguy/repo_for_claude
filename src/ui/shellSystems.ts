@@ -38,17 +38,25 @@ export class GateSystem implements EngineSystem {
  * Estimate, stand-in until package E1's furnace workshop: stage1 `furnace_workshop.loop` says "A
  * campaign is one furnace run (~30 days)", so every 30 days on which copper is smelted count as one
  * campaign (`campaigns_run`, read by wind_furnaces and pot_bellows). The same stand-in as A's
- * headless test. E1 replaces this system.
+ * headless test. The furnace workshop's own campaigns (E1) add to it: the smelters' routine work and
+ * the player's campaigns both teach the furnace crews (open question 53).
  */
 export const STANDIN_CAMPAIGN_DAYS = 30;
 export const CAMPAIGNS_METRIC = "campaigns_run";
+/** Campaigns the furnace workshop (E1) has run; added to the stand-in's count. */
+export const FURNACE_CAMPAIGNS_METRIC = "furnace_campaigns";
+/** Total iron made (bessemer_converter reads it), kept by the furnace workshop (E1). */
+export const IRON_TOTAL_METRIC = "iron_kg_total";
+/** The rocket engine workshop's best firing (E5): read by the Stage 5 gate and nodes. */
+export const STATIC_FIRE_METRIC = "engine_static_fire_s";
+export const THRUST_METRIC = "engine_thrust_kn";
 
 /**
  * Names conditions may read that no state variable or resource declares, because a running system
  * sets them each tick (energy, the campaigns stand-in). Reachability (src/content/reach.ts) treats
  * these as able to come true; anything else undeclared can never come true.
  */
-export const SUPPLIED_METRICS: ReadonlySet<string> = new Set([ENERGY_METRIC, CAMPAIGNS_METRIC]);
+export const SUPPLIED_METRICS: ReadonlySet<string> = new Set([ENERGY_METRIC, CAMPAIGNS_METRIC, IRON_TOTAL_METRIC, STATIC_FIRE_METRIC, THRUST_METRIC]);
 
 export class StandInCampaigns implements EngineSystem {
   readonly id = "campaigns";
@@ -57,13 +65,44 @@ export class StandInCampaigns implements EngineSystem {
   constructor(private readonly metals: readonly string[] = ["copper_kg", "bloom_kg", "iron_kg"]) {}
   tick(ctx: TickContext): void {
     if (this.metals.some((m) => (ctx.report.produced[m] ?? 0) > 0)) this.days++;
-    ctx.engine.setMetric(CAMPAIGNS_METRIC, Math.floor(this.days / STANDIN_CAMPAIGN_DAYS));
+    ctx.engine.setMetric(CAMPAIGNS_METRIC, Math.floor(this.days / STANDIN_CAMPAIGN_DAYS) + (ctx.engine.metric(FURNACE_CAMPAIGNS_METRIC) ?? 0));
   }
   save(): JsonValue {
     return this.days;
   }
   load(d: JsonValue): void {
     this.days = typeof d === "number" ? d : 0;
+  }
+}
+
+/**
+ * The labor tiers (DESIGN.md, Labor): once foremen (or departments) take over, each works in the
+ * stage files joins the engine as its primary job unlocks, with a first target of what that job's
+ * current crew makes a day, so nothing lurches at the switch. The player then moves targets, not people.
+ */
+export class TiersSystem implements EngineSystem {
+  readonly id = "tiers";
+  constructor(private readonly tree: Tree) {}
+  tick(ctx: TickContext): void {
+    const e = ctx.engine;
+    if (e.laborTier() === "people") return;
+    for (const w of this.tree.works ?? []) {
+      if (e.works().some((x) => x.def.id === w.id) || !e.isJobUnlocked(w.primaryJob)) continue;
+      const jr = ctx.report.jobs[w.primaryJob];
+      const perWorker = (e.jobDef(w.primaryJob)?.outputs?.[w.output] ?? 0) * e.modifier("yield", w.primaryJob);
+      const target = jr ? Math.round(jr.throughput * perWorker) : 0;
+      e.addWorks(
+        {
+          id: w.id,
+          name: w.name,
+          output: w.output,
+          primaryJob: w.primaryJob,
+          supportJobs: w.supportJobs.filter((j) => !!e.jobDef(j)),
+          ...(w.department ? { department: w.department } : {}),
+        },
+        target,
+      );
+    }
   }
 }
 
@@ -78,7 +117,7 @@ export interface LogEntry {
 const LOG_KEEP = 400;
 
 /** Pause kinds that are worth a log line (intro cards are not). */
-const LOGGED = new Set(["node_complete", "node_revealed", "milestone", "pressure_red", "workshop_open", GATE_PAUSE]);
+const LOGGED = new Set(["node_complete", "node_revealed", "milestone", "pressure_red", "workshop_open", "workshop_done", GATE_PAUSE]);
 
 export class LogSystem implements EngineSystem {
   readonly id = "log";

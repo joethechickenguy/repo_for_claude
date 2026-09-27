@@ -30,6 +30,9 @@ import type {
   Tree,
   TreeNode,
   Workshop,
+  WorkshopPlay,
+  WorksSpec,
+  DepartmentSpec,
 } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -111,6 +114,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     if (meta.name !== undefined) r.name = String(meta.name);
     if (meta.fuel !== undefined) r.fuel = String(meta.fuel);
     if (meta.work === true) r.work = true;
+    if (meta.workshop !== undefined) r.workshop = String(meta.workshop);
     resources[id] = r;
   }
 
@@ -162,6 +166,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
         base.dials.push(...dials);
         for (const o of arr(w.outputs).map(String)) if (!base.outputs.includes(o)) base.outputs.push(o);
         if (w.failure_rule !== undefined) base.failureRule = String(w.failure_rule);
+        Object.assign(base.play, playOf(w.play));
         if (w.loop !== undefined) base.loop = String(w.loop);
       } else {
         if (workshops[wid]) errors.push(`${file}: workshop ${wid} defined twice; use extends: true`);
@@ -174,6 +179,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
           outputs: arr(w.outputs).map(String),
           stage: data.stage,
           dials,
+          play: playOf(w.play),
         };
         if (w.failure_rule !== undefined) ws.failureRule = String(w.failure_rule);
         workshops[wid] = ws;
@@ -325,6 +331,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     if (n.numbers_status !== undefined) node.numbersStatus = String(n.numbers_status);
     if (n.trap_lesson !== undefined) node.trapLesson = String(n.trap_lesson);
     if (n.tradeoff !== undefined) node.tradeoff = String(n.tradeoff);
+    if (n.log !== undefined) node.log = String(n.log);
     if (n.modifiers !== undefined) node.modifiers = parseModifiers(n.modifiers, `${nid}: modifiers`, errors);
     if (n.pressure_per_day !== undefined) {
       const ppd: Record<string, number> = {};
@@ -388,7 +395,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
         effectWhenRed: String(pr.effect_when_red ?? ""),
         answers: arr(pr.answers).map(String),
         introducedInBeat: Number(pr.introduced_in_beat ?? 1),
-        ...pressureExtras(pr, `${file}: pressure ${pr.id}`, errors),
+        ...pressureExtras(pr, `${file}: pressure ${pr.id}`, errors, stateVariables),
       };
     });
     const hb = d.heartbeat;
@@ -411,6 +418,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     }
     if (!rawNodes.has(g.id)) errors.push(`${file}: gate ${g.id} is not a node`);
     const gate: Stage["gate"] = { id: String(g.id), name: String(g.name ?? g.id), condition: gateConds, routes: arr(g.routes).map(String) };
+    if (g.banner !== undefined) gate.banner = String(g.banner);
     if (g.score !== undefined) gate.score = String(g.score);
 
     stages.push({
@@ -542,6 +550,36 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
       choices[id] = { id, stage: Number(d.stage), prompt: String(c.prompt ?? ""), options };
     }
   }
+  // Works and departments (stage `works:` / `departments:`): the labor tiers' facilities.
+  const works: WorksSpec[] = [];
+  const departments: DepartmentSpec[] = [];
+  for (const { file, data } of raw.stages) {
+    const d = obj(data);
+    for (const w of arr(d.works)) {
+      const id = String(w?.id ?? "");
+      const spec: WorksSpec = {
+        id,
+        name: String(w?.name ?? id),
+        output: String(w?.output ?? ""),
+        primaryJob: String(w?.primary_job ?? ""),
+        supportJobs: arr(w?.support_jobs).map(String),
+        stage: Number(d.stage),
+      };
+      if (w?.department !== undefined) spec.department = String(w.department);
+      if (!id || works.some((x) => x.id === id)) errors.push(`${file}: works ${JSON.stringify(id)} has no id or is defined twice`);
+      if (!(spec.output in resources)) errors.push(`${file}: works ${id} output ${JSON.stringify(spec.output)} is not a resource`);
+      for (const j of [spec.primaryJob, ...spec.supportJobs]) if (!jobs[j]?.rates) errors.push(`${file}: works ${id} job ${JSON.stringify(j)} has no rates`);
+      if (!jobs[spec.primaryJob]?.rates?.outputs?.[spec.output]) errors.push(`${file}: works ${id}: ${spec.primaryJob} doesn't make ${spec.output}`);
+      works.push(spec);
+    }
+    for (const dp of arr(d.departments)) {
+      const id = String(dp?.id ?? "");
+      if (!id || departments.some((x) => x.id === id)) errors.push(`${file}: department ${JSON.stringify(id)} has no id or is defined twice`);
+      departments.push({ id, name: String(dp?.name ?? id), priority: Number(dp?.priority ?? 0) });
+    }
+  }
+  for (const w of works) if (w.department && !departments.some((x) => x.id === w.department)) errors.push(`works ${w.id}: unknown department ${w.department}`);
+
   const pressureIds = new Set(stages.flatMap((s) => s.pressures.map((p) => p.id)));
   for (const nid of nodeOrder) {
     const n = nodes[nid]!;
@@ -568,6 +606,8 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     warnings,
     tools,
     choices,
+    ...(works.length ? { works } : {}),
+    ...(departments.length ? { departments } : {}),
   };
   return { tree, errors, warnings };
 }
@@ -575,7 +615,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
 const MODIFIER_KINDS: readonly PressureModifier["kind"][] = ["rate", "yield", "toolLife", "training"];
 
 /** A pressure's optional `model:` and `red_modifiers:` (package F; see PressureModel). */
-function pressureExtras(pr: Y, where: string, errors: string[]): { model?: PressureModel; redModifiers?: PressureModifier[] } {
+function pressureExtras(pr: Y, where: string, errors: string[], stateVariables: Record<string, StateVariable>): { model?: PressureModel; redModifiers?: PressureModifier[] } {
   const out: { model?: PressureModel; redModifiers?: PressureModifier[] } = {};
   const nums = (v: Y, what: string): Record<string, number> => {
     const r: Record<string, number> = {};
@@ -593,6 +633,10 @@ function pressureExtras(pr: Y, where: string, errors: string[]): { model?: Press
       perDay: typeof m.per_day === "number" ? m.per_day : 0,
     };
     if (m.per_worker !== undefined) model.perWorker = nums(m.per_worker, "model.per_worker");
+    if (m.per_state !== undefined) {
+      model.perState = nums(m.per_state, "model.per_state");
+      for (const k of Object.keys(model.perState)) if (!(k in stateVariables)) errors.push(`${where}: model.per_state.${k} is not a declared state variable`);
+    }
     if (typeof m.min === "number") model.min = m.min;
     if (typeof m.max === "number") model.max = m.max;
     if (m.flow === true) model.flow = true;
@@ -674,6 +718,11 @@ function proseOrExpr(text: string, lib: ExprLibrary, known: (name: string) => bo
     }
   }
   return null;
+}
+
+/** A workshop's `play:` block as plain JSON (dropping anything YAML-only, like dates or nulls). */
+function playOf(v: Y): WorkshopPlay {
+  return JSON.parse(JSON.stringify(obj(v), (_k, x) => (x === null ? undefined : x))) as WorkshopPlay;
 }
 
 function compileDial(d: Y, stage: number): Dial {

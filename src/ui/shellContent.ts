@@ -45,7 +45,12 @@ export function workFromTree(tree: Tree): string[] {
 }
 
 export function extrasFromTree(tree: Tree): EngineExtras {
-  return { jobs: jobDefsFromTree(tree), tools: toolDefsFromTree(tree) };
+  return {
+    jobs: jobDefsFromTree(tree),
+    tools: toolDefsFromTree(tree),
+    // Departments and their starting priorities; works join at runtime (TiersSystem).
+    ...(tree.departments ? { departments: tree.departments.map((d) => ({ id: d.id, name: d.name, priority: d.priority })) } : {}),
+  };
 }
 
 /** The engine content for a new run from the tree alone. */

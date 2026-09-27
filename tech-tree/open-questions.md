@@ -248,3 +248,100 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     600 W in the first year, so the energy half of the gate never binds), the fuel bar rarely goes
     red because Stage 1 leaves huge wood stockpiles, and the engine workshop (E2) should replace the
     fixed engine rates (`tend_engine`) with the designed engine.
+
+## Workshops (packages E1-E6)
+
+53. **Campaigns: the routine and the workshop.** The furnace workshop (E1) runs real campaigns: the
+    charge leaves the stores, the metal arrives ~30 days later or the history says why not. The
+    smelting jobs keep running beside it, and `campaigns_run` counts both (D's stand-in's 30 smelting
+    days per campaign plus the workshop's own), so a player who never opens the workshop isn't
+    blocked (DESIGN.md: missing a loop slows, never blocks). The air-supply multipliers stay node
+    modifiers on the jobs (question 51); the dial locks bellows and the wind site until they're built.
+    A campaign's results the nodes leave to the simulation (`coke_rate`, `iron_quality`,
+    `steel_quality`) are written when it finishes. Workshop loop numbers (campaign days, charges,
+    heat size) live in a new `play:` block on the workshop (tech-tree/README.md).
+54. **The engine workshop's running engine.** One engine at a time: a finished build replaces the
+    running one. Its design sets `engine_type`, `coal_per_engine_kw`, `dynamo_output_kw`,
+    `factory_power_kw`, `grid_kw` and `power_station_efficiency`, and the `tend_engine` job's yield
+    becomes the design's coal-to-work (250 kg -> 10 kWh at the job's rate), replacing the Watt and
+    high-pressure nodes' fixed factors while it runs (question 52). A steam turbine has no size dial,
+    so it takes the piston design's shaft power at turbine efficiency; a water turbine gives
+    `play.water_turbine_kw` per river site (estimate). The prime-mover dial arrives in Stage 4, so in
+    Stage 3 a colony that built the water turbine and no rotative engine drives its dynamo with it.
+    A burst adds 1 to `boiler_explosions` and loses the engine; "kills the crew" isn't modelled
+    (people are immortal and nothing removes them yet). Boiler pressure stays at or below 2 atm until
+    the high-pressure engine; the turbine needs steel_quality 2 (the dial's own text).
+55. **The parts queue.** The stage files named the queue's contents only in prose ("engines, rails,
+    dies, instruments, wire"), so `machine_shop.play.parts` lists a year's standing demand per kind
+    of part (hours, tolerance, and the node that creates the need; all estimates). The queue is
+    that standing demand in the player's order: `shop_hours_balance` = shop hours a day minus its
+    hours (rejects included) over `queue_year_days`, so the bar goes negative exactly when "the queue
+    exceeds a year of shop time". Order decides which parts are late; nothing yet stalls a project
+    for a late part (G3: make ordering bite, e.g. node labor waiting on its part). Reordering is ↑/↓
+    buttons rather than drag (works at phone width and from the keyboard). Retooling (30 days) commits
+    `tolerance_mm` and `bearing_quality`; until the player retools, the shop holds hand tolerance.
+    Hardened-steel bearings wait for precision_grinding; the without-pages "two plates first" route
+    isn't modelled.
+56. **Liquefier plant size and the gate.** No dial sets the plant's size (question 38), so the
+    compressor is `liquefier_workshop.play.compressor_kw` (100 kW, estimate: a good Linde design
+    makes ~1 t/day, twice the gate). A running plant counts oxygen into `lox_kg_per_day` and the
+    stores only with a column and air_separation built; without them it makes liquid air
+    (`has_liquid_air`, `cryo_process`). The compressor's draw isn't yet a load on the Stage 4 power
+    balance (G4/F). A plant that never liquefies is given up after `play.trial_days`.
+57. **Rocket engine firings.** The engine burns kerosene and LOX once `has_kerosene`, else alcohol
+    and LOX (the two routes into first_liquid_rocket); no dial chooses. Every firing is planned for
+    60 s (the gate's number) and takes `play.firing_days` of stand time and the LOX that burn needs
+    from the stores; the chamber lasts `min(60, burn_time_s)`. The best firing (longest, then most
+    thrust) supplies `engine_static_fire_s` and `engine_thrust_kn`, so a worse later firing never
+    loses the gate. `stand_days_balance` = a year minus the queued stand days; `lox_balance` = LOX in
+    store minus the next firing's need; one stand (test_stand's "a second stand doubles throughput"
+    isn't counted). Roughness on the pressure trace is a picture of the stability margin, not a flaw:
+    flaws, their discovery and fixes are package H's; the screen says so.
+58. **The rocket workshop's vehicle.** Per-stage dials (propellant mass, propellants, tanks, feed)
+    are the columns of the mockup's stage table; `stage_count` and `route` are the vehicle's. The
+    first design on the screen is the mockup's (`play.default_stages`, short of the Moon).
+    Propellants are locked to what the chemistry has made (`has_ethanol`, `has_kerosene`,
+    `has_hypergolics`), aluminum tanks to `has_duralumin`. Adopting a design is instant (Stage 6 is
+    "almost no construction"); `vehicle_design` holds it as members `stageN:<t>t:<propellants>:<tank>:<feed>`
+    (sets are lists or number maps), and `dv_margin_km_s` is recomputed daily so the capsule's mass and
+    the margin midcourse correction (0.1) and crew safety (0.15) spend follow it. Isp stays the play
+    values (question 12/36), not the engine the colony fired in E5.
+
+## Stage content and the test campaign (packages G1-G6, H)
+
+59. **Stage length.** Stages 1-2 were trimmed to 3-5 years by the owner's playtest (a decision every
+    year). Stages 3-6 follow: labor x0.25 (Stage 3), x0.175 (Stage 4), x0.12 (Stages 5-6), a few
+    critical builds trimmed further so no year passes without a decision. A middling bot reaches
+    each gate in 3.4-5.8 years, 21-36 minutes at 1x (docs/playtests/2026-09-27-stage*-bot.md): the
+    game is ~26 in-game years and ~2.6 hours at 1x, against DESIGN.md's 100-200 years and 10 hours
+    (question 50). Owner's call: longer stages with more decisions in them, or a shorter game.
+    Mineral prospecting finds every site in reach (the "missing ones use substitutes" mechanic isn't
+    modelled). The works and departments tiers now have content (see 63).
+60. **Beat gating and optional beats.** A beat waits on the nearest lower beat that has a
+    critical-path node, and a gate only on its own requirements: Stage 4's gate waited ~600 days for
+    oil (its only beat-7 node, optional, and impossible on the canals route). Nodes moved to the beat
+    their prerequisites allow: Stage 5's computing, tracking and storable propulsion (3-4), the
+    launch complex (5, "runs alongside engine development"). A bar that goes red again within 90
+    days doesn't slow the game again (the brownout flickered daily).
+61. **The test campaign's readings.** Flaws, their `when` conditions, exposures and fix times are
+    in the Stage 6 file's `test_campaign.play.flaws` (from failure-modes.md; exposures, test costs
+    and the vehicle facts `vehicle_stages`, `turbopump_stages`, `lox_stages`, `largest_stage_t`,
+    `lox_lander` are estimates). At launch a known flaw whose severity is fatal always strikes (H's
+    done criterion; the screen says so); any other unfixed flaw strikes with `strike_chance` (0.5),
+    rolled in mission order from a seed fixed by the draft (question 4: shown and seeded, not a free
+    roll). An escape tower counts only with solid motors. Guidance errors are survivable with a
+    midcourse burn and 0.3 km/s of margin, fatal without. A lost pilot costs two years, a lost
+    vehicle one. Launch LOX is each stage's propellant at its oxidizer share: a big steel vehicle
+    needs years of LOX, which is the case for aluminum, kerosene and the plant scale-up.
+62. **What counts as a decision in the playtests.** Nodes with a `tradeoff` line (every option of a
+    choice, and optional nodes that compete for builders), plus, in Stage 6 only, each test-campaign
+    result ("test more, fix, or launch?"). The bot is middling on purpose: it never misreads a card,
+    builds optional projects only when fewer than two builds are underway, adds people to whatever a
+    stalled project lacks, and runs the workshops with fixed habits (tests/play/workshops.ts).
+63. **Works and departments in content (question 30).** Stages 3-5 list their works (`works:`: a
+    facility's output, primary job, feeder jobs and department) and Stage 5 its five departments with
+    starting priorities. Foremen set `labor_tier: works`; each works joins as its primary job unlocks,
+    with a first target of what that job's crew made a day, so production holds through the switch
+    (tests/ui/worksTier.test.ts). ± on a target moves by the power of ten below it. Jobs outside any
+    works (wood, flint, Build, the machine shop's lathes) stay rows of people. Foremen and departments
+    are optional: the playtest bot stays on the people tier.

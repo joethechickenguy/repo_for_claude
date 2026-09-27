@@ -292,8 +292,16 @@ export function availableJobs(tree: Tree, book: NodeBook): string[] {
   return out;
 }
 
-export const isWorkshopOpen = (tree: Tree, workshop: string, book: NodeBook): boolean =>
-  !!tree.workshops[workshop] && isComplete(book, tree.workshops[workshop]!.opensWith);
+/**
+ * A workshop is open once its `opens_with` node, or any node of kind `workshop` naming it, is complete:
+ * a trap (the Savery pump) mustn't be the only door into a workshop the real route needs.
+ */
+export const isWorkshopOpen = (tree: Tree, workshop: string, book: NodeBook): boolean => {
+  const w = tree.workshops[workshop];
+  if (!w) return false;
+  if (isComplete(book, w.opensWith)) return true;
+  return book.completed.some((id) => tree.nodes[id]?.kind === "workshop" && tree.nodes[id]?.workshop === workshop);
+};
 
 export const openWorkshops = (tree: Tree, book: NodeBook): string[] => Object.keys(tree.workshops).filter((w) => isWorkshopOpen(tree, w, book));
 
@@ -301,7 +309,8 @@ export const openWorkshops = (tree: Tree, book: NodeBook): string[] => Object.ke
 export function availableDials(tree: Tree, workshop: string, book: NodeBook): string[] {
   const w = tree.workshops[workshop];
   if (!w || !isWorkshopOpen(tree, workshop, book)) return [];
-  return w.dials.filter((d) => isComplete(book, d.addedBy)).map((d) => d.id);
+  // The opening node's dials come with the workshop however it opened.
+  return w.dials.filter((d) => d.addedBy === w.opensWith || isComplete(book, d.addedBy)).map((d) => d.id);
 }
 
 /** The stage gate's checks (gate.condition) with the unmet ones listed for the UI. */

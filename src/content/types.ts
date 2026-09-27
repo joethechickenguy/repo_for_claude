@@ -60,6 +60,8 @@ export interface Resource {
   fuel?: string;
   /** Each unit produced is 1 kWh of delivered shaft work (engines), counted x2.5 (energy.md rule 5). */
   work?: boolean;
+  /** Made by this workshop's runs (liquid oxygen from the liquefier) rather than, or as well as, a job. */
+  workshop?: string;
 }
 
 /**
@@ -181,6 +183,8 @@ export interface TreeNode {
   choice?: string;
   /** One line on what this option gives up or gains, shown on its card (node `tradeoff:`). */
   tradeoff?: string;
+  /** The log's line when the node completes, in the colony's voice (node `log:`). */
+  log?: string;
   /** Engine modifiers applied for good when the node completes (node `modifiers:`, same shape as `red_modifiers`). */
   modifiers?: PressureModifier[];
   /** Added to a pressure's per-day drift once the node is complete (node `pressure_per_day:`). */
@@ -232,6 +236,8 @@ export interface PressureModel {
   perUnitConsumed: Record<string, number>;
   /** + this per effective worker-day of a job (people x efficiency x modifiers x the fraction that ran). */
   perWorker?: Record<string, number>;
+  /** + this x a numeric state variable's value (e.g. generation a workshop writes, `grid_kw: 1`). */
+  perState?: Record<string, number>;
   perDay: number;
   min?: number;
   max?: number;
@@ -253,6 +259,8 @@ export interface Gate {
   condition: Condition[];
   routes: string[];
   score?: string;
+  /** One or two sentences shown and logged when the gate is reached (gate `banner:`). */
+  banner?: string;
 }
 
 export interface Stage {
@@ -293,7 +301,16 @@ export interface Workshop {
   failureRule?: string;
   stage: number;
   dials: Dial[];
+  /**
+   * The workshop screen's own play values (campaign length, batch sizes, build time, the parts
+   * queue...), from the stage files' `play:` blocks; an extension's keys add to or replace the base's.
+   */
+  play: WorkshopPlay;
 }
+
+/** Plain data a workshop reads for its loop (numbers, lists and small records). */
+export type WorkshopPlay = { [key: string]: PlayValue };
+export type PlayValue = number | string | boolean | PlayValue[] | { [key: string]: PlayValue };
 
 // ---- Draft --------------------------------------------------------------------------------------------------
 
@@ -366,4 +383,27 @@ export interface Tree {
   tools?: Record<string, ToolSpec>;
   /** Exclusive choices from the stage files' `choices:` lists, keyed by id. */
   choices?: Record<string, Choice>;
+  /** Facilities of the works tier (stage `works:` lists), in staffing order. */
+  works?: WorksSpec[];
+  /** Departments of the departments tier (stage `departments:`), with starting priorities. */
+  departments?: DepartmentSpec[];
+}
+
+/** A works: a facility with a target output, staffed from its primary job and feeders (DESIGN.md, Labor). */
+export interface WorksSpec {
+  id: string;
+  name: string;
+  /** Resource the target is in. */
+  output: string;
+  primaryJob: string;
+  /** Jobs staffed to feed the primary job's inputs. */
+  supportJobs: string[];
+  department?: string;
+  stage: number;
+}
+
+export interface DepartmentSpec {
+  id: string;
+  name: string;
+  priority: number;
 }

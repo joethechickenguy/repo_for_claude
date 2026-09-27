@@ -24,6 +24,7 @@ variables:
   haul_workers: {type: count, description: "People carrying things between sites. Roads and rails reduce it."}
   chemical_balance: {type: number, description: "Alkali and acid supply minus demand (Stage 4)."}
   iron_quality: {type: count, default: 3, description: "0-3, starts 3. Phosphorus ore -1, sulfur coke -1, over-blown steel -1. Below 2: tool life and plate strength fall a third."}
+  parts_too_tight: {type: count, description: "Queued parts needing a tighter fit than the machine shop holds (machine shop workshop)."}
   tolerance_mm: {type: number, unit: mm, default: 1.0, description: "Best routine machining fit. Hand 1.0; flat reference 0.5; lead screw 0.25; gauges 0.1; micrometer 0.02; grinding 0.01."}
   known_flaws: {type: set, description: "Flaws revealed by testing (failure-modes.md)."}
 
@@ -127,6 +128,7 @@ variables:
   has_liquid_air: {type: flag}
   cryo_process: {type: enum, values: [none, cascade, linde, claude], description: "Sets kWh per kg LOX."}
   has_lox: {type: flag}
+  liquefier_kw: {type: number, unit: kW, description: "The liquefier plant's compressor draw while it runs (liquefier workshop): a load on the Stage 4 power balance."}
   lox_kg_per_day: {type: number, unit: kg/day, description: "Stage 4 gate condition; paces Stage 5-6 testing."}
   pump_workers: {type: count, description: "People bailing mines; the engine's visible payoff."}
   rail_km: {type: number, unit: km}
@@ -163,6 +165,9 @@ variables:
   has_radar_altimeter: {type: flag}
   landing_tolerance: {type: number, unit: m/s}
   fixed_flaws: {type: set}
+  crewed_landing_survived: {type: flag, description: "Stage 6 gate: a crewed landing with the pilot alive (test campaign launch)."}
+  landing_year: {type: number, description: "In-game year of the successful landing: the score."}
+  pilots_lost: {type: count, description: "Pilots lost at launch; each costs two years (new vehicle, new pilot)."}
 
   # ---- Stage 1 route flags ----------------------------------------------------------------------------------------
   has_bellows: {type: flag, description: "Portable forced draft."}

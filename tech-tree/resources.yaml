@@ -29,23 +29,31 @@ resources:
   coke_kg:           {produced_by: coke_coal, name: "Coke (kg)", fuel: coal}
   # Delivered shaft work, 1 kWh per unit; counted x2.5 in the energy number (energy.md rule 5).
   engine_work_kwh:   {produced_by: tend_engine, name: "Engine work (kWh)", work: true}
-  steel_kg:          {produced_by: blow_steel}
-  alloy_steel_kg:    {produced_by: make_alloy_steel}
-  glass_kg:          {produced_by: make_glass}
-  cement_kg:         {produced_by: make_cement}
-  caustic_kg:        {produced_by: electrolyze_brine}
-  rubber_substitute_kg: {produced_by: electrolyze_brine, note: "Polysulfide rubber from chlorine chemistry; see open questions"}
-  paper_kg:          {produced_by: make_soda_ash, note: "Soda pulping"}
-  lox_kg:            {produced_by: separate_oxygen}
+  steel_kg:          {produced_by: blow_steel, name: "Steel (kg)"}
+  acid_kg:           {produced_by: make_sulfuric_acid, name: "Sulfuric acid (kg)"}
+  soda_ash_kg:       {produced_by: make_soda_ash, name: "Soda ash (kg)"}
+  crude_kg:          {produced_by: pump_crude, name: "Crude oil (kg)"}
+  kerosene_kg:       {produced_by: refine_crude, name: "Kerosene (kg)"}
+  grain_kg:          {produced_by: farm_fuel_crops, name: "Fuel crops (kg)"}
+  ethanol_kg:        {produced_by: ferment_and_distill, name: "Alcohol (kg)"}
+  # Electricity sent to the grid, 1 kWh per unit; counted x2.5 in the energy number (energy.md rule 5).
+  electricity_kwh:   {produced_by: run_power_station, name: "Electricity (kWh)", work: true}
+  alloy_steel_kg:    {produced_by: make_alloy_steel, name: "Alloy steel (kg)"}
+  glass_kg:          {produced_by: make_glass, name: "Glass (kg)"}
+  cement_kg:         {produced_by: make_cement, name: "Cement (kg)"}
+  caustic_kg:        {produced_by: electrolyze_brine, name: "Caustic soda (kg)"}
+  rubber_substitute_kg: {produced_by: electrolyze_brine, name: "Synthetic rubber (kg)", note: "Polysulfide rubber from chlorine chemistry; see open questions"}
+  paper_kg:          {produced_by: make_soda_ash, name: "Paper (kg)", note: "Soda pulping"}
+  lox_kg:            {produced_by: separate_oxygen, name: "Liquid oxygen (kg)", workshop: liquefier_workshop}   # the liquefier's runs make it (E4)
   # minor minerals: one mining job, one site each
-  sand_kg:           {produced_by: mine_mineral}
-  salt_kg:           {produced_by: mine_mineral}
-  lead_kg:           {produced_by: mine_mineral}
-  sulfur_kg:         {produced_by: mine_mineral, note: "Also from roasting sulfide copper ore"}
-  zinc_kg:           {produced_by: mine_mineral}
-  graphite_kg:       {produced_by: mine_mineral}
-  mercury_kg:        {produced_by: mine_mineral}
-  silver_kg:         {produced_by: mine_mineral}
-  chromium_ore_kg:   {produced_by: mine_mineral}
-  tungsten_kg:       {produced_by: mine_mineral, note: "Carbon filaments if none is found"}
-  bauxite_kg:        {produced_by: mine_mineral}
+  sand_kg:           {produced_by: mine_mineral, name: "Sand (kg)"}
+  salt_kg:           {produced_by: mine_mineral, name: "Salt (kg)"}
+  lead_kg:           {produced_by: mine_mineral, name: "Lead (kg)"}
+  sulfur_kg:         {produced_by: mine_mineral, name: "Sulfur (kg)", note: "Also from roasting sulfide copper ore"}
+  zinc_kg:           {produced_by: mine_mineral, name: "Zinc (kg)"}
+  graphite_kg:       {produced_by: mine_mineral, name: "Graphite (kg)"}
+  mercury_kg:        {produced_by: mine_mineral, name: "Mercury (kg)"}
+  silver_kg:         {produced_by: mine_mineral, name: "Silver (kg)"}
+  chromium_ore_kg:   {produced_by: mine_mineral, name: "Chromite (kg)"}
+  tungsten_kg:       {produced_by: mine_mineral, name: "Tungsten (kg)", note: "Carbon filaments if none is found"}
+  bauxite_kg:        {produced_by: mine_mineral, name: "Bauxite (kg)"}

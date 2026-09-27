@@ -115,10 +115,18 @@ export function perDayFor(tree: Tree, pressureId: string, base: number, book: Re
   return out;
 }
 
+/**
+ * Play value (estimate): a bar that goes red again within this many days of its last red slowdown
+ * doesn't slow the game again (a brownout that clears itself by halving the loads flickers daily).
+ */
+export const RED_REPAUSE_DAYS = 90;
+
 export class PressureSystem implements EngineSystem {
   readonly id = "pressures";
   /** Bars currently red and shown (the pause fires on the way in). */
   private redNow: string[] = [];
+  /** Day each bar last slowed the game going red (a bar hovering at its line slows it once, not daily). */
+  private lastRedPause: Record<string, number> = {};
 
   constructor(
     private readonly tree: Tree,
@@ -140,6 +148,7 @@ export class PressureSystem implements EngineSystem {
           const jr = ctx.report.jobs[j];
           if (jr) v += jr.throughput * jr.fraction * k;
         }
+        for (const [x, k] of Object.entries(m.perState ?? {})) v += e.state.getNumber(x) * k;
         v += perDayFor(this.tree, p.id, m.perDay, book);
         if (m.min !== undefined) v = Math.max(m.min, v);
         if (m.max !== undefined) v = Math.min(m.max, v);
@@ -149,7 +158,11 @@ export class PressureSystem implements EngineSystem {
       for (const mod of p.redModifiers ?? []) e.setModifier(mod.kind, mod.target, pressureSource(p.id), active ? mod.factor : null);
       if (active) {
         next.push(p.id);
-        if (!this.redNow.includes(p.id)) ctx.pause({ kind: "pressure_red", subject: p.id });
+        const last = this.lastRedPause[p.id];
+        if (!this.redNow.includes(p.id) && (last === undefined || ctx.day - last >= RED_REPAUSE_DAYS)) {
+          ctx.pause({ kind: "pressure_red", subject: p.id });
+          this.lastRedPause[p.id] = ctx.day;
+        }
       }
     }
     this.redNow = next;
@@ -161,12 +174,13 @@ export class PressureSystem implements EngineSystem {
   }
 
   save(): JsonValue {
-    return { redNow: [...this.redNow] };
+    return { redNow: [...this.redNow], lastRedPause: { ...this.lastRedPause } };
   }
 
   load(data: JsonValue): void {
-    const d = data as { redNow?: string[] } | null;
+    const d = data as { redNow?: string[]; lastRedPause?: Record<string, number> } | null;
     this.redNow = Array.isArray(d?.redNow) ? [...d!.redNow] : [];
+    this.lastRedPause = d?.lastRedPause && typeof d.lastRedPause === "object" ? { ...d.lastRedPause } : {};
   }
 }
 

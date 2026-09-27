@@ -9,7 +9,7 @@ Content for the design in `../DESIGN.md`, in a form an engine can load. One YAML
 | `stages/stageN-*.yaml` | The stage: gate, pressures, workshops, nodes (beats 1-8) |
 | `state-variables.yaml` | Every variable a node, pressure or gate reads or writes |
 | `draft.yaml` | Stage 0: roster pools, page categories and topics, defaults, weakest-area rule |
-| `resources.yaml` | Every resource a node costs and the job that produces it |
+| `resources.yaml` | Every resource a node costs and the job that produces it (`workshop:` when a workshop's runs make it, like liquid oxygen) |
 | `energy.md` | Energy accounting rules, gate calibration, per-source watts |
 | `failure-modes.md` | Hidden flaws, test types that reveal them, traps |
 | `open-questions.md` | Unresolved history, physics, and realism-vs-fun conflicts |
@@ -28,6 +28,7 @@ gate:
   name: A working steam engine
   condition: {energy_w_per_person: 600, state: ["mine_drained_by_engine == true"]}
   routes: [A_newcomen, B_watt, C_high_pressure, T_savery]   # T_ = trap
+  banner: "Optional: one or two sentences shown and logged when the gate is reached"
 
 choices:                           # optional: exclusive either/ors; starting one option closes the rest
   - id: air_supply
@@ -46,8 +47,9 @@ pressures:                         # bars the simulation moves
     introduced_in_beat: 6
     model: {per_unit_produced: {wood_kg: -0.0000006}, per_day: 0.01, min: 0, max: 100}   # optional: how drives moves
     red_modifiers: {rate: {gather_wood: 0.667}}   # optional: effect_when_red as engine modifiers
-    # model may also take per_worker: {job: delta per effective worker-day} and flow: true (restarts at 0
-    # each day: a bar of today's net, like fuel made minus fuel used)
+    # model may also take per_worker: {job: delta per effective worker-day}, per_state: {numeric state
+    # variable: factor} (e.g. generation a workshop writes) and flow: true (restarts at 0 each day: a bar
+    # of today's net, like fuel made minus fuel used)
 
 workshops:                         # design screens; a base definition once, `extends: true` later
   - id: engine_workshop
@@ -60,6 +62,8 @@ workshops:                         # design screens; a base definition once, `ex
       - {id: plate, name: "Plate", options: [hammered, rolled], added_by: newcomen_engine, effect: "...", basis: "..."}
     outputs: [water_lifted_per_day, coal_per_day, safety_margin, years_to_failure]
     failure_rule: "optional: deterministic failure statement"
+    play: {build_days: 180}        # optional: the screen's loop values (campaign length, batch size, build time,
+                                   # the parts queue); an extension's keys add to or replace the base's
 
 nodes:
   - id: newcomen_engine
@@ -83,6 +87,7 @@ nodes:
       jobs: [tend_engine]                      # per-worker-day rate in a comment
       effects: ["..."]
     tradeoff: "One line: what this option gains and gives up (shown on its card)"
+    log: "Optional: the log's line when it completes, in the colony's voice"
     modifiers: {rate: {smelt_copper: 2}, toolLife: {blades: 2.5}}   # optional: applied for good on completion
     pressure_per_day: {wood_distance: 0.07}    # optional: added to that bar's model per_day once complete
     adjusts_state: {iron_quality: -1}          # optional: shifts a number once on completion (sources add up)

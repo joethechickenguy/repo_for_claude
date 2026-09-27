@@ -105,6 +105,7 @@ gate:
     energy_w_per_person: 250
     state: ["metal_tools >= 5000", "tool_wear >= 0"]
   routes: [A_wind, B_bellows, C_arsenic, D_tin]
+  banner: "Five thousand metal tools: every crew has an edge that lasts. The iron is in the hills, and the fire isn't hot enough for it yet."
 
 # Either/or decisions (owner playtest 2026-09-27: a substantive decision at least once a year, and
 # alternatives that read as alternatives). Starting one option closes the others for good; the
@@ -172,6 +173,10 @@ workshops:
          effect: "Too little: the charge never reaches temperature and the campaign fails. More than needed is just fuel burned",
          basis: "Copper melts at 1,085 C; prototype uses 10 kg charcoal per kg copper"}
     outputs: [metal_kg, fuel_kg, failed_campaigns]
+    play:                            # the screen's loop; play values (estimates)
+      campaign_days: 30              # the loop's "~30 days"
+      copper_ore_kg: 150             # ore one blowpipe crew charges per campaign; bellows and wind multiply it (estimate)
+      calm_season: [152, 243]        # the ridge's fixed calm season, days of the year (June-August; estimate)
 
 nodes:
 
@@ -235,6 +240,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "The river terraces are full of clay, but it sits under a meter of gravel that bare hands can't move."
+    log: "The first ditch is dug with fire-hardened sticks, and clay comes up by the basket."
     requires:
       state: ["wood_kg > 300"]
       resources: {wood_kg: 1000}
@@ -258,6 +264,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "Clay pots dry and crack, and one rain turns them back to mud."
+    log: "The first pots come out of the pit ringing instead of crumbling."
     requires:
       nodes: [digging_sticks]
       state: ["clay_kg > 300"]
@@ -284,6 +291,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "Copper melts at 1,085 C, and an open wood fire rarely gets past 900 C."
+    log: "The covered piles smoulder for days and give back light black fuel that burns hot."
     requires:
       nodes: [pit_kiln]
       resources: {wood_kg: 20000, clay_kg: 30000}
@@ -363,6 +371,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "Your survey pages mark a malachite outcrop three days' walk east, and there is no path through the scrub."
+    log: "A trail of green-stained stones leads the prospectors up to the outcrop."
     requires:
       nodes: [charcoal_clamps]
       resources: {blades: 3000}
@@ -394,6 +403,7 @@ nodes:
     workshop: furnace_workshop
     critical_path: true
     problem: "You have ore and charcoal, but nothing survives the heat and no fire burns hot enough without forced air."
+    log: "Six people blowing through reeds, a crucible glowing between them: the first bead of copper."
     requires:
       nodes: [trail_green_stones]
       state: ["ore_kg > 150"]
@@ -477,6 +487,7 @@ nodes:
     kind: project
     critical_path: true
     problem: "Flint is sharp but brittle, and crews go through blades faster than knappers can make them."
+    log: "Copper poured into carved stone comes out an axe."
     requires:
       nodes: [crucibles_blowpipes]
       state: ["copper_kg > 40"]
@@ -564,6 +575,7 @@ nodes:
     critical_path: false
     problem: "Copper tools dull and bend within weeks, and toolmakers can't keep up."
     tradeoff: "Tools last 1.6 times as long, right away. The smelters breathe arsenic, and past a point some of them die."
+    log: "The new copper is harder; the smelters cough more."
     modifiers: {toolLife: {copper_tools: 1.6}}   # the 1.6x in `effects`; estimate
     requires:
       nodes: [stone_molds]
@@ -621,6 +633,7 @@ nodes:
     route: [D_tin]
     critical_path: false
     problem: "Pure copper casts poorly, full of bubbles, and wears fast."
+    log: "Nine parts copper to one of tin: an edge that holds."
     requires:
       nodes: [tin_survey_kestel]
       resources: {copper_kg: 500, tin_kg: 60}
