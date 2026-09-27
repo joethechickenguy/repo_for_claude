@@ -196,7 +196,21 @@ Tick when done; add 3-5 lines of what shipped and what was left open.
   - Open: open-questions 18-24 (undeclared condition names, `geological_survey`, enum writes
     and state defaults missing from YAML). Job rates are still only YAML comments (`Job.rateNote`).
     Nothing wires the node logic into the running engine yet (D or F).
-- [ ] C simulation models
+- [x] C simulation models
+  - `src/models` (import from `src/models`), pure and deterministic, dial and output names from the
+    YAML: `energy` (energy.md rules; A's EnergySystem calls it), `furnace` (copper, bloomery, blast
+    furnace with hot blast and flux, Bessemer), `engine` (Savery, Newcomen/Watt/high-pressure, hoop
+    stress and burst date, generator, transmission, prime mover), `machineShop` (tolerance ladder,
+    shop hours, parts queue with rejects), `liquefier`, `rocketEngine` (Isp SL/vac, feed caps, burn
+    time, margins for H), `rocket` (per-stage rocket equation, budget by route, margin, optimal staging).
+  - 195 tests pin the worked examples with file:line citations: 0.5 m Newcomen 3.93 kW and 2.5 t
+    coal/day; the mockup's 4-stage rocket 13.64 km/s at 614 t; V-2 settings 198/238 s, 251 kN, 60 s;
+    every energy.md number; Neilson's hot blast; 30 trays → 99% O2.
+  - Didn't match, pinned as physics gives and logged as open questions 31-40: Linde ~1 kWh/kg (model
+    2.35; Claude 1.18), single steel stage "5.8" (5.70 by its own arithmetic; 5.76/6.38 in the
+    workshop), steel vs aluminum "nearly twice" (2.5x), coke "1.5-2 t/t" (Neilson ~5).
+  - Open: `flaws_expected`/`flaws_found` are H's; play Isp (280/310 s) sits above the engine model,
+    so E6 can pass `isp_s` per stage; engine size, boiler radius and plant size have no dial (38).
 - [ ] D shell UI
 - [ ] E1 furnace · [ ] E2 engine · [ ] E3 machine shop · [ ] E4 liquefier · [ ] E5 rocket engine · [ ] E6 rocket
 - [ ] F pressures and beats

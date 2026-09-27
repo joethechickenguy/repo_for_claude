@@ -107,7 +107,7 @@ export const REGEN_OXIDIZER_RICH_BURN_S = 30;
  */
 export const SEPARATION_PRESSURE_RATIO = 0.4;
 
-/** V-2 throat, 0.40 m across (estimate from its drawings). No dial sets engine size; see open-questions C8. */
+/** V-2 throat, 0.40 m across (estimate from its drawings). No dial sets engine size; see open question 38. */
 export const DEFAULT_THROAT_AREA_M2 = Math.PI * 0.2 ** 2;
 
 export interface RocketEngineDials {

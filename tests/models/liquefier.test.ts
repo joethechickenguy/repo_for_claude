@@ -22,7 +22,7 @@ const PLANT = { compressor_kw: 50 };
 describe("Linde plant: ~1 kWh/kg? (stage4 L60, L381; energy.md L111, L118; open question 11)", () => {
   const r = liquefier(LINDE, PLANT);
 
-  it("physics gives ≈ 2.35 kWh/kg at 200 atm with a long exchanger, not the YAML's ~1 (open question C3)", () => {
+  it("physics gives ≈ 2.35 kWh/kg at 200 atm with a long exchanger, not the YAML's ~1 (open question 33)", () => {
     expectNear(r.kwh_per_kg!, 2.35, 0.01);
   });
   it("no simple throttle cycle can reach 1 kWh/kg: even an ideal compressor and ideal exchanger need ~1.3", () => {

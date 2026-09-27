@@ -105,10 +105,10 @@ describe("mission budget and margin", () => {
 describe("what-ifs and traps", () => {
   const steelStage: RocketStageDials = { propellant_mass: 100, propellants: "ethanol_lox", tank_material: "steel", feed: "turbopump" };
 
-  it("stage6 L107: the trap's own arithmetic, ln(1/0.14) × 2.9 km/s, is 5.70 (the YAML says ≈ 5.8; open question C4)", () => {
+  it("stage6 L107: the trap's own arithmetic, ln(1/0.14) × 2.9 km/s, is 5.70 (the YAML says ≈ 5.8; open question 34)", () => {
     expectNear(2.9 * Math.log(1 / 0.14), 5.70, 0.001);
   });
-  it("failure-modes.md L67: ln(7) × 2.9 is 5.64 (the file says ≈ 5.7; open question C4)", () => {
+  it("failure-modes.md L67: ln(7) × 2.9 is 5.64 (the file says ≈ 5.7; open question 34)", () => {
     expectNear(2.9 * Math.log(7), 5.64, 0.001);
   });
   it("in the workshop (dry = 0.14 × propellant) a single steel stage tops out at 5.76 km/s on ethanol, 6.38 on kerosene: short of 9.4 either way", () => {
@@ -130,7 +130,7 @@ describe("what-ifs and traps", () => {
   it("failure-modes.md L66: black powder at ~0.8 km/s needs a mass ratio of ~130,000 to reach orbit", () => {
     expectNear(massRatioForDv(9.4, 0.8), 130_000, 0.03);
   });
-  it("Isp to exhaust speed: 2.9 km/s is 296 s, not one of the play values (open question C4)", () => {
+  it("Isp to exhaust speed: 2.9 km/s is 296 s, not one of the play values (open question 34)", () => {
     expectNear(exhaustVelocityKmS(296), 2.9, 0.001);
   });
 });
@@ -159,7 +159,7 @@ describe("optimal staging", () => {
     opt.dv_km_s.forEach((dv, i) => expectNear(dv, check.stages[i]!.dv_km_s, 1e-6));
   });
 
-  it("stage4 L454: a steel vehicle is 'nearly twice' an aluminum one; the model gives ≈ 2.5× (open question C5)", () => {
+  it("stage4 L454: a steel vehicle is 'nearly twice' an aluminum one; the model gives ≈ 2.5× (open question 35)", () => {
     // Same engines as the mockup: kerosene turbopump stages 1-3, ethanol pressure-fed lander.
     const al = optimalStaging(
       [

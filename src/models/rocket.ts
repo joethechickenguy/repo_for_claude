@@ -19,7 +19,7 @@ export type Route = "direct_ascent" | "parking_orbit";
 /**
  * The workshop's play values. They are content, but they exist only as prose in
  * stage6-rocket.yaml, which the content loader can't read, so they live here and can be overridden
- * per call. See tech-tree/open-questions.md (C6).
+ * per call. See tech-tree/open-questions.md (36).
  */
 export interface RocketPlayValues {
   /** Isp by propellant, s. stage6 L58: "Play values: 280 s, 310 s; hypergolic 290 s". */
@@ -56,7 +56,7 @@ export const MISSION_BUDGET_KM_S: MissionBudget = {
  * Extra Δv each route needs on top of the base budget, km/s. Estimate: a parking orbit costs an
  * upper-stage restart after a coast (ullage burn, restart transients, a second set of steering
  * losses), taken as ~0.1 km/s; direct ascent flies the base budget. Its price is windows and
- * guidance, not Δv. See open-questions.md (13, C7).
+ * guidance, not Δv. See open-questions.md (13, 37).
  */
 export const ROUTE_DV_ADJUST_KM_S: Readonly<Record<Route, number>> = {
   direct_ascent: 0,

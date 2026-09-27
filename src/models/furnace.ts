@@ -226,7 +226,7 @@ export const FREEZE_BLAST_FRACTION = 0.8;
  *  - charcoal 1.5: energy.md L102 and stage2 L446 ("1.5-2 t").
  *  - coke 5.04: Neilson's 8.06 t of coal per t of iron (energy.md L114, sourced) made into coke at
  *    1.6 kg coal per kg coke (stage2 L357, estimate). stage2 L446 says "1.5-2 t ... coke", which
- *    disagrees; see open-questions.md C2.
+ *    disagrees; see open-questions.md (32).
  */
 export const COLD_BLAST_FUEL_T_PER_T: Readonly<Record<FurnaceFuel, number>> = {
   charcoal: 1.5,

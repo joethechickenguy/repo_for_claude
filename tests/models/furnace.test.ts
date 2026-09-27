@@ -142,7 +142,7 @@ describe("blast furnace (stage2 L85-96, L437-459; stage3 L56-58, L363)", () => {
     expectNear(r.coal_kg_per_day, 8_060, 1e-9);
     expectNear(r.fuel_kg_per_day * COAL_PER_KG_COKE, r.coal_kg_per_day, 1e-12);
     expectNear(perPerson({ coal: r.coal_kg_per_day }), 250, 0.01);
-    // stage2 L446 says "1.5-2 t charcoal or coke per t"; for coke the model gives ~5 t (open question C2).
+    // stage2 L446 says "1.5-2 t charcoal or coke per t"; for coke the model gives ~5 t (open question 32).
     expectNear(r.coke_rate, 5.04, 0.001);
   });
   it("hot blast at 149 C: Neilson's 8.06 -> 5.16 t of coal per t (stage3 L363), ≈ 160 W (energy.md L104)", () => {

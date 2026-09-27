@@ -113,3 +113,50 @@ The loader takes the simplest reading of each and says so in `npm run content` w
 30. **Training.** Reading: idle people train in one trade at a time (a count variable named
     `trained_*` or `*_trained`), one trained person per 365 idle person-days (estimate), sped up by
     a `training` modifier (teachers). Trained counts don't leave the idle pool.
+
+## Simulation models (package C)
+
+31. **Fuel-ratio dial range.** `fuel_ratio` is [2, 15] (stage1 L54) and starts at the prototype's
+    working ratio (2 kg charcoal per kg ore = 10 per kg copper), so the copper "too little" failure
+    (L55) is out of range; the bloomery window, 0.8-1.3 (stage2 L83), lies below the range entirely
+    though L197 says the same dial applies. The model takes any positive ratio (blowpipes fail below
+    ~1.8; a bellows bloomery below ~0.86). Proposed range: [0.5, 15].
+32. **Blast-furnace coke rate.** stage2 L446 says "1.5-2 t charcoal or coke per t"; energy.md's
+    Neilson figure is ~8 t of coal per t cold-blast, ≈5 t of coke at L357's 1.6 kg coal per kg coke.
+    The model uses charcoal 1.5 and coke 5.04, which reproduces energy.md's 250 W and 160 W rows.
+    Proposed: fix L446 for coke.
+33. **Linde at ~1 kWh/kg is below the physics** (stage4 L60, L381; energy.md L111-118; see 11). A
+    throttle cycle at 200 atm needs ~1.3 kWh/kg even with an ideal isothermal compressor and
+    exchanger. The model (60% compressor) gives ~2.35 for Linde and ~1.2 for Claude, which is half, as
+    the YAML says; ~1 kWh/kg is a Claude-cycle figure. So LOX loads are ~2.3x energy.md's (500 kg/day:
+    ~49 kW, ~12 W per person; 50 t/day: ~4.9 MW, ~1.2 kW per person). Accept and let J tune, or say
+    "~2 kWh/kg" for Linde in the YAML and energy.md.
+34. **Single-stage what-if** (stage6 L107: "≈ 5.8 km/s: ln(1/0.14) x 2.9"; failure-modes.md: "ln(7) x
+    2.9 ≈ 5.7"). The stated arithmetic gives 5.70 and 5.64; 2.9 km/s (296 s) is none of the play
+    Isps; and "structural fraction" there means dry/total, while the mockup, whose convention
+    reproduces 13.6 km/s and which the model follows, uses dry/propellant. In the workshop a single
+    steel stage tops out at 5.76 km/s on alcohol and 6.38 on kerosene. The lesson holds (both < 9.4).
+    Proposed text: "~5.8 km/s on alcohol, ~6.4 on kerosene".
+35. **Steel vs aluminum vehicle** (stage4 L454: "nearly twice the mass"). With the play values and
+    optimal staging for 15.3 km/s and a 1.6 t capsule: ~2,480 t in steel vs ~1,000 t in aluminum,
+    2.5x. Proposed: "two and a half times".
+36. **Numbers in prose and comments aren't loadable.** The rocket play values (Isp 280/310/290,
+    fractions 0.14/0.09, pressure-fed +0.08/-25 s, budget 9.4 + 3.1 + 2.8), feed caps (20/25/60 bar),
+    the tolerance ladder, the 1.5 safe margin, job-rate comments the models need (20% copper yield,
+    1.6 kg coal per kg coke) and energy.md's values are copied into `src/models` as named constants
+    citing file and line, with tests pinning them. If they should be tunable content, give them
+    structured fields (see 25) and pass them in: `designRocket` already takes `play` and `budget`.
+37. **Δv by route** (see 13). The model adds an estimated 0.1 km/s for a parking orbit (restart,
+    ullage, coast); direct ascent flies the base 15.3. The Stage 6 gate reads `dv_total_km_s >= 15.3`
+    (stage6 L339), which ignores the route and the margin other nodes spend (midcourse, suit and
+    tower); `dv_margin_km_s >= 0` may be what's meant.
+38. **Sizes with no dial.** Rocket-engine throat area (the model defaults to the V-2's 0.4 m throat,
+    ≈250 kN at 15 bar, just the gate), boiler radius (model: twice the cylinder diameter), liquefier
+    size (compressor kW, an input) and number of machines per works. Dial, state, or fixed?
+39. **Name mismatches.** `feed_system` state values [pressure, steam_turbopump, gas_generator] vs the
+    engine dial [pressure_fed, peroxide_turbopump, gas_generator_turbopump] vs the rocket dial
+    [pressure_fed, turbopump]; `plate_quality` has `open_hearth`, the plate dial doesn't. The models
+    use the dial names; the engine needs a mapping when it writes state.
+40. **Newcomen efficiency.** The 4 kW → 2-3 t coal/day example (stage2 L107, L679) needs 0.4-0.5%;
+    energy.md §1 also says "about a third of a percent", which would give 3.8 t/day. The model uses
+    0.5%, which matches the example and energy.md's own 10 kW → ~6 t/day arithmetic.
