@@ -8,12 +8,12 @@ Content for the design in `../DESIGN.md`, in a form an engine can load. One YAML
 | --- | --- |
 | `stages/stageN-*.yaml` | The stage: gate, pressures, workshops, nodes (beats 1-8) |
 | `state-variables.yaml` | Every variable a node, pressure or gate reads or writes |
-| `page-bundles.yaml` | Draft bundles, page costs, roster synergies |
+| `draft.yaml` | Stage 0: roster pools, page categories and topics, defaults, weakest-area rule |
 | `resources.yaml` | Every resource a node costs and the job that produces it |
 | `energy.md` | Energy accounting rules, gate calibration, per-source watts |
 | `failure-modes.md` | Hidden flaws, test types that reveal them, traps |
 | `open-questions.md` | Unresolved history, physics, and realism-vs-fun conflicts |
-| `generated/` | dependencies.md (beats, pressures, graphs), routes.md, bundles.md, state-index.md, summary.md |
+| `generated/` | dependencies.md (beats, pressures, graphs), routes.md, bundles.md (pages → nodes), state-index.md, summary.md |
 
 ## Stage file
 
@@ -74,7 +74,7 @@ nodes:
       effects: ["..."]
     reads_state: [has_coal]
     writes_state: [engine_type, mine_drained_by_engine]
-    pages_bundle: steam_engines              # or none
+    pages_bundle: steam_engines              # a topic or category id from draft.yaml, or none
     without_pages: "How the node differs without the bundle: a different route, not just slower"
     numbers_status: "What's sourced vs estimated"
     sources: ["https://..."]

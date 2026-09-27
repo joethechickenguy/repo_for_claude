@@ -104,10 +104,12 @@ visibly. Only wood, charcoal and clay spoil. No storage caps.
 
 **Tools** wear with use (Stage 1's heartbeat) and keep mattering: iron 3× bronze, quenched 6×.
 
-**Pages.** Without a bundle a node is *different*, not just slower: a research loop with visible dead
-ends, a historical substitute with a scar, or a discovery that can't be conceived until its precursor
-has been used (no separate condenser until a Newcomen engine has run two years). Roster synergies
-make pages worth more with the matching specialists.
+**People carry principles, paper carries data.** Specialists make an area's workshops converge fast
+and its research loops short. Pages hold what nobody remembers: where deposits are, tables, and the
+few recipes that took years of trials (basic lining, Haber catalyst, peroxide, self-excitation).
+Without pages a node is *different*, not just slower: a research loop with visible dead ends, a
+historical substitute with a scar, or a discovery that can't be conceived until its precursor has
+been used (no separate condenser until a Newcomen engine has run two years). See Stage 0 below.
 
 **Failure is deterministic and legible.** Boilers burst on a date shown before you build them. Wind
 furnaces lose output in a fixed calm season. Test-campaign flaws are fixed by the design and state,
@@ -116,6 +118,26 @@ and the run continues. See `tech-tree/failure-modes.md`.
 
 **The notebook** fills as you play: 2-5 sentences of real science per node. The notebook explains,
 the workshop tests.
+
+## Stage 0: the draft
+
+One screen, two columns, two to ten minutes. It loads with a default allocation that is workable
+but not good, and the player can depart at once.
+
+- **Who goes.** 10,000 people across nine pools (builders, primitive skills, prospectors,
+  metallurgists, mechanics, chemists, electrical, rocket engineers, teachers), each with + / − in
+  blocks. Each pool's card says in one line what it speeds up and what its absence costs. Any
+  allocation is allowed; builders are the remainder.
+- **What they carry.** 10,000 pages across eight categories (survey, first-year guide, metallurgy,
+  engines and machine tools, chemistry, electricity, cryogenics, rocketry), each with + / −. A
+  category expands to its topics for players who want to allocate finer (Haber process, petroleum,
+  lunar tables); otherwise pages spread over topics automatically. Full coverage of everything would
+  take ~20,000 pages. Coverage of a topic sets how its nodes behave: known, partial (half-length
+  discovery loops), or absent (the `without_pages` route).
+- **One hint.** A single line, "Weakest area: metallurgy", recomputed on every change from the lower
+  of roster fill and page coverage per area. No numbers, no run-length estimate. Nothing is blocked.
+
+Data: `tech-tree/draft.yaml`.
 
 ## What was rejected
 

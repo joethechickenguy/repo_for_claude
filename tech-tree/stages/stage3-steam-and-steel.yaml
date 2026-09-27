@@ -383,7 +383,7 @@ nodes:
       effects: ["Reveals mineral sites over several years, nearest first. Later nodes list the mineral they need; a missing one uses the node's substitute"]
     reads_state: [bundles_taken, rail_km]
     writes_state: [mineral_sites]
-    pages_bundle: geological_survey
+    pages_bundle: survey_minerals
     without_pages: "Different route: sites turn up in a slower, arbitrary order and scarce ones (tungsten, chromite) may not be found at all; their nodes then use substitutes"
     numbers_status: "Anatolian chromite (Guleman), bauxite (Seydisehir) are sourced; the rest is a design list"
     sources: ["https://www.usgs.gov/centers/national-minerals-information-center/turkey", "https://en.wikipedia.org/wiki/Guleman_mine"]
@@ -482,7 +482,7 @@ nodes:
       jobs: [tend_niter_beds, make_black_powder]
       effects: ["Blasting: hard-rock mining and tunnelling x2.5. First fixed nitrogen (nitrate_source: niter_beds), a trickle"]
     writes_state: [has_nitrate, nitrate_source]
-    pages_bundle: industrial_chemistry
+    pages_bundle: nitrogen_fuels
     without_pages: "Different route: leaching and crystallizing found by trial; first usable powder after ~3 years instead of ~1.5"
     numbers_status: "Beds took a year or more to mature (commonly cited; estimate)"
     sources: ["https://en.wikipedia.org/wiki/Saltpeter"]

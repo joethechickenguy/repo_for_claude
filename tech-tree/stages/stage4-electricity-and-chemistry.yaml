@@ -496,7 +496,7 @@ nodes:
       effects: ["Kerosene: the denser rocket fuel option (workshop Isp 310 vs 280). Mineral oil improves bearing_quality"]
     reads_state: [mineral_sites, rail_km]
     writes_state: [has_kerosene, bearing_quality]
-    pages_bundle: geological_survey
+    pages_bundle: survey_oil_hydro
     without_pages: "Hand-dug pits at seeps (tiny yield) until drilling is learned, 2x labor"
     numbers_status: "Oil at Batman (SE Turkey) and Baku; depths and rates are estimates"
     sources: ["https://en.wikipedia.org/wiki/Petroleum_industry_in_Azerbaijan"]

@@ -6,7 +6,7 @@
 variables:
 
   # ---- Draft -------------------------------------------------------------------------------------
-  bundles_taken: {type: set, description: "Page bundles carried. Nodes check it for discounts and for whether a discovery is possible at all."}
+  bundles_taken: {type: set, description: "Map topic -> page coverage (0-1) from the draft. Nodes use it via three thresholds: known (>=1), partial (>=0.5), absent (without_pages route)."}
   draft_roster: {type: set, description: "Skill pool -> drafted specialists."}
 
   # ---- Pressures (one bar each; the simulation moves them) ----------------------------------------

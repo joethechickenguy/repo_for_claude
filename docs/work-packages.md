@@ -139,9 +139,19 @@ the same choices and seed always give the same result.
 
 ## I. Draft (Stage 0)
 
-**Delivers.** The mockup's screen 1: bundles with page costs, roster pools, synergies from
-`page-bundles.yaml`, depart. Writes `bundles_taken` and `draft_roster`. A "what this changes" hover
-per bundle generated from `generated/bundles.md`.
+**Delivers.** The screen described in `DESIGN.md` § Stage 0, from `tech-tree/draft.yaml`. Two
+columns: roster pools with + / − (blocks of 100; builders absorb the remainder so the total is always
+10,000) and page categories with + / − (blocks of 100 against a 10,000 budget), each category
+expandable to its topics with their own + / −; topic edits pin that topic and the category's remaining
+pages spread over the unpinned ones. Every pool and topic shows its one-line "speeds" / "skips" text
+and, on hover, the nodes it changes (from `generated/bundles.md`). The "Weakest area" line recomputes
+on every change per the rule in `draft.yaml`. Loads the defaults; Depart is always enabled. Writes
+`draft_roster` and per-topic coverage into `bundles_taken` (a map topic → coverage; the loader's
+`without_pages` logic reads it with the three thresholds).
+
+**Done when.** Defaults load and depart works with no interaction; every + / − keeps the totals exact;
+the weakest-area line matches a hand computation for three test allocations; a topic pin survives a
+category change.
 
 ## J. Tuning
 

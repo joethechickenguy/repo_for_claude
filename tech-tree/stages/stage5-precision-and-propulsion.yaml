@@ -354,7 +354,7 @@ nodes:
       effects: ["feed: peroxide_turbopump. Light tanks; chamber pressure to ~25 bar. A standing peroxide hazard"]
     reads_state: [bearing_quality, has_caustic]
     writes_state: [feed_system, turbopump_quality, has_peroxide]
-    pages_bundle: liquid_rocket_engines
+    pages_bundle: propellants
     without_pages: "4x labor; concentrated peroxide decomposes explosively when contaminated"
     numbers_status: "V-2 peroxide-permanganate turbopump sourced"
     sources: ["https://airandspace.si.edu/collection-objects/turbopump-steam-generator-and-frame-v-2-rocket-engine/nasm_A19600013000"]
@@ -408,7 +408,7 @@ nodes:
       effects: ["Nitric acid with a coal-tar amine ignites on contact: no igniter, no boil-off. Lander engine option. Nitrate supply caps production"]
     reads_state: [nitrate_source]
     writes_state: [has_hypergolics]
-    pages_bundle: industrial_chemistry
+    pages_bundle: propellants
     without_pages: "3x labor; dangerous"
     numbers_status: "Luna 9's KTDU-5A used nitric acid and an amine fuel (sourced)"
     sources: ["https://en.wikipedia.org/wiki/Luna_9"]
@@ -434,7 +434,7 @@ nodes:
       effects: ["Choose: arc process (Birkeland-Eyde, electricity-hungry, simple) or ammonia synthesis (Haber-Bosch, 200 atm, catalyst search; needs the industrial chemistry pages). Ostwald nitric acid follows; platinum if found, cobalt oxide otherwise"]
     reads_state: [hydro_kw, power_balance_kw, max_pressure_atm, bundles_taken, mineral_sites]
     writes_state: [nitrate_source, has_nitric_acid]
-    pages_bundle: industrial_chemistry
+    pages_bundle: nitrogen_fuels
     without_pages: "Different route: Haber-Bosch is unavailable (the catalyst search took years of systematic work); the arc process is the only option"
     numbers_status: "Birkeland-Eyde 1903, Haber 1909, Oppau 1913, Ostwald 1902 sourced"
     sources: ["https://en.wikipedia.org/wiki/Haber_process", "https://en.wikipedia.org/wiki/Birkeland%E2%80%93Eyde_process"]
@@ -460,7 +460,7 @@ nodes:
       effects: ["Separation, ullage and escape motors. Without aluminum and perchlorate: black-powder charges (adds separation_recontact risk)"]
     reads_state: [has_aluminum, has_caustic]
     writes_state: [has_solids]
-    pages_bundle: industrial_chemistry
+    pages_bundle: propellants
     without_pages: "4x labor"
     numbers_status: "Scout reached orbit on solids (1960s) sourced; binder chemistry uncertain here"
     sources: ["https://en.wikipedia.org/wiki/Solid-propellant_rocket"]

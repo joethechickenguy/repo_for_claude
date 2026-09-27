@@ -138,7 +138,7 @@ nodes:
       effects: ["Finds two deposits and presents them as deposit_choice"]
     reads_state: [bundles_taken]
     writes_state: [deposits_known]
-    pages_bundle: geological_survey
+    pages_bundle: survey_iron_coal
     without_pages: "Different route: the deposits are found in the order prospecting parties stumble on them (bog iron first, hillside after ~3 more years of searching), so the phosphorus problem is met before the choice exists"
     numbers_status: "Estimate"
     sources: ["https://donwagner.dk/arch-iron/resources/Rom_Bohr_Bloomery.pdf"]
@@ -166,7 +166,7 @@ nodes:
         - "Both can be opened; the second later. Adds the ore_choice dial to the furnace workshop"
     reads_state: [deposits_known]
     writes_state: [iron_ore_grade, iron_ore_phosphorus, iron_quality, haul_distance_days]
-    pages_bundle: geological_survey
+    pages_bundle: survey_iron_coal
     without_pages: "See iron_prospecting"
     numbers_status: "Grades and distances are estimates; phosphorus in bog iron is well attested"
     sources: ["https://en.wikipedia.org/wiki/Bog_iron"]
@@ -333,7 +333,7 @@ nodes:
       effects: ["Prospecting finds two seams and presents them as coal_seam_choice"]
     reads_state: [bundles_taken]
     writes_state: [has_coal]
-    pages_bundle: geological_survey
+    pages_bundle: survey_iron_coal
     without_pages: "Different route: only the near seam is found at first; its sulfur is discovered by using it. The far seam turns up after 3 more years of prospecting"
     numbers_status: "Heating values standard; rates are estimates"
     sources: ["https://en.wikipedia.org/wiki/Coal"]
@@ -360,7 +360,7 @@ nodes:
         - "Adds the furnace_fuel dial to the furnace workshop; coke ovens are built as part of the choice"
     reads_state: [has_coal]
     writes_state: [coal_sulfur, has_coke, haul_distance_days, mine_water_m]
-    pages_bundle: geological_survey
+    pages_bundle: survey_iron_coal
     without_pages: "See coal_mining"
     numbers_status: "Coke yield 60-70% is typical (estimate); seam properties are game values"
     sources: ["https://en.wikipedia.org/wiki/Coke_(fuel)"]

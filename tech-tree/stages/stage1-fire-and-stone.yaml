@@ -178,7 +178,7 @@ nodes:
       effects: ["Introduces the outcrop bar (finite ore)"]
     reads_state: [bundles_taken]
     writes_state: [has_copper_ore, malachite_left_kg, haul_distance_days]
-    pages_bundle: geological_survey
+    pages_bundle: survey_copper_tin
     without_pages: "Different route: prospecting parties (200,000 person-days) find the outcrop by following green staining in streambeds; the trail then follows"
     numbers_status: "Native copper and malachite near Cayonu/Ergani are sourced; distances and labor are estimates"
     sources: ["https://en.wikipedia.org/wiki/%C3%87ay%C3%B6n%C3%BC"]
@@ -371,7 +371,7 @@ nodes:
     unlocks:
       jobs: [mine_cassiterite, smelt_tin]
     writes_state: [has_tin_source, trained_miners]
-    pages_bundle: geological_survey
+    pages_bundle: survey_copper_tin
     without_pages: "Unavailable: without the survey there's no reason to go. Arsenical copper is the substitute"
     numbers_status: "Kestel mine and Goltepe (c. 2600 BCE, near Nigde) are sourced; distance and labor are estimates"
     sources: ["https://en.wikipedia.org/wiki/Kestel_(archaeological_site)"]

@@ -37,7 +37,7 @@ def load():
             stages.append((os.path.basename(path), yaml.safe_load(f)))
     with open(os.path.join(ROOT, "state-variables.yaml")) as f:
         state_vars = yaml.safe_load(f)["variables"]
-    with open(os.path.join(ROOT, "page-bundles.yaml")) as f:
+    with open(os.path.join(ROOT, "draft.yaml")) as f:
         bundles = yaml.safe_load(f)
     with open(os.path.join(ROOT, "resources.yaml")) as f:
         resources = yaml.safe_load(f)["resources"]
@@ -81,7 +81,19 @@ def validate(stages, state_vars, bundles, resources):
                 warnings.append(f"{fname}: {nid} notebook has ~{sentences} sentences (aim for 2-5)")
 
     declared_vars = set(state_vars)
-    bundle_ids = set(bundles["bundles"]) | {"none"}
+    bundle_ids = {"none"}
+    for cat in bundles["pages"]:
+        bundle_ids.add(cat["id"])
+        bundle_ids.update(t["id"] for t in cat["topics"])
+    roster_ids = {r["id"] for r in bundles["roster"]}
+    cat_ids = {c["id"] for c in bundles["pages"]}
+    for a in bundles["areas"]:
+        if a["roster"] not in roster_ids or a["pages"] not in cat_ids:
+            errors.append(f"draft.yaml: area {a['id']} references unknown roster or pages category")
+    if sum(r["default"] for r in bundles["roster"]) != bundles["people_total"]:
+        errors.append("draft.yaml: roster defaults do not sum to people_total")
+    if sum(c["default"] for c in bundles["pages"]) != bundles["page_budget"]:
+        errors.append("draft.yaml: page defaults do not sum to page_budget")
 
     # workshops: base definitions once, extensions (`extends: true`) add dials in later stages
     workshops = {}
@@ -255,15 +267,18 @@ def write_generated(stages, nodes, state_vars, bundles):
     by_bundle = defaultdict(list)
     for n in nodes.values():
         by_bundle[n.get("pages_bundle")].append(n)
-    lines = [header, "# Page bundles and the nodes they change\n\n"]
-    total = 0
-    for bid, b in bundles["bundles"].items():
-        total += b["pages"]
-        lines.append(f"## {b['name']} ({b['pages']} pages)\n\n{b['summary']}\n\n")
-        for n in sorted(by_bundle.get(bid, []), key=lambda x: (x["stage"], x["id"])):
+    lines = [header, "# Pages: what each topic changes\n\n",
+             f"Budget {bundles['page_budget']} pages; full coverage of everything would take "
+             f"{sum(t['full'] for c in bundles['pages'] for t in c['topics'])}.\n\n"]
+    for cat in bundles["pages"]:
+        lines.append(f"## {cat['name']} (default {cat['default']})\n\n")
+        for n in by_bundle.get(cat["id"], []):
             lines.append(f"- S{n['stage']} `{n['id']}`: without pages, {n.get('without_pages', '')}\n")
+        for t in cat["topics"]:
+            lines.append(f"\n**{t['name']}** (full {t['full']}): {t['skips']}\n\n")
+            for n in sorted(by_bundle.get(t["id"], []), key=lambda x: (x["stage"], x["id"])):
+                lines.append(f"- S{n['stage']} `{n['id']}`: without pages, {n.get('without_pages', '')}\n")
         lines.append("\n")
-    lines.append(f"Total if every bundle is taken: {total} pages against a budget of {bundles['page_budget']}.\n")
     with open(os.path.join(out, "bundles.md"), "w") as f:
         f.write("".join(lines))
 
