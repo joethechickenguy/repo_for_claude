@@ -9,6 +9,7 @@ of printed knowledge, and a race to land one person alive on the Moon.
 | [`tech-tree/`](tech-tree/README.md) | The content as data: one YAML per stage, state variables, page bundles, resources, energy rules, failure modes, open questions |
 | [`docs/work-packages.md`](docs/work-packages.md) | The build split into chunks with dependencies and done-criteria |
 | [`docs/kickoff-prompts.md`](docs/kickoff-prompts.md) | Copy-paste prompts, one per package, in wave order |
+| [`docs/known-issues.md`](docs/known-issues.md) | Problems found in playtests, not yet scheduled |
 | [`tools/validate_tree.py`](tools/validate_tree.py) | Validates the tree and regenerates `tech-tree/generated/` |
 
 ```sh
