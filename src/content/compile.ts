@@ -30,6 +30,7 @@ import type {
   Tree,
   TreeNode,
   Workshop,
+  WorkshopPlay,
 } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -162,6 +163,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
         base.dials.push(...dials);
         for (const o of arr(w.outputs).map(String)) if (!base.outputs.includes(o)) base.outputs.push(o);
         if (w.failure_rule !== undefined) base.failureRule = String(w.failure_rule);
+        Object.assign(base.play, playOf(w.play));
         if (w.loop !== undefined) base.loop = String(w.loop);
       } else {
         if (workshops[wid]) errors.push(`${file}: workshop ${wid} defined twice; use extends: true`);
@@ -174,6 +176,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
           outputs: arr(w.outputs).map(String),
           stage: data.stage,
           dials,
+          play: playOf(w.play),
         };
         if (w.failure_rule !== undefined) ws.failureRule = String(w.failure_rule);
         workshops[wid] = ws;
@@ -674,6 +677,11 @@ function proseOrExpr(text: string, lib: ExprLibrary, known: (name: string) => bo
     }
   }
   return null;
+}
+
+/** A workshop's `play:` block as plain JSON (dropping anything YAML-only, like dates or nulls). */
+function playOf(v: Y): WorkshopPlay {
+  return JSON.parse(JSON.stringify(obj(v), (_k, x) => (x === null ? undefined : x))) as WorkshopPlay;
 }
 
 function compileDial(d: Y, stage: number): Dial {

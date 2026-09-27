@@ -1,0 +1,51 @@
+// Words the workshop screens (packages E1-E6) show that no stage file carries: output labels, button
+// labels, failure lines, units. Dial names, effects and reasons come from the stage YAML via the kit.
+// `{name}` placeholders are filled by `fill()` from ../strings.
+
+export const WS = {
+  frame: {
+    outputs: "Outputs",
+    history: "What you tried",
+    needs: "needs {name}",
+    notEnough: "Not enough {name}: {have} of {need}.",
+    running: "{what}: day {day} of {days}.",
+    none: "—",
+    pendingH: "found by the test campaign",
+  },
+  furnace: {
+    charge: "This campaign",
+    chargeKinds: { copper: "Copper", iron_bloom: "Iron bloom", iron_blast: "Blast furnace" } as Record<string, string>,
+    temperature: "Hottest the charge gets",
+    required: "Needs",
+    ore: "Ore charged",
+    fuel: "Fuel burned",
+    lime: "Lime charged",
+    metal: "Metal out",
+    blast: "Blast",
+    cokeRate: "Fuel per ton of iron",
+    ironQuality: "Iron quality (0-3)",
+    campaigns: "Campaigns run",
+    run: "Run a campaign ({days} days)",
+    runTitle: "Run",
+    converter: "Converter heat",
+    carbon: "Carbon left",
+    steelQuality: "Steel quality (0-3)",
+    blow: "Blow a heat",
+    pig: "Pig iron charged",
+    steel: "Steel out",
+    ok: "The metal ran.",
+    calm: "Calm season on the ridge: the wind site gives {pct}% of its output.",
+    failures: {
+      too_cold: "The charge never got hot enough: the ore sat in the fire and nothing ran. Fuel burned anyway.",
+      cast_lumps: "Too much charcoal: the iron took up carbon and came out as brittle cast lumps, not a bloom.",
+      frozen_short_stack: "The stack is too short for iron to take up carbon and melt: the slag froze.",
+      frozen_weak_blast: "Not enough blast for this stack: the furnace chilled and the slag froze.",
+      under_blown: "Stopped too early: carbon left in, the steel is hard and brittle.",
+      over_blown: "Blown too long: the metal took up oxygen and is weak. Manganese would recover it.",
+    } as Record<string, string>,
+    coldShort: "Phosphorus stayed in (acid lining): the steel is brittle when cold.",
+    hotShort: "Sulfur stayed in (no manganese): the steel cracks at forging heat.",
+    result: "{metal} {unit} of {what}",
+    failed: "failed",
+  },
+} as const;

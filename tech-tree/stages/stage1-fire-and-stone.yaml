@@ -172,6 +172,10 @@ workshops:
          effect: "Too little: the charge never reaches temperature and the campaign fails. More than needed is just fuel burned",
          basis: "Copper melts at 1,085 C; prototype uses 10 kg charcoal per kg copper"}
     outputs: [metal_kg, fuel_kg, failed_campaigns]
+    play:                            # the screen's loop; play values (estimates)
+      campaign_days: 30              # the loop's "~30 days"
+      copper_ore_kg: 150             # ore one blowpipe crew charges per campaign; bellows and wind multiply it (estimate)
+      calm_season: [152, 243]        # the ridge's fixed calm season, days of the year (June-August; estimate)
 
 nodes:
 

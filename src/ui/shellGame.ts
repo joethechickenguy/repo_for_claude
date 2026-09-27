@@ -745,7 +745,7 @@ export class Game {
       }
     }
     if (kind === "pressure_red") return this.tree.stages.flatMap((x) => x.pressures).find((p) => p.id === s)?.name ?? s;
-    if (kind === "workshop_open") return this.tree.workshops[s]?.name ?? s;
+    if (kind === "workshop_open" || kind === "workshop_done") return this.tree.workshops[s]?.name ?? s;
     if (kind === GATE_PAUSE || kind === "opening") return this.tree.stages.find((x) => String(x.stage) === s)?.gate.name ?? s;
     return this.tree.nodes[s]?.name ?? s;
   }
@@ -768,7 +768,7 @@ export class Game {
 
   /** One line for the pause banner, and the introduction cards the pause carries. */
   pauseView(reasons: readonly PauseReason[] = this.decision): PauseView {
-    const order = [GATE_PAUSE, "node_complete", "pressure_red", "workshop_open", "milestone", "node_revealed"];
+    const order = [GATE_PAUSE, "node_complete", "pressure_red", "workshop_open", "workshop_done", "milestone", "node_revealed"];
     const sorted = [...reasons].filter((r) => r.kind !== INTRO_PAUSE).sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
     const parts = sorted.map((r) => {
       if (r.kind === GATE_PAUSE) return fill(STRINGS.pause.gate, { n: r.subject ?? "" });

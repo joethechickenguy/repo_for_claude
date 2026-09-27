@@ -248,3 +248,15 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     600 W in the first year, so the energy half of the gate never binds), the fuel bar rarely goes
     red because Stage 1 leaves huge wood stockpiles, and the engine workshop (E2) should replace the
     fixed engine rates (`tend_engine`) with the designed engine.
+
+## Workshops (packages E1-E6)
+
+53. **Campaigns: the routine and the workshop.** The furnace workshop (E1) runs real campaigns: the
+    charge leaves the stores, the metal arrives ~30 days later or the history says why not. The
+    smelting jobs keep running beside it, and `campaigns_run` counts both (D's stand-in's 30 smelting
+    days per campaign plus the workshop's own), so a player who never opens the workshop isn't
+    blocked (DESIGN.md: missing a loop slows, never blocks). The air-supply multipliers stay node
+    modifiers on the jobs (question 51); the dial locks bellows and the wind site until they're built.
+    A campaign's results the nodes leave to the simulation (`coke_rate`, `iron_quality`,
+    `steel_quality`) are written when it finishes. Workshop loop numbers (campaign days, charges,
+    heat size) live in a new `play:` block on the workshop (tech-tree/README.md).

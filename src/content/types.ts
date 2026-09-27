@@ -293,7 +293,16 @@ export interface Workshop {
   failureRule?: string;
   stage: number;
   dials: Dial[];
+  /**
+   * The workshop screen's own play values (campaign length, batch sizes, build time, the parts
+   * queue...), from the stage files' `play:` blocks; an extension's keys add to or replace the base's.
+   */
+  play: WorkshopPlay;
 }
+
+/** Plain data a workshop reads for its loop (numbers, lists and small records). */
+export type WorkshopPlay = { [key: string]: PlayValue };
+export type PlayValue = number | string | boolean | PlayValue[] | { [key: string]: PlayValue };
 
 // ---- Draft --------------------------------------------------------------------------------------------------
 

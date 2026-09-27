@@ -60,6 +60,8 @@ workshops:                         # design screens; a base definition once, `ex
       - {id: plate, name: "Plate", options: [hammered, rolled], added_by: newcomen_engine, effect: "...", basis: "..."}
     outputs: [water_lifted_per_day, coal_per_day, safety_margin, years_to_failure]
     failure_rule: "optional: deterministic failure statement"
+    play: {build_days: 180}        # optional: the screen's loop values (campaign length, batch size, build time,
+                                   # the parts queue); an extension's keys add to or replace the base's
 
 nodes:
   - id: newcomen_engine

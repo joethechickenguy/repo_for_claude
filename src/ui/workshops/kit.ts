@@ -21,6 +21,8 @@ export interface DialView {
   kind: "range" | "options" | "both";
   range?: [number, number];
   options?: string[];
+  /** Options shown but not yet usable, with the one-line reason (e.g. "needs Pot bellows"). */
+  locked?: Record<string, string>;
 }
 
 /** The dials the player has earned in a workshop, in the order the stage files add them. */
@@ -95,9 +97,13 @@ export function mountDials(
       }
       if (opt !== null && d.options) {
         h += `<div class="wk-opts" role="group" aria-label="${esc(d.name)}">`;
-        for (const o of d.options)
-          h += `<button type="button" data-opt="${esc(o)}" class="${o === opt ? "on" : ""}" aria-pressed="${o === opt}">${esc(optionWords(o))}</button>`;
+        for (const o of d.options) {
+          const why = d.locked?.[o];
+          h += `<button type="button" data-opt="${esc(o)}" class="${o === opt ? "on" : ""}" aria-pressed="${o === opt}"${why ? ` disabled title="${esc(why)}"` : ""}>${esc(optionWords(o))}</button>`;
+        }
         h += `</div>`;
+        const lockedLines = d.options.filter((o) => d.locked?.[o]).map((o) => `${optionWords(o)}: ${d.locked![o]}`);
+        if (lockedLines.length) h += `<p class="small muted wk-locked">${esc(lockedLines.join(" · "))}</p>`;
       }
       h += `<p class="small muted">${esc(d.effect)}</p><details class="small"><summary>${esc(STRINGS.workshop.why)}</summary><p>${esc(d.basis)}</p></details></div>`;
     }
@@ -116,7 +122,7 @@ export function mountDials(
   };
   root.addEventListener("click", (ev) => {
     const b = (ev.target as HTMLElement).closest("button[data-opt]") as HTMLButtonElement | null;
-    if (!b) return;
+    if (!b || b.disabled) return;
     const id = (b.closest("[data-dial]") as HTMLElement).dataset.dial!;
     const d = dials.find((x) => x.id === id)!;
     const v = cur[id] ?? defaultDialValue(d);

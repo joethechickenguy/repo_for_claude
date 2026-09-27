@@ -210,3 +210,31 @@ details p{margin:4px 0 0}
 .wk-history{list-style:none; padding:0; margin:8px 0; font-size:14px}
 .wk-history li{border-top:1px solid var(--rule); padding:5px 0}
 .wk-history li.bad b{color:var(--red)}
+
+/* Workshop screen frame (src/ui/workshops/common.ts): dials left; outputs, actions, progress, history right. */
+.wk{display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); gap:12px 32px}
+@media (max-width:900px){ .wk{grid-template-columns:minmax(0,1fr)} }
+.wk h3{margin:14px 0 4px}
+.wk-right > .wk-body > h3:first-child{margin-top:0}
+.wk-act{margin:8px 0}
+.wk-prog{margin:0 0 8px}
+.wk-prog p{margin:0 0 3px}
+.wk-bar{height:6px; border:1px solid var(--ink)}
+.wk-bar i{display:block; height:100%; background:var(--blue)}
+.wk-top{margin-bottom:8px}
+.wk-top:empty{display:none}
+.wk-svg{width:100%; height:auto; display:block; margin:6px 0}
+.wk-svg .ax{stroke:var(--rule); fill:none}
+.wk-svg .ln{stroke:var(--blue); fill:none; stroke-width:1.5}
+.wk-svg .bad{stroke:var(--red)}
+.wk-svg text{fill:var(--pencil); font-size:11px; font-variant-numeric:tabular-nums}
+.wk-queue{list-style:none; padding:0; margin:6px 0}
+.wk-queue li{display:flex; gap:8px; align-items:baseline; border-top:1px solid var(--rule); padding:4px 0}
+.wk-queue li .grow{flex:1}
+.wk-queue li.bad b{color:var(--red)}
+.wk-tabs{display:flex; flex-wrap:wrap; gap:4px}
+.wk-dv{position:relative; height:26px; border:1px solid var(--ink); margin:6px 0 18px}
+.wk-dv i{position:absolute; top:0; bottom:0; left:0; border-right:1px solid var(--paper)}
+.wk-dv i.s0{background:var(--ink)} .wk-dv i.s1{background:var(--pencil)} .wk-dv i.s2{background:var(--blue)} .wk-dv i.s3{background:var(--rule)}
+.wk-dv b{position:absolute; top:-4px; bottom:-14px; border-left:2px solid var(--red)}
+.wk-dv b span{position:absolute; top:28px; left:4px; font-size:11px; font-weight:400; color:var(--red); white-space:nowrap}

@@ -65,6 +65,10 @@ workshops:
       - {id: manganese, name: "Manganese addition", options: [none, spiegeleisen], added_by: bessemer_converter,
          effect: "Removes oxygen and sulfur after the blow: cures hot shortness. Needs manganese ore",
          basis: "Mushet, 1850s"}
+    play:
+      converter_heat_kg: 5000        # pig iron per converter heat; early Bessemer vessels held 5-10 t (estimate)
+      converter_heat_days: 1         # a blow is twenty minutes; charging, blowing and pouring take the day (estimate)
+      converter_yield: 0.88          # steel per kg of pig; carbon, silicon and some iron burn off (estimate)
   - id: engine_workshop
     extends: true
     dials:
