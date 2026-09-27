@@ -11,6 +11,7 @@ import type {
   JsonValue,
   LaborTier,
   ModifierKind,
+  PauseReason,
   ResourceAmounts,
   ResourceDef,
   SaveGame,
@@ -37,8 +38,8 @@ export interface TickContext {
   laborAvailable(pool: string): number;
   /** Take up to `amount` person-days from a pool; returns what was granted. Unused labor is lost. */
   takeLabor(pool: string, amount: number): number;
-  /** Ask the clock to stop after this tick with a one-line reason. */
-  pause(reason: string): void;
+  /** Ask the clock to stop after this tick. */
+  pause(reason: PauseReason): void;
 }
 
 /**
@@ -603,7 +604,7 @@ export class Engine implements StateView {
         add(report.laborUsed, pool, got);
         return got;
       },
-      pause: (reason) => report.pauseReasons.push(reason),
+      pause: (reason) => void report.pauseReasons.push({ ...reason }),
     };
     try {
       for (const sys of this.systems) sys.tick(ctx);

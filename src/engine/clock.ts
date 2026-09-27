@@ -3,14 +3,14 @@
 // the wall clock; the clock only decides how many ticks to run.
 import type { Engine } from "./engine";
 import { CLOCK_SPEEDS } from "./params";
-import type { TickReport } from "./types";
+import type { PauseReason, TickReport } from "./types";
 
 export type ClockSpeed = (typeof CLOCK_SPEEDS)[number];
 
-/** Why the clock stopped: the player pressed pause, or systems gave one-line reasons. */
+/** Why the clock stopped: the player pressed pause, or systems gave reasons. */
 export interface PauseEvent {
   byPlayer: boolean;
-  reasons: string[];
+  reasons: PauseReason[];
   day: number;
 }
 

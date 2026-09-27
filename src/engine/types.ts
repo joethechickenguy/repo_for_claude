@@ -208,6 +208,17 @@ export interface SaveGame {
 
 // ---- Reports ---------------------------------------------------------------------------------------
 
+/**
+ * Why a system wants the clock to stop: a red bar, a completed node, a newly visible node. The UI
+ * turns it into the one-line reason from its strings; the engine carries no prose.
+ */
+export interface PauseReason {
+  /** e.g. `node_complete`, `node_revealed`, `milestone`, `pressure_red`. */
+  kind: string;
+  /** The node, pressure or milestone id. */
+  subject?: string;
+}
+
 export type AssignmentReason = "manual" | "pinned" | "auto";
 
 /** One staffing decision, so the people panel can show what the engine assigned and why. */
@@ -258,6 +269,6 @@ export interface TickReport {
   laborUsed: Record<string, number>;
   /** People added to each trade this tick. */
   trained: Record<string, number>;
-  /** One-line reasons a system asked the clock to stop. */
-  pauseReasons: string[];
+  /** Why systems asked the clock to stop after this tick. */
+  pauseReasons: PauseReason[];
 }
