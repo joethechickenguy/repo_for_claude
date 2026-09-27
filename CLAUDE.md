@@ -18,10 +18,6 @@ the data contract. Do not redesign; if the design blocks you, write the question
   works (a file plus its tests) and never hold more than ~15 minutes of uncommitted work. Push a
   green slice at least every ~30 minutes; keep unfinished parts out of the commit rather than
   waiting for the whole package. Your first push should come early, not at the end.
-- Back up unfinished work too: every ~15 minutes commit what you have (red or WIP is fine) and
-  `git push -f origin HEAD:<branch>-wip-<package>` (e.g. `claude/new-session-vd0f1w-wip-C`). That
-  branch is yours alone, so force-pushing it is fine; the shared branch only ever gets green,
-  rebased work and is never force-pushed. Delete your backup branch once the package is merged in.
 - Finish a package by ticking its box in `docs/work-packages.md` and writing 3-5 lines under "Status".
 
 ## Stack
