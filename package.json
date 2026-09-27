@@ -3,11 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "npm run content -- --quiet",
     "dev": "vite",
     "build": "npm run content && tsc --noEmit && vite build",
     "content": "node scripts/build-content.mjs",
     "validate": "python3 tools/validate_tree.py --check",
+    "pretest": "npm run content -- --quiet",
     "test": "vitest run",
+    "pretypecheck": "npm run content -- --quiet",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
