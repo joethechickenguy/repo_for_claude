@@ -11,6 +11,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.dont_write_bytecode = True  # keep tools/ free of __pycache__
 sys.path.insert(0, os.path.join(HERE, "..", "tools"))
 import validate_tree as v  # noqa: E402
 
