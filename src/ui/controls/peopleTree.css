@@ -1,0 +1,23 @@
+/* The recursive people-panel row (peopleTree.ts). Uses the shell's CSS variables (--ink, --pencil,
+   --rule, --blue, --red, --hi, --paper) from src/ui/styles.css; square buttons, tabular numbers. */
+.ptree{font-variant-numeric:tabular-nums}
+.ptree-item{border-bottom:1px solid var(--rule)}
+.ptree-kids .ptree-item:last-child{border-bottom:0}
+.ptree-kids{padding-left:18px; border-top:1px solid var(--rule)}
+.ptree-row{display:flex; align-items:center; gap:6px; padding:6px 0; flex-wrap:wrap}
+.ptree-label{flex:1 1 8em; min-width:0; display:flex; flex-direction:column}
+.ptree-name{overflow-wrap:anywhere}
+.ptree-note{font-size:13px; color:var(--pencil)}
+.ptree-value{min-width:52px; text-align:right}
+.ptree-detail{font-size:13px; color:var(--pencil); min-width:0}
+.ptree-toggle{border:0; background:transparent; padding:0 2px; width:18px; color:var(--pencil)}
+.ptree-toggle:hover:not(:disabled){background:transparent; color:var(--ink)}
+.ptree-pin{font-size:12px; padding:0 5px; color:var(--pencil); border-color:var(--rule)}
+.ptree-item.pinned > .ptree-row > .ptree-pin{color:var(--paper); background:var(--ink); border-color:var(--ink)}
+.ptree-item[data-tone="short"] > .ptree-row .ptree-value,
+.ptree-item[data-tone="short"] > .ptree-row .ptree-detail{color:var(--red)}
+.ptree-item[data-tone="auto"] > .ptree-row .ptree-value{color:var(--pencil)}
+.ptree-item[data-tone="good"] > .ptree-row .ptree-value{color:var(--blue)}
+.ptree-item.new > .ptree-row{animation:ptree-flash 1.6s ease-out}
+@keyframes ptree-flash{from{background:var(--hi)}to{background:transparent}}
+@media (prefers-reduced-motion:reduce){.ptree-item.new > .ptree-row{animation:none}}
