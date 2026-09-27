@@ -110,7 +110,8 @@ export function furnaceDials(game: Game): DialView[] {
 const byId = (dials: readonly DialView[]) => (id: string) => dials.find((d) => d.id === id);
 
 function resName(game: Game, id: string): string {
-  return game.tree.resources[id]?.name ?? optionWords(id);
+  // "Charcoal (kg)" -> "Charcoal": the unit is on the number.
+  return (game.tree.resources[id]?.name ?? optionWords(id)).replace(/\s*\([^)]*\)$/, "");
 }
 
 /** Is `day` in the ridge's calm season (play.calm_season, days of the year)? */

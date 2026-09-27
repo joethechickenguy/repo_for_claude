@@ -69,7 +69,12 @@ workshops:
     outputs: [dv_total_km_s, dv_margin_km_s, liftoff_mass_t, flaws_expected]
     play:
       payload_t: 1.6                 # the capsule and pilot until the capsule node sets capsule_mass_t (its 1.6 t pressure hull)
-      default_propellant_t: [420, 95, 22, 5]   # the first design on the screen: the interface mockup's vehicle (short of the Moon)
+      default_stages:                # the first design on the screen: the interface mockup's vehicle (short of the Moon);
+                                     # options the colony can't use yet fall back to one it can
+        - {propellant_mass: 420, propellants: kerosene_lox, tank_material: steel, feed: turbopump}
+        - {propellant_mass: 95, propellants: kerosene_lox, tank_material: aluminum, feed: turbopump}
+        - {propellant_mass: 22, propellants: kerosene_lox, tank_material: aluminum, feed: turbopump}
+        - {propellant_mass: 5, propellants: ethanol_lox, tank_material: aluminum, feed: pressure_fed}
       margin_deductions_km_s: {midcourse_correction: 0.1, crew_safety: 0.15}   # margin those nodes spend (their effects)
       dv_bar_km_s: 18                # the Δv bar's full width (the mockup's)
 

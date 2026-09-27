@@ -232,7 +232,31 @@ Tick when done; add 3-5 lines of what shipped and what was left open.
   - Proven by `tests/ui/stage1-play.test.ts`: from an empty run, using only the panel's rows and
     cards, Stage 1 reaches its gate (~day 1,070) and opens Stage 2. Open: 43-46 (campaigns stand-in
     until E1, prose node effects not applied, trade names); stages 2+ have no job rates yet.
-- [ ] E1 furnace · [ ] E2 engine · [ ] E3 machine shop · [ ] E4 liquefier · [ ] E5 rocket engine · [ ] E6 rocket
+- [x] E1 furnace · [x] E2 engine · [x] E3 machine shop · [x] E4 liquefier · [x] E5 rocket engine · [x] E6 rocket
+  - One file per workshop in `src/ui/workshops/` on D's kit plus a shared frame (`common.ts`: dials left;
+    live outputs, actions, the running loop and history right; redrawn on every change and day) and
+    `strings.ts`. Each registers its screen and a saved game system, shows only earned dials in stage
+    order (options the colony can't use yet are locked with the node that opens them), and runs C's
+    model live. Loop numbers (campaign days, charges, build time, parts list...) live in a new
+    workshop `play:` block in the stage YAML (tech-tree/README.md).
+  - E1 campaigns take their charge from the stores and deliver metal ~30 days later (or say why not),
+    count toward `campaigns_run`, set coke_rate/iron_quality/steel_quality (converter heats). E2 builds
+    cost iron and months; the running engine sets engine_type, coal_per_engine_kw, dynamo_output_kw,
+    grid and power figures and the tenders' coal-to-work; thin boilers burst on the shown date. E3's
+    retool sets tolerance_mm/bearing_quality; the ordered parts queue drives shop_hours_balance. E4 runs
+    cool to the first drop, then make LOX daily (`lox_kg_per_day`). E5 firings queue for the stand, burn
+    LOX, draw a pressure trace; the best sets the Stage 5 gate metrics. E6 is the mockup's screen 5 and
+    sets vehicle_design/dv_margin_km_s.
+  - 42 tests in `tests/ui/workshops/` pin the worked examples on screen: 0.5 m Newcomen 3.93 kW / ~2.5 t
+    coal, the 1.2 m rotative engine's 50 kW dynamo, Neilson's hot blast, 30 trays -> 99% O2, V-2 settings
+    (~200/239 s, ~250 kN for 60 s), the mockup rocket 3.50/3.70/3.66/2.78 = 13.64 km/s at ~614 t; each
+    workshop's dials against the YAML order; a loop through the engine, save/load, and the DOM screen.
+    Light, dark and 390 px checked in Chromium.
+  - Open: questions 53-58 (smelting jobs and campaigns side by side; one running engine; the parts queue
+    is standing demand and nothing stalls on a late part yet (G3); plant size and firing LOX are play
+    values; flaws are H's, the screens say so). Touched other packages' files additively: B's compile
+    (`play`), D's kit (locked options, step), shellSystems (supplied metrics, workshop campaigns),
+    a `workshop_done` pause/log line, shell.css.
 - [x] F pressures and beats
   - `src/ui/pressures/`: `PressureSystem` moves each bar's `drives` per tick from the day's
     production (new optional pressure `model:`), goes red from `red_when`, applies `red_modifiers`

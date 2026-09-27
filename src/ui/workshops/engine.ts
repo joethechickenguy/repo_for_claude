@@ -196,6 +196,7 @@ export function engineDesign(game: Game, values: Record<string, JsonValue>): Eng
 
 function burstText(game: Game, e: EngineDesign, doneDay: number | null): { text: string; bad: boolean } {
   if (e.years_to_failure === null) return { text: S.safe, bad: false };
+  if (e.years_to_failure === 0 && doneDay === null) return { text: S.burstsAtOnce, bad: true };
   if (doneDay === null) return { text: fill(S.bursts, { years: n(e.years_to_failure) }), bad: true };
   const { year, day } = yearDay(doneDay + Math.round(e.years_to_failure * DAYS_PER_YEAR));
   return { text: fill(S.burstsOn, { year, day }), bad: true };
@@ -214,7 +215,7 @@ export function engineRows(game: Game, e: EngineDesign, doneDay: number | null =
   rows.push({ label: S.margin, value: Number.isFinite(margin) ? n(margin) : "∞", tone: margin < SAFE_MARGIN ? "bad" : "good" });
   const b = burstText(game, e, doneDay);
   rows.push({ label: "", value: b.text, tone: b.bad ? "bad" : "good" });
-  if (e.dynamo) {
+  if (e.dynamo && e.generator !== "none") {
     const lim = S.limited[e.dynamo.limited_by] ?? "";
     rows.push({ label: S.dynamo, value: n(e.dynamo.dynamo_output_kw, "kW") + (lim ? ` (${lim})` : "") });
   }
@@ -330,8 +331,8 @@ registerWorkshop(ENGINE_WS, (el, game) => {
           : null;
       h += actionHTML("build", fill(S.build, { days }), blocked);
       if (d.running && !d.building) h += noteHTML(S.replaced);
-      h += outputsBlock(d.running ? engineRows(game, d.running.design, d.running.done) : [], `${S.running}${d.running ? `: ${d.running.design.title}` : ""}`);
-      if (!d.running) h += noteHTML(S.none);
+      if (d.running) h += outputsBlock(engineRows(game, d.running.design, d.running.done), `${S.running}: ${d.running.design.title}`);
+      else h += `<h3>${esc(S.running)}</h3>` + noteHTML(S.none);
       return h;
     },
     act: () => void buildEngine(game),

@@ -50,7 +50,16 @@ describe("E6 rocket workshop", () => {
     expect(text).toContain(WS.rocket.reach.toward_moon);
   });
 
-  it("the screen's first design is the mockup's (defaults), with only the chemistry the colony has", () => {
+  it("with the chemistry in hand, the screen's first design is the mockup's vehicle", () => {
+    const g = new Game(tree);
+    setBook(g, ["rocket_workshop"]);
+    chemistry(g);
+    const { stages, design } = currentRocket(g, { dials: {}, stages: [], adopted: null, history: [] });
+    expect(stages).toEqual(MOCKUP);
+    expect(design.dv_total_km_s).toBeCloseTo(13.64, 2);
+  });
+
+  it("the first design uses only the chemistry the colony has", () => {
     const g = new Game(tree);
     setBook(g, ["rocket_workshop"]);
     g.engine.state.set("has_ethanol", true);

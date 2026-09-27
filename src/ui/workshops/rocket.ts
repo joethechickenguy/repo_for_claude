@@ -85,21 +85,25 @@ export function stageCount(game: Game, values: Record<string, JsonValue>): numbe
 }
 
 function defaultStageCount(game: Game): number {
-  return playList(game, ROCKET, "default_propellant_t").length || 1;
+  return playList(game, ROCKET, "default_stages").length || 1;
 }
 
-/** One stage's dials from its saved values (defaults: the mockup's propellant masses). */
+/** The first design's stages (the mockup's vehicle), from `play.default_stages`. */
+function defaultStages(game: Game): Record<string, JsonValue>[] {
+  return playList(game, ROCKET, "default_stages").filter((x) => x && typeof x === "object" && !Array.isArray(x)) as Record<string, JsonValue>[];
+}
+
+/** One stage's dials: its saved values over the first design's; locked options fall back to open ones. */
 export function stageDials(game: Game, values: Record<string, JsonValue>, index: number): RocketStageDials {
   const all = rocketAllDials(game);
   const d = (id: string) => all.find((x) => x.id === id);
-  const defaults = playList(game, ROCKET, "default_propellant_t") as number[];
-  const mass = typeof values.propellant_mass === "number" ? values.propellant_mass : (defaults[index] ?? dialNumber({}, d("propellant_mass"), 100));
+  const v = { ...(defaultStages(game)[index] ?? {}), ...values };
   const [lo, hi] = d("propellant_mass")?.range ?? [0, Infinity];
   return {
-    propellant_mass: Math.max(lo, Math.min(hi, mass)),
-    propellants: dialOption<Propellants>(values, d("propellants"), "ethanol_lox"),
-    tank_material: dialOption<TankMaterial>(values, d("tank_material"), "steel"),
-    feed: dialOption<StageFeed>(values, d("feed"), "turbopump"),
+    propellant_mass: Math.max(lo, Math.min(hi, dialNumber(v, d("propellant_mass"), lo))),
+    propellants: dialOption<Propellants>(v, d("propellants"), "ethanol_lox"),
+    tank_material: dialOption<TankMaterial>(v, d("tank_material"), "steel"),
+    feed: dialOption<StageFeed>(v, d("feed"), "turbopump"),
   };
 }
 
@@ -212,7 +216,8 @@ export function dvBarHTML(game: Game, design: RocketDesign, route: Route | null)
     [moon, S.marks.moon],
     [design.budget_km_s, S.marks.landed],
   ];
-  for (const [v, l] of marks) h += `<b style="left:${pct(v)}%"><span>${esc(l)}</span></b>`;
+  // Labels alternate above and below the bar so neighbours don't collide at phone width.
+  marks.forEach(([v, l], i) => (h += `<b class="${i % 2 ? "low" : ""}" style="left:${pct(v)}%"><span>${esc(l)}</span></b>`));
   return h + `</div>`;
 }
 
@@ -232,9 +237,8 @@ registerWorkshop(ROCKET, (el, game) => {
     dials: () => rocketDials(game),
     values: () => ({ stage_count: defaultStageCount(game), ...sys.data.dials }) as Record<string, DialValue>,
     setValue: (id, v) => void (sys.data.dials = { ...sys.data.dials, [id]: v as JsonValue }),
-    body: () => {
-      const d = sys.data;
-      const { stages, route, design } = currentRocket(game, d);
+    top: () => {
+      const { stages, route, design } = currentRocket(game, sys.data);
       let h = `<h3>${esc(S.vehicle)}</h3>` + noteHTML(fill(S.payload, { t: n(payloadT(game)) }));
       h += stageTableHTML(game, stages, design);
       h += outputsBlock(
@@ -250,7 +254,11 @@ registerWorkshop(ROCKET, (el, game) => {
       h += noteHTML(S.budgetNote);
       if (stages.length === 1)
         h += noteHTML(fill(S.single, { dv: singleStageMaxDvKmS(stages[0]!).toFixed(2), orbit: `${MISSION_BUDGET_KM_S.to_orbit_km_s} km/s` }), true);
-      h += actionHTML("adopt", S.adopt, null);
+      return h;
+    },
+    body: () => {
+      const d = sys.data;
+      let h = actionHTML("adopt", S.adopt, null);
       if (d.adopted) {
         const a = designRocket(rocketInputs(game, d.adopted.stages, d.adopted.route));
         h += outputsBlock(

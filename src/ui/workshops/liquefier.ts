@@ -85,7 +85,7 @@ export function liquefierRows(game: Game, r: LiquefierResult): OutputRow[] {
     { label: S.oxygen, value: n(r.oxygen_kg_per_day, "kg") },
     { label: S.kwh, value: r.kwh_per_kg === null ? "—" : n(r.kwh_per_kg, "kWh"), tone: r.kwh_per_kg === null ? "bad" : "normal" },
     { label: S.purity, value: n(r.purity_pct, "%") },
-    { label: S.firstDrop, value: r.days_to_first_drop === null ? S.never : fill(S.days, { n: n(r.days_to_first_drop) }), tone: r.days_to_first_drop === null ? "bad" : "good" },
+    { label: S.firstDrop, value: r.days_to_first_drop === null ? S.never : fill(r.days_to_first_drop === 1 ? S.day : S.days, { n: n(r.days_to_first_drop) }), tone: r.days_to_first_drop === null ? "bad" : "good" },
     { label: S.asymptote, value: n(r.asymptote_c, "°C"), tone: r.asymptote_c > LIQUID_AIR_C ? "bad" : "good" },
   ];
 }

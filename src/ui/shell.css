@@ -245,3 +245,10 @@ details p{margin:4px 0 0}
 .wk-table .r{text-align:right}
 .wk-table .wk-num{width:5em}
 .wk-dv{margin-top:26px}
+.wk-table td:first-child{white-space:nowrap}
+.wk-top h3{margin:0 0 4px}
+.wk-dv b span{top:-18px; left:4px}
+.wk-top .wk-outputs{grid-template-columns:minmax(0,1fr); max-width:460px}
+.wk-table select{max-width:12em}
+.wk-dv{margin-bottom:24px}
+.wk-dv b.low span{top:28px}

@@ -117,9 +117,9 @@ export interface ScreenSpec {
   /** A click on a `[data-act]` button inside the body. */
   act(action: string, button: HTMLElement): void;
   history(): readonly HistoryEntry[];
-  /** Optional widget above the dials; redraws with the body. */
+  /** Optional full-width block above the dials (the rocket's stage table); redraws with the body. */
   top?(): string;
-  /** A `change` on an input or select inside the body carrying `data-field` (e.g. the rocket's stage table). */
+  /** A `change` on an input or select in the body or top carrying `data-field` (e.g. the rocket's stage table). */
   field?(field: string, value: string): void;
 }
 
@@ -179,13 +179,14 @@ export function mountScreen(el: HTMLElement, game: Game, spec: ScreenSpec): () =
   const onChange = (ev: Event): void => {
     const t = ev.target as HTMLInputElement | HTMLSelectElement;
     const f = t.dataset?.field;
-    if (!f || !spec.field || !body.contains(t)) return;
+    if (!f || !spec.field || !(body.contains(t) || top.contains(t))) return;
     spec.field(f, t.value);
     drawBody();
   };
   wrap.addEventListener("click", onClick);
   top.addEventListener("click", onClick);
   body.addEventListener("change", onChange);
+  top.addEventListener("change", onChange);
   drawDials();
   drawBody();
   const off = game.engine.onTick(() => {
@@ -195,6 +196,7 @@ export function mountScreen(el: HTMLElement, game: Game, spec: ScreenSpec): () =
   return () => {
     off();
     body.removeEventListener("change", onChange);
+    top.removeEventListener("change", onChange);
     wrap.removeEventListener("click", onClick);
     top.removeEventListener("click", onClick);
     el.replaceChildren();
