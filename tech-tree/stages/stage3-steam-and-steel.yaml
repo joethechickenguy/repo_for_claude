@@ -102,6 +102,24 @@ workshops:
          effect: "Individual motors (Stage 4) remove belt losses and let the shop grow: shop hours +50%",
          basis: "Historic; see Stage 4"}
     outputs: [tolerance_mm, shop_hours_per_day, queue_days]
+    play:
+      retool_days: 30                # re-setting the shop to new dials: scraping plates, cutting screws, making gauges (estimate)
+      queue_year_days: 365           # shop_hours red_when: "queue exceeds a year of shop time"
+      # The parts queue: a year's standing demand per kind of part, joining the queue when `after` is
+      # built. Hours are for a year's batch at a fit the shop can hold; all estimates (play values).
+      parts:
+        - {id: engine_parts, name: "Engine cylinders, pistons and valves", hours: 20000, tolerance_mm: 0.5, after: rotative_engine_shafting}
+        - {id: lathe_screws, name: "Lead screws and slides for new lathes", hours: 5000, tolerance_mm: 0.25, after: screw_cutting_lathe}
+        - {id: gauges, name: "Gauges and instruments", hours: 4000, tolerance_mm: 0.1, after: measurement}
+        - {id: rails, name: "Rail chairs, wheels and axles", hours: 30000, tolerance_mm: 1.0, after: rails_wagonways}
+        - {id: wire_dies, name: "Wire-drawing dies", hours: 3000, tolerance_mm: 0.25, after: wire_drawing}
+        - {id: dynamo_parts, name: "Dynamo armatures and shafts", hours: 15000, tolerance_mm: 0.25, after: dynamo}
+        - {id: turbine_blades, name: "Turbine blades and rotors", hours: 12000, tolerance_mm: 0.1, after: steam_turbine}
+        - {id: compressor_parts, name: "Compressor pistons and valves", hours: 10000, tolerance_mm: 0.1, after: compressors}
+        - {id: expander_pistons, name: "Cold expansion-engine pistons", hours: 6000, tolerance_mm: 0.05, after: claude_expander}
+        - {id: injectors, name: "Rocket injectors", hours: 5000, tolerance_mm: 0.05, after: injector_design}
+        - {id: gyro_parts, name: "Gyroscope rotors and gimbals", hours: 4000, tolerance_mm: 0.01, after: gyroscopes}
+        - {id: turbopump_parts, name: "Turbopump impellers and bearings", hours: 8000, tolerance_mm: 0.01, after: gas_generator_turbopump}
 
 nodes:
 

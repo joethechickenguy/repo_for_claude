@@ -271,3 +271,14 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     A burst adds 1 to `boiler_explosions` and loses the engine; "kills the crew" isn't modelled
     (people are immortal and nothing removes them yet). Boiler pressure stays at or below 2 atm until
     the high-pressure engine; the turbine needs steel_quality 2 (the dial's own text).
+55. **The parts queue.** The stage files named the queue's contents only in prose ("engines, rails,
+    dies, instruments, wire"), so `machine_shop.play.parts` lists a year's standing demand per kind
+    of part (hours, tolerance, and the node that creates the need; all estimates). The queue is
+    that standing demand in the player's order: `shop_hours_balance` = shop hours a day minus its
+    hours (rejects included) over `queue_year_days`, so the bar goes negative exactly when "the queue
+    exceeds a year of shop time". Order decides which parts are late; nothing yet stalls a project
+    for a late part (G3: make ordering bite, e.g. node labor waiting on its part). Reordering is ↑/↓
+    buttons rather than drag (works at phone width and from the keyboard). Retooling (30 days) commits
+    `tolerance_mm` and `bearing_quality`; until the player retools, the shop holds hand tolerance.
+    Hardened-steel bearings wait for precision_grinding; the without-pages "two plates first" route
+    isn't modelled.
