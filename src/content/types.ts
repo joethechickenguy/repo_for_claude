@@ -58,6 +58,8 @@ export interface Resource {
   name?: string;
   /** Fuel kind when burned for work (`wood`, `charcoal`, ...; energy.md), read by the energy system. */
   fuel?: string;
+  /** Each unit produced is 1 kWh of delivered shaft work (engines), counted x2.5 (energy.md rule 5). */
+  work?: boolean;
 }
 
 /**
@@ -181,8 +183,10 @@ export interface TreeNode {
   tradeoff?: string;
   /** Engine modifiers applied for good when the node completes (node `modifiers:`, same shape as `red_modifiers`). */
   modifiers?: PressureModifier[];
-  /** Pressures whose per-day drift this node replaces once complete (node `pressure_per_day:`). */
+  /** Added to a pressure's per-day drift once the node is complete (node `pressure_per_day:`). */
   pressurePerDay?: Record<string, number>;
+  /** Numeric state shifted once on completion (node `adjusts_state:`, e.g. `{iron_quality: -1}`). */
+  adjustsState?: Record<string, number>;
 }
 
 /**
@@ -226,9 +230,13 @@ export interface Pressure {
 export interface PressureModel {
   perUnitProduced: Record<string, number>;
   perUnitConsumed: Record<string, number>;
+  /** + this per effective worker-day of a job (people x efficiency x modifiers x the fraction that ran). */
+  perWorker?: Record<string, number>;
   perDay: number;
   min?: number;
   max?: number;
+  /** A flow bar: the variable restarts at 0 each day, so it shows today's net (e.g. fuel made minus used). */
+  flow?: boolean;
 }
 
 /** One engine modifier a red bar applies: kind `rate` | `yield` | `toolLife` | `training`. */

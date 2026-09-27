@@ -15,10 +15,12 @@ Budget 10000 pages; full coverage of everything would take 22800.
 
 **Iron ore and coal seams, with sulfur and phosphorus** (full 1200): Stage 2 prospecting; both deposits and both seams known at once
 
+- S2 `bog_iron`: without pages, See iron_prospecting
 - S2 `coal_mining`: without pages, Different route: only the near seam is found at first; its sulfur is discovered by using it. The far seam turns up after 3 more years of prospecting
-- S2 `coal_seam_choice`: without pages, See coal_mining
-- S2 `deposit_choice`: without pages, See iron_prospecting
+- S2 `far_seam`: without pages, See coal_mining
+- S2 `hillside_ore`: without pages, See iron_prospecting
 - S2 `iron_prospecting`: without pages, Different route: the deposits are found in the order prospecting parties stumble on them (bog iron first, hillside after ~3 more years of searching), so the phosphorus problem is met before the choice exists
+- S2 `near_seam`: without pages, See coal_mining
 
 **Minor minerals: lead, zinc, sulfur, manganese, dolomite, chromite, bauxite** (full 1200): Stage 3 mineral prospecting reveals sites at once instead of over years
 
@@ -64,6 +66,7 @@ Budget 10000 pages; full coverage of everything would take 22800.
 **Blast furnace, hot blast, Bessemer, basic lining, manganese, alloys, aluminum** (full 2000): The converter's lining and manganese dials appear at once (historically 22 years)
 
 - S2 `blast_furnace`: without pages, Different route: the first two campaigns freeze (too short a stack, too weak a blast) and the notebook fills in only after; ~3 more campaigns
+- S2 `coke_blast`: without pages, 1.5x labor
 - S2 `finery_forge`: without pages, 1.5x labor
 - S2 `plate_rolling`: without pages, 2x labor
 - S2 `sand_casting`: without pages, 1.5x labor; many castings full of holes

@@ -37,6 +37,13 @@ export function fuelsFromTree(tree: Tree): Record<string, FuelKind> {
   return out;
 }
 
+/** Resources that are delivered shaft work, 1 kWh per unit (resources.yaml `work: true`). */
+export function workFromTree(tree: Tree): string[] {
+  return Object.values(tree.resources)
+    .filter((r) => r.work)
+    .map((r) => r.id);
+}
+
 export function extrasFromTree(tree: Tree): EngineExtras {
   return { jobs: jobDefsFromTree(tree), tools: toolDefsFromTree(tree) };
 }

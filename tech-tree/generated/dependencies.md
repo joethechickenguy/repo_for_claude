@@ -84,28 +84,31 @@ Heartbeat: `fuel_balance`. Gate: A working steam engine.
 
 | Pressure | Red when | Answers |
 | --- | --- | --- |
-| Fuel | daily fuel use exceeds daily fuel production for more than 10 days | charcoal_clamps, coppicing, coal_mining, watt_engine |
+| Fuel | fuel_balance < 0 | coppicing, coal_mining, watt_engine |
 | Forest within two days' walk | forest_cover < 30 | coppicing, coal_mining |
 | Water in the mine | mine_water_m > 0 (workings below the water table) | mine_drainage_manual, drainage_adit, shallow_pits, savery_pump, newcomen_engine, watt_engine, high_pressure_engine |
-| Tools | tools < tool users | bloom_smithing, quench_temper |
-| Iron quality | iron_quality < 2 (of 3) | deposit_choice, coal_seam_choice, furnace_workshop |
+| Tools | tool_wear < 1 | bloom_smithing, quench_temper |
+| Iron quality | iron_quality < 2 (of 3) | hillside_ore, far_seam, furnace_workshop |
 
-**furnace_workshop** (extends): Ore (from `deposit_choice`); Charge (from `bloomery`); Stack height (m) (from `blast_furnace`); Blast (from `blast_furnace`); Fuel (from `coal_seam_choice`); Lime per ton of ore (from `lime_burning`)
+**furnace_workshop** (extends): Ore (from `iron_prospecting`); Charge (from `bloomery`); Stack height (m) (from `blast_furnace`); Blast (from `blast_furnace`); Fuel (from `coal_mining`); Lime per ton of ore (from `lime_burning`)
 
 **Engine workshop** (opens with `savery_pump`): Lift height (m) (from `savery_pump`); Cylinder diameter (m) (from `newcomen_engine`); Boiler pressure (atm) (from `newcomen_engine`); Plate thickness (mm) and type (from `newcomen_engine`); Separate condenser (from `watt_engine`)
 
 | Beat | Node | Kind | Substantive | Problem |
 | --- | --- | --- | --- | --- |
-| 1 | `deposit_choice` | decision_option | yes | Two deposits: bog iron a day's walk away, lean and phosphorus-rich, or hillside ore three days away, rich and clean, that needs a road. |
+| 1 | `bog_iron` | decision_option | yes | Two deposits: bog iron a day's walk away, lean and phosphorus-rich, or hillside ore three days away, rich and clean, that needs a road. |
+| 1 | `hillside_ore` | decision_option | yes | Two deposits: bog iron a day's walk away, lean and phosphorus-rich, or hillside ore three days away, rich and clean, that needs a road. |
 | 1 | `iron_prospecting` | project |  | Iron ore is everywhere, but your crews can't tell rich ore from red rock. |
 | 2 | `bloomery` | workshop | yes | Iron doesn't melt until 1,538 C, far beyond what your copper furnaces reach. |
-| 2 | `forced_draft_for_iron` | decision_option | yes | Your Stage 1 blast works only where it was built. The iron ore is somewhere else. |
+| 2 | `forced_draft_for_iron` | project | yes | Your Stage 1 blast works only where it was built. The iron ore is somewhere else. |
 | 3 | `bloom_smithing` | project | yes | The bloom is a spongy lump full of slag that crumbles if you try to use it. |
 | 3 | `quench_temper` | project | yes | Wrought-iron edges are soft; iron tools bend and need constant resharpening. |
 | 4 | `coal_mining` | project |  | The forest can't feed both the charcoal kilns and the furnaces. |
-| 4 | `coal_seam_choice` | decision_option | yes | A seam at the surface a day away, sulfurous, or a deeper, cleaner seam three days off. |
 | 4 | `coppicing` | project | yes | Charcoal crews walk a day or more to standing forest, and the woods are retreating. |
+| 4 | `far_seam` | decision_option | yes | A seam at the surface a day away, sulfurous, or a deeper, cleaner seam three days off. |
+| 4 | `near_seam` | decision_option | yes | A seam at the surface a day away, sulfurous, or a deeper, cleaner seam three days off. |
 | 5 | `blast_furnace` | workshop | yes | A bloomery makes 30 kg a day and wastes most of the iron in slag. You need tons. |
+| 5 | `coke_blast` | upgrade | yes | The blast furnace eats a forest a year in charcoal, and the woods can't keep up. |
 | 5 | `finery_forge` | project | yes | Cast iron shatters under a hammer; you need tough wrought iron for tools, chains and plate. |
 | 5 | `lime_burning` | project |  | Slag carries away too much iron, and furnace walls crumble after a few campaigns. |
 | 5 | `sand_casting` | project |  | Stone and clay molds are too small and slow for pipes, cylinders and gears. |
@@ -126,11 +129,18 @@ Heartbeat: `fuel_balance`. Gate: A working steam engine.
 flowchart TD
   iron_prospecting["Iron prospecting"]
   gate_reliable_smelting --> iron_prospecting
-  deposit_choice["Which deposit to open"]
-  iron_prospecting --> deposit_choice
+  bog_iron["Open the bog iron"]
+  iron_prospecting --> bog_iron
+  hillside_ore["Road to the hillside ore"]
+  iron_prospecting --> hillside_ore
   bloomery["Bloomery furnace"]
-  deposit_choice --> bloomery
+  bog_iron -.-> bloomery
   pot_bellows -.-> bloomery
+  bog_iron -.-> bloomery
+  wind_furnaces -.-> bloomery
+  hillside_ore -.-> bloomery
+  pot_bellows -.-> bloomery
+  hillside_ore -.-> bloomery
   wind_furnaces -.-> bloomery
   forced_draft_for_iron["Forced draft at the iron site"]
   bloomery --> forced_draft_for_iron
@@ -141,9 +151,11 @@ flowchart TD
   coppicing["Coppiced woodland"]
   bloomery --> coppicing
   coal_mining["Coal"]
-  iron_prospecting --> coal_mining
-  coal_seam_choice["Which seam to work"]
-  coal_mining --> coal_seam_choice
+  bloom_smithing --> coal_mining
+  near_seam["Work the near seam"]
+  coal_mining --> near_seam
+  far_seam["Sink the far seam"]
+  coal_mining --> far_seam
   lime_burning["Lime burning"]
   bloomery --> lime_burning
   water_wheels["Water wheels"]
@@ -151,13 +163,17 @@ flowchart TD
   blast_furnace["Blast furnace"]
   bloom_smithing --> blast_furnace
   lime_burning --> blast_furnace
+  coke_blast["Coke in the blast furnace"]
+  blast_furnace --> coke_blast
+  near_seam -.-> coke_blast
+  far_seam -.-> coke_blast
   finery_forge["Finery forge"]
   blast_furnace --> finery_forge
   sand_casting["Sand-mold founding"]
   blast_furnace --> sand_casting
   trip_hammer["Trip hammers"]
   water_wheels --> trip_hammer
-  finery_forge --> trip_hammer
+  bloom_smithing --> trip_hammer
   mine_drainage_manual["Bucket chains and rag pumps"]
   bloom_smithing --> mine_drainage_manual
   drainage_adit["Drainage adit"]
@@ -166,10 +182,12 @@ flowchart TD
   mine_drainage_manual --> shallow_pits
   savery_pump["Savery fire engine"]
   mine_drainage_manual --> savery_pump
-  sand_casting --> savery_pump
+  bloom_smithing --> savery_pump
   newcomen_engine["Atmospheric engine"]
   sand_casting --> newcomen_engine
   mine_drainage_manual --> newcomen_engine
+  near_seam -.-> newcomen_engine
+  far_seam -.-> newcomen_engine
   boring_mill["Cylinder boring mill"]
   sand_casting --> boring_mill
   water_wheels -.-> boring_mill
@@ -193,7 +211,7 @@ flowchart TD
   pot_bellows("Pot bellows (S1)")
   wind_furnaces("Wind-draft furnaces on the ridge (S1)")
   classDef crit stroke-width:3px
-  class iron_prospecting,deposit_choice,bloomery,bloom_smithing,coal_mining,coal_seam_choice,blast_furnace,sand_casting,newcomen_engine,gate_steam crit
+  class iron_prospecting,bog_iron,hillside_ore,bloomery,bloom_smithing,coal_mining,near_seam,far_seam,blast_furnace,sand_casting,newcomen_engine,gate_steam crit
 ```
 
 ## Stage 3: Steam and steel
@@ -474,7 +492,7 @@ flowchart TD
   steam_turbine --> gas_generator_turbopump
   hypergolic_propellants["Storable propellants"]
   sulfuric_acid --> hypergolic_propellants
-  coal_seam_choice --> hypergolic_propellants
+  coal_mining --> hypergolic_propellants
   niter_beds -.-> hypergolic_propellants
   nitrogen_fixation -.-> hypergolic_propellants
   nitrogen_fixation["Fixed nitrogen at scale"]
@@ -506,7 +524,7 @@ flowchart TD
   alloy_steels("Alloy and tool steels (S4)")
   aluminum("Aluminum (S4)")
   chlor_alkali("Brine electrolysis (S4)")
-  coal_seam_choice("Which seam to work (S2)")
+  coal_mining("Coal (S2)")
   compressors("Multistage compressors (S4)")
   gate_liquid_oxygen("Gate: liquid oxygen on tap (S4)")
   glassworks("Glassworks (S3)")

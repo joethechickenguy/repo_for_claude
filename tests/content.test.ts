@@ -59,7 +59,8 @@ describe("compiled tree", () => {
     const w = (id: string) => tree.nodes[id]!.writesState;
     expect(w("watt_engine").find((x) => x.variable === "engine_type")?.value).toBe("watt");
     expect(w("high_pressure_engine").find((x) => x.variable === "engine_type")?.value).toBe("high_pressure");
-    expect(w("deposit_choice").find((x) => x.variable === "iron_ore_phosphorus")?.value).toBeNull();
+    expect(w("bog_iron").find((x) => x.variable === "iron_ore_phosphorus")?.value).toBe("high"); // writes_values
+    expect(w("hillside_ore").find((x) => x.variable === "iron_ore_phosphorus")?.value).toBe("low");
     expect(w("crucibles_blowpipes").find((x) => x.variable === "has_copper")?.value).toBe(true);
     expect(w("stone_molds").find((x) => x.variable === "metal_tools")?.value).toBeNull();
   });
@@ -69,9 +70,12 @@ describe("compiled tree", () => {
     expect(p(1, "ore_outcrop").redWhen.expr).toEqual({ kind: "cmp", ref: "malachite_left_kg", op: "<", value: 20000 });
     expect(p(1, "wood_distance").redWhen.expr).toEqual({ kind: "cmp", ref: "forest_cover", op: "<", value: 70 });
     expect(p(1, "tool_wear").redWhen.expr).toEqual({ kind: "cmp", ref: "tool_wear", op: "<", value: 1 });
-    expect(p(2, "fuel_balance").redWhen.expr).toBeNull();
+    // Stage 2's fuel bar became an expression when Stage 2 was made playable (2026-09-27); Stage 3's
+    // shop-hours bar is still prose.
+    expect(p(2, "fuel_balance").redWhen.expr).toEqual({ kind: "cmp", ref: "fuel_balance", op: "<", value: 0 });
     expect(p(2, "fuel_balance").heartbeat).toBe(true);
-    expect(p(2, "tool_wear").heartbeat).toBe(false);
+    expect(p(2, "tools_iron").heartbeat).toBe(false);
+    expect(p(3, "shop_hours").redWhen.expr).toBeNull();
   });
 
   it("reads the optional default, writes_values and without_pages_labor fields", () => {

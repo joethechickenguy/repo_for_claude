@@ -14,7 +14,7 @@ describe("engine content from the tree", () => {
   it("tools and fuels come from the YAML", () => {
     const tools = new Map(toolDefsFromTree(tree).map((t) => [t.resource, t]));
     for (const t of STAGE1_TOOLS) expect(tools.get(t.resource)).toEqual(t);
-    expect(fuelsFromTree(tree)).toEqual({ wood_kg: "wood", charcoal_kg: "charcoal" });
+    expect(fuelsFromTree(tree)).toEqual({ wood_kg: "wood", charcoal_kg: "charcoal", coal_kg: "coal", coke_kg: "coal" });
   });
 
   it("builds engine content an Engine accepts", () => {

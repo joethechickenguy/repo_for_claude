@@ -15,8 +15,109 @@ gate:
   name: A working steam engine
   condition:
     energy_w_per_person: 600
-    state: ["mine_drained_by_engine == true"]
+    state: ["mine_drained_by_engine == true", "mine_water_m < 0"]   # built AND the mine really drained (2026-09-27)
   routes: [A_newcomen, B_watt, C_high_pressure, T_savery]
+
+# Job rates per worker-day (open question 25; owner playtest 2026-09-27: Stage 2 had none, so nothing
+# past the bloomery could ever be made). All estimates unless noted; sources in the node comments.
+jobs:
+  mine_iron_ore:
+    name: Mine iron ore
+    what: "30 kg of ore a day with a tool"                       # deposit_choice comment
+    why: "Every bloom and every ton of cast iron starts as ore someone dug."
+    outputs: {iron_ore_kg: 30}
+    tool: true
+  smelt_iron_bloom:
+    name: Smelt iron (bloomery)
+    what: "Uses 30 kg ore and 30 kg charcoal. Makes 6 kg of bloom"   # charcoal:ore ~1:1, ~17-20% of ore as bloom (bloomery sources)
+    why: "Iron never melts in a bloomery; the ore is reduced to a spongy bloom soaked in slag."
+    inputs: {iron_ore_kg: 30, charcoal_kg: 30}
+    outputs: {bloom_kg: 6}
+    burns: {charcoal_kg: 30}
+  smith_bloom:
+    name: Smith the bloom
+    what: "Uses 15 kg bloom and 6 kg charcoal. Makes 10 kg of bar iron"   # a third lost to scale and slag (bloom_smithing notebook)
+    why: "Hammering squeezes the slag out and welds the iron grains into a bar you can work."
+    inputs: {bloom_kg: 15, charcoal_kg: 6}
+    outputs: {iron_kg: 10}
+    burns: {charcoal_kg: 6}
+  forge_iron_tools:
+    name: Forge iron tools
+    what: "Uses 1.5 kg iron and half a kg of charcoal per tool. Makes 4 tools"   # bloom_smithing comment
+    why: "Iron tools last three times as long as bronze."
+    inputs: {iron_kg: 6, charcoal_kg: 2}
+    outputs: {iron_tools: 4}
+    burns: {charcoal_kg: 2}
+  mine_coal:
+    name: Mine coal
+    what: "400 kg of coal a day with a tool"                      # coal_seam_choice comment says 500 at the outcrop; estimate
+    why: "Coal is fuel nobody had to grow this century."
+    outputs: {coal_kg: 400}
+    tool: true
+  coke_coal:
+    name: Coke coal
+    what: "Uses 160 kg coal. Makes 100 kg coke"                   # coke yield 60-70% (coal_seam_choice)
+    why: "Coke is strong enough to hold up a tall furnace charge; raw coal crumbles and smothers it."
+    inputs: {coal_kg: 160}
+    outputs: {coke_kg: 100}
+  quarry_stone:
+    name: Quarry stone
+    what: "250 kg of limestone a day with a tool"
+    why: "Stone for furnace stacks, and limestone for lime."
+    outputs: {stone_kg: 250}
+    tool: true
+  burn_lime:
+    name: Burn lime
+    what: "Uses 100 kg limestone and 50 kg wood. Makes 56 kg lime"   # lime_burning comment; 56% by mass is exact
+    why: "Lime lets furnace slag flow without taking the iron with it."
+    inputs: {stone_kg: 100, wood_kg: 50}
+    outputs: {lime_kg: 56}
+    burns: {wood_kg: 50}
+  run_blast_furnace:
+    name: Run the blast furnace
+    what: "Uses 60 kg ore, 50 kg charcoal and 4 kg lime. Makes 30 kg iron"   # ~1 t/day from a crew of ~30; ~1.5 t charcoal per t
+    why: "Iron with 4% carbon melts: tons a day instead of kilograms."
+    inputs: {iron_ore_kg: 60, charcoal_kg: 50, lime_kg: 4}
+    outputs: {iron_kg: 30}
+    burns: {charcoal_kg: 50}
+  run_coke_furnace:
+    name: Run the coke furnace
+    what: "Uses 60 kg ore, 80 kg coke and 4 kg lime. Makes 30 kg iron"   # coke burns ~1.6x charcoal by mass here; estimate
+    why: "The same furnace on coke: no trees burned."
+    inputs: {iron_ore_kg: 60, coke_kg: 80, lime_kg: 4}
+    outputs: {iron_kg: 30}
+    burns: {coke_kg: 80}
+  bail_mine:
+    name: Bail the mine
+    what: "Rag-and-chain pumps: each pumper lifts water back out of the workings"   # 100 pumpers hold ~2,000 t of digging a month; estimate
+    why: "Every mine below the water table is a well you're trying to keep empty."
+    tool: true
+  tend_engine:
+    name: Tend the engine
+    what: "Uses 250 kg coal a day. Delivers 10 kWh of pumping work"   # a 4 kW Newcomen on ~2.5 t coal/day with 10 tenders (worked example)
+    why: "An engine, not people, keeps the mine dry, as long as it's fed coal."
+    inputs: {coal_kg: 250}
+    outputs: {engine_work_kwh: 10}
+
+# Iron tools last three times as long as bronze (tool_wear pressure).
+tools:
+  iron_tools: {life_worker_days: 1200, metal: true}
+
+# Either/or decisions, about one a year (owner playtest 2026-09-27). Starting one option closes the
+# other for good.
+choices:
+  - id: iron_deposit
+    prompt: "Two iron deposits. Dig the lean bog iron now, or build a road to the rich hillside ore?"
+    options: [bog_iron, hillside_ore]
+  - id: coal_seam
+    prompt: "Two coal seams. Take the sulfurous one at the surface, or dig the clean one deep and far?"
+    options: [near_seam, far_seam]
+  - id: mine_water_plan
+    prompt: "The workings are flooding. Dig a drainage tunnel to the valley, or keep opening fresh pits?"
+    options: [drainage_adit, shallow_pits]
+  - id: engine_path
+    prompt: "Where do the machinists go: a mill that bores true cylinders, or one that rolls even boiler plate?"
+    options: [boring_mill, plate_rolling]
 
 # ---------------------------------------------------------------------------------------------
 # Pressures: simulated bars. `drives` names the state variable; `red_when` is the failing threshold;
@@ -28,46 +129,57 @@ pressures:
     drives: fuel_balance
     heartbeat: true
     rises_with: ["every furnace, kiln and engine draws charcoal or coal per day"]
-    red_when: "daily fuel use exceeds daily fuel production for more than 10 days"
-    effect_when_red: "Furnaces run short and stop mid-campaign; engines idle; output falls"
-    answers: [charcoal_clamps, coppicing, coal_mining, watt_engine]
+    red_when: "fuel_balance < 0"
+    effect_when_red: "More fuel is burned than made each day: stocks are falling, and furnaces stall when they run out"
+    answers: [coppicing, coal_mining, watt_engine]
     introduced_in_beat: 4
+    # A flow bar: today's charcoal, coal and coke made minus used, in kg (estimates, package F shape).
+    model: {per_unit_produced: {charcoal_kg: 1, coal_kg: 1, coke_kg: 1}, per_unit_consumed: {charcoal_kg: -1, coal_kg: -1, coke_kg: -1}, min: -20000, max: 20000, flow: true}
 
   - id: forest
     name: Forest within two days' walk
     drives: forest_cover
     rises_with: ["charcoal burning (100 kg wood per 20 kg charcoal)", "construction wood"]
     red_when: "forest_cover < 30"
-    effect_when_red: "Wood per burner falls by half; charcoal haul labor triples"
+    effect_when_red: "Wood per gatherer falls by half, and charcoal crews walk a day to the trees"
     answers: [coppicing, coal_mining]
     introduced_in_beat: 4
+    # forest_cover moves with Stage 1's wood_distance model; this bar adds the deeper penalty.
+    red_modifiers: {rate: {gather_wood: 0.5}}
 
   - id: mine_water
     name: Water in the mine
     drives: mine_water_m
     rises_with: ["cumulative ore and coal dug: the workings deepen ~1 m per 2,000 t (estimate)", "seasonal: wet season adds 2 m"]
     red_when: "mine_water_m > 0 (workings below the water table)"
-    effect_when_red: "Ore and coal output from the flooded galleries falls to zero unless pumped; upper galleries keep producing at 40%"
+    effect_when_red: "The deep galleries are under water: ore and coal come only from the upper workings, at 40%"
     answers: [mine_drainage_manual, drainage_adit, shallow_pits, savery_pump, newcomen_engine, watt_engine, high_pressure_engine]
     introduced_in_beat: 6
+    # Estimates: digging deepens the workings ~1 m per 2,000 t; each effective pumper lifts 0.0001 m a
+    # day, so hand pumping slows the water but can't beat a busy mine (200 pumpers: 0.02 m/day against
+    # ~0.04 m/day of digging); each kWh of engine work 0.002 m (a 10-tender Newcomen, ~100 kWh/day,
+    # drains 0.2 m a day).
+    model: {per_unit_produced: {iron_ore_kg: 0.0000005, coal_kg: 0.0000005, engine_work_kwh: -0.002}, per_worker: {bail_mine: -0.0001}, min: -5, max: 30}
+    red_modifiers: {rate: {mine_iron_ore: 0.4, mine_coal: 0.4}}
 
-  - id: tool_wear
+  - id: tools_iron
     name: Tools
-    drives: metal_tools
+    drives: tool_wear
     rises_with: ["every tool user wears a tool; iron lasts 3x bronze, quenched iron 6x"]
-    red_when: "tools < tool users"
+    red_when: "tool_wear < 1"          # tools < tool users; the engine keeps tool_wear = tools / users
     effect_when_red: "Workers without tools drop to quarter speed (as in Stage 1)"
     answers: [bloom_smithing, quench_temper]
-    introduced_in_beat: 1   # carried from Stage 1
+    introduced_in_beat: 1   # carried from Stage 1 (same variable; the shell draws one Tools bar)
 
   - id: iron_quality
     name: Iron quality
     drives: iron_quality
     rises_with: ["sulfur from high-sulfur coke", "phosphorus from bog iron"]
     red_when: "iron_quality < 2 (of 3)"
-    effect_when_red: "Tool life and boiler plate strength fall by a third; the smiths report cracks at the forge"
-    answers: [deposit_choice, coal_seam_choice, furnace_workshop]
+    effect_when_red: "Iron tools wear out a third faster; the smiths report cracks at the forge"
+    answers: [hillside_ore, far_seam, furnace_workshop]
     introduced_in_beat: 3
+    red_modifiers: {toolLife: {iron_tools: 0.67}}
 
 # ---------------------------------------------------------------------------------------------
 # Workshops: design screens. Dials are added in the order listed, each by the node named.
@@ -76,7 +188,7 @@ workshops:
   - id: furnace_workshop
     extends: true
     dials:
-      - {id: ore_choice, name: "Ore", options: [bog_iron, hillside_ore], added_by: deposit_choice,
+      - {id: ore_choice, name: "Ore", options: [bog_iron, hillside_ore], added_by: iron_prospecting,
          effect: "Grade sets yield (bog ~40% Fe, hillside ~60%); bog iron carries phosphorus and lowers iron_quality",
          basis: "Bloomeries want ore above ~50% Fe ([Rom & Bohr](https://donwagner.dk/arch-iron/resources/Rom_Bohr_Bloomery.pdf))"}
       - {id: charge_mode, name: "Charge", options: [copper, iron_bloom, iron_blast], added_by: bloomery,
@@ -88,7 +200,7 @@ workshops:
       - {id: blast_source, name: "Blast", options: [treadwheels, water_wheel], added_by: blast_furnace,
          effect: "A water wheel blows a tall furnace with no walkers; treadwheels need ~60 walkers per furnace (estimate)",
          basis: "Du Shi's water-powered bellows, 31 AD"}
-      - {id: furnace_fuel, name: "Fuel", options: [charcoal, coke], added_by: coal_seam_choice,
+      - {id: furnace_fuel, name: "Fuel", options: [charcoal, coke], added_by: coal_mining,
          effect: "Coke frees the forest. Coke from the high-sulfur seam carries sulfur into the iron: iron_quality -1 (hot shortness)",
          basis: "Darby's 1709 coke smelting relied on unusually low-sulfur coal"}
       - {id: flux, name: "Lime per ton of ore", range: [0, 300], added_by: lime_burning,
@@ -133,10 +245,9 @@ nodes:
     problem: "Iron ore is everywhere, but your crews can't tell rich ore from red rock."
     requires:
       nodes: [gate_reliable_smelting]
-      labor_person_days: 400000
+      labor_person_days: 200000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
-      jobs: [prospect]
-      effects: ["Finds two deposits and presents them as deposit_choice"]
+      effects: ["Finds two deposits: bog iron nearby, hillside ore farther off"]
     reads_state: [bundles_taken]
     writes_state: [deposits_known]
     pages_bundle: survey_iron_coal
@@ -150,23 +261,24 @@ nodes:
       pottery. Bog iron forms where groundwater carries dissolved iron into marshes; it's easy to
       dig and full of phosphorus. Hillside hematite is richer and cleaner and usually farther away.
 
-  - id: deposit_choice
-    name: Which deposit to open
+  - id: bog_iron
+    name: Open the bog iron
     stage: 2
     beat: 1
     kind: decision_option
     critical_path: true
     problem: "Two deposits: bog iron a day's walk away, lean and phosphorus-rich, or hillside ore three days away, rich and clean, that needs a road."
+    tradeoff: "Ore right away, a day's walk off. It's lean and full of phosphorus: everything made from it is a grade worse."
     requires:
       nodes: [iron_prospecting]
+      labor_person_days: 60000
     unlocks:
       jobs: [mine_iron_ore]       # 30 kg/day with a tool (estimate)
-      effects:
-        - "Bog iron: ore now, ~40% Fe, iron_quality -1 (phosphorus) for everything made from it"
-        - "Hillside: a 1.5M person-day road first (with a milestone: wheelbarrows and carts halve haul labor at 50%), then ~60% Fe clean ore"
-        - "Both can be opened; the second later. Adds the ore_choice dial to the furnace workshop"
+      effects: ["Ore now, ~40% Fe; iron quality -1 (phosphorus)"]
+    adjusts_state: {iron_quality: -1}
     reads_state: [deposits_known]
-    writes_state: [iron_ore_grade, iron_ore_phosphorus, iron_quality, haul_distance_days]
+    writes_state: [iron_ore_grade, iron_ore_phosphorus, haul_distance_days]
+    writes_values: {iron_ore_grade: 40, iron_ore_phosphorus: high}
     pages_bundle: survey_iron_coal
     without_pages: "See iron_prospecting"
     numbers_status: "Grades and distances are estimates; phosphorus in bog iron is well attested"
@@ -178,6 +290,36 @@ nodes:
       carries so much that the bars stay cold-short. Ancient smiths worked around it; your Stage 3
       steelmakers will find it's the one thing the Bessemer converter can't remove.
 
+  - id: hillside_ore
+    name: Road to the hillside ore
+    stage: 2
+    beat: 1
+    kind: decision_option
+    critical_path: true
+    problem: "Two deposits: bog iron a day's walk away, lean and phosphorus-rich, or hillside ore three days away, rich and clean, that needs a road."
+    tradeoff: "A three-day road before the first basket of ore. Then rich, clean ore: a third more bloom from every smelt, and nothing lowers iron quality."
+    requires:
+      nodes: [iron_prospecting]
+      resources: {blades: 2000}
+      labor_person_days: 500000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
+    milestones:
+      - {at: 0.5, id: wheelbarrows, effect: "Wheelbarrows and carts: the second half of the road goes faster"}
+    unlocks:
+      jobs: [mine_iron_ore]
+      effects: ["Ore ~60% Fe, low phosphorus: a third more bloom per smelt"]
+    modifiers: {yield: {smelt_iron_bloom: 1.33}}   # 60% vs 40% Fe; estimate
+    reads_state: [deposits_known]
+    writes_state: [iron_ore_grade, iron_ore_phosphorus, haul_distance_days]
+    writes_values: {iron_ore_grade: 60, iron_ore_phosphorus: low}
+    pages_bundle: survey_iron_coal
+    without_pages: "See iron_prospecting"
+    numbers_status: "Grades and distances are estimates"
+    sources: ["https://donwagner.dk/arch-iron/resources/Rom_Bohr_Bloomery.pdf"]
+    tags: [substantive, labor_sink]
+    notebook: >
+      Hematite, the red iron oxide, is the richest common iron ore: up to 70% iron by weight, and
+      clean. Bloomeries want ore above about half iron; below that, so much iron goes into the slag
+      that almost nothing is left to hammer. A long road to good ore is often the cheaper iron.
   # ---- Beat 2: the bloomery -----------------------------------------------------------------
   - id: bloomery
     name: Bloomery furnace
@@ -188,10 +330,9 @@ nodes:
     critical_path: true
     problem: "Iron doesn't melt until 1,538 C, far beyond what your copper furnaces reach."
     requires:
-      nodes: [deposit_choice]
-      any_of: [[pot_bellows], [wind_furnaces]]
+      any_of: [[bog_iron, pot_bellows], [bog_iron, wind_furnaces], [hillside_ore, pot_bellows], [hillside_ore, wind_furnaces]]
       resources: {clay_kg: 40000, charcoal_kg: 10000}
-      labor_person_days: 700000
+      labor_person_days: 500000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
       jobs: [smelt_iron_bloom]    # per campaign: 1 t ore + ratio x 1 t charcoal -> yield% bloom
       effects: ["Furnace workshop gains the iron charge mode: the Stage 1 air and fuel dials now apply to iron, with a narrower window"]
@@ -214,14 +355,18 @@ nodes:
     name: Forced draft at the iron site
     stage: 2
     beat: 2
-    kind: decision_option
+    kind: project
     critical_path: false
     problem: "Your Stage 1 blast works only where it was built. The iron ore is somewhere else."
+    tradeoff: "Bloomeries run half again as fast, for 300,000 person-days of building that the main road can't use."
     requires:
       nodes: [bloomery]
       state: ["NOT has_bellows OR NOT has_wind_furnaces"]
+      resources: {pots: 300, wood_kg: 5000}
+      labor_person_days: 300000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
-      effects: ["Whichever Stage 1 option you skipped (pot_bellows or wind_furnaces) is offered now at the iron site, at its Stage 1 cost"]
+      effects: ["The draft you skipped in Stage 1, built at the iron site: bloomeries run half again as fast"]
+    modifiers: {rate: {smelt_iron_bloom: 1.5}}   # estimate
     reads_state: [has_bellows, has_wind_furnaces]
     writes_state: [has_bellows, has_wind_furnaces]
     pages_bundle: metallurgy_1
@@ -246,12 +391,12 @@ nodes:
       nodes: [bloomery]
       state: ["bloom_kg > 500"]
       resources: {copper_kg: 300, charcoal_kg: 5000}
-      labor_person_days: 500000
+      labor_person_days: 300000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
-      jobs: [forge_iron_tools]    # 1.5 kg bar per tool; lasts 3x bronze
-      effects: ["Iron enters the tool mix. Toolmakers choose bronze or iron per batch; bronze stays better for bearings and bellows fittings"]
+      jobs: [smith_bloom, forge_iron_tools]   # bloom -> bar at two thirds; 1.5 kg bar per tool, lasts 3x bronze
+      effects: ["Iron enters the tool mix: bar iron from the bloom, then iron tools that last three times as long as bronze"]
     reads_state: [trained_smiths, iron_quality]
-    writes_state: [iron_tools]
+    writes_state: []
     pages_bundle: metallurgy_1
     without_pages: "1.5x labor; first bars are slaggy"
     numbers_status: "Estimate"
@@ -270,17 +415,19 @@ nodes:
     kind: project
     critical_path: false
     problem: "Wrought-iron edges are soft; iron tools bend and need constant resharpening."
+    tradeoff: "Iron tools last twice as long. The trials cost months of smiths and iron before the first success."
     requires:
       nodes: [bloom_smithing]
       state: ["iron_tools > 1000"]
       resources: {charcoal_kg: 4000, iron_kg: 500}
-      labor_person_days: 300000
+      labor_person_days: 200000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
       effects:
         - "A research loop: each trial (a month, 20 smiths, 50 kg iron) tests one carburizing time and quench. Deterministic sequence: with Metallurgy I pages, trial 2 succeeds; without, trial 6"
         - "Success: iron tools last 2x longer (6x bronze); has_steel_edges for Stage 3 machining"
     reads_state: [bundles_taken]
     writes_state: [has_steel_edges]
+    modifiers: {toolLife: {iron_tools: 2}}   # the 2x in `effects`
     pages_bundle: metallurgy_1
     without_pages: "Different route: more trials, each shown with its result (too soft, cracked in the quench, right), so the player learns the window by seeing it"
     numbers_status: "Roughly 0.6-1% carbon for hardenable tool steel is standard; trial counts are game values"
@@ -300,10 +447,12 @@ nodes:
     kind: project
     critical_path: false
     problem: "Charcoal crews walk a day or more to standing forest, and the woods are retreating."
+    tradeoff: "The forest regrows fast enough to feed the furnaces for good. A long, labor-hungry project that pays back slowly."
     requires:
       nodes: [bloomery]
-      state: ["forest_cover < 60"]
-      labor_person_days: 1500000
+      state: ["forest_cover < 75"]   # was < 60, which a Stage 1 coppice could make unreachable; estimate
+      labor_person_days: 800000     # was 1,500,000 (owner playtest 2026-09-27); estimate
+    pressure_per_day: {wood_distance: 0.1}   # adds 0.1 cover points of regrowth a day; estimate
     unlocks:
       effects: ["Managed forest regrows on a 15-year cycle; sets a sustainable charcoal ceiling (~1 t charcoal per 4 ha per year, estimate) instead of a cliff. Repeatable: more area, more ceiling"]
     reads_state: [forest_cover]
@@ -327,11 +476,11 @@ nodes:
     critical_path: true
     problem: "The forest can't feed both the charcoal kilns and the furnaces."
     requires:
-      nodes: [iron_prospecting]
-      state: ["forest_cover < 50 OR fuel_balance < 0"]
-      labor_person_days: 600000
+      nodes: [bloom_smithing]   # was iron_prospecting + "forest_cover < 50 OR fuel_balance < 0": a good player
+                                # never met it, and beat gating held beats 5-7 behind it (owner playtest 2026-09-27)
+      labor_person_days: 250000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
-      effects: ["Prospecting finds two seams and presents them as coal_seam_choice"]
+      effects: ["Prospecting finds two seams: a sulfurous one at the surface, a clean one deep and far"]
     reads_state: [bundles_taken]
     writes_state: [has_coal]
     pages_bundle: survey_iron_coal
@@ -344,23 +493,24 @@ nodes:
       kilogram holds about as much energy as a kilogram of charcoal, but nobody had to grow it this
       century. The catch is what was buried with the plants, especially sulfur.
 
-  - id: coal_seam_choice
-    name: Which seam to work
+  - id: near_seam
+    name: Work the near seam
     stage: 2
     beat: 4
     kind: decision_option
     critical_path: true
     problem: "A seam at the surface a day away, sulfurous, or a deeper, cleaner seam three days off."
+    tradeoff: "Coal now, from the surface. It's sulfurous: iron made with its coke cracks at the forge (iron quality falls by one)."
     requires:
       nodes: [coal_mining]
+      labor_person_days: 100000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
-      jobs: [mine_coal, coke_coal]   # 500 kg coal per worker-day at the outcrop; 1.6 kg coal -> 1 kg coke (estimates)
-      effects:
-        - "Near seam: coal now; coke from it carries sulfur (furnace_fuel dial shows sulfur_flag)"
-        - "Far seam: a road and a deeper pit first (~2M person-days, mine_water rises faster), then clean coke"
-        - "Adds the furnace_fuel dial to the furnace workshop; coke ovens are built as part of the choice"
+      jobs: [mine_coal, coke_coal]   # 400 kg coal per worker-day; 1.6 kg coal -> 1 kg coke (estimates)
+      effects: ["Coal now; its coke carries sulfur"]
+    adjusts_state: {iron_quality: -1}
     reads_state: [has_coal]
-    writes_state: [coal_sulfur, has_coke, haul_distance_days, mine_water_m]
+    writes_state: [coal_sulfur, has_coke]
+    writes_values: {coal_sulfur: high}
     pages_bundle: survey_iron_coal
     without_pages: "See coal_mining"
     numbers_status: "Coke yield 60-70% is typical (estimate); seam properties are game values"
@@ -372,6 +522,34 @@ nodes:
       forms a film between the grains that melts at forging heat, so the bar cracks under the
       hammer. Metallurgists call it hot shortness.
 
+  - id: far_seam
+    name: Sink the far seam
+    stage: 2
+    beat: 4
+    kind: decision_option
+    critical_path: true
+    problem: "A seam at the surface a day away, sulfurous, or a deeper, cleaner seam three days off."
+    tradeoff: "A road and a deep pit before any coal. Then clean coke and good iron, but the deep pit floods sooner."
+    requires:
+      nodes: [coal_mining]
+      resources: {blades: 1500}
+      labor_person_days: 600000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
+    unlocks:
+      jobs: [mine_coal, coke_coal]
+      effects: ["Clean coal; the mine water rises faster"]
+    pressure_per_day: {mine_water: 0.004}   # the deep pit lets in water on its own; estimate
+    reads_state: [has_coal]
+    writes_state: [coal_sulfur, has_coke]
+    writes_values: {coal_sulfur: low}
+    pages_bundle: survey_iron_coal
+    without_pages: "See coal_mining"
+    numbers_status: "Seam properties are game values"
+    sources: ["https://en.wikipedia.org/wiki/Coal_mining"]
+    tags: [substantive, labor_sink]
+    notebook: >
+      Coal from deeper, older seams is often lower in sulfur. Abraham Darby's success with coke in
+      1709 owed a lot to the unusually clean coal near Coalbrookdale; ironmasters elsewhere who
+      copied him with sulfurous coal got brittle iron and gave up for decades.
   # ---- Beat 5: the blast furnace --------------------------------------------------------------
   - id: lime_burning
     name: Lime burning
@@ -384,7 +562,7 @@ nodes:
       nodes: [bloomery]
       state: ["campaigns_run > 10"]
       resources: {wood_kg: 30000, clay_kg: 10000}
-      labor_person_days: 400000
+      labor_person_days: 250000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
       jobs: [quarry_stone, burn_lime]   # 100 kg limestone + 50 kg wood -> 56 kg lime
       effects: ["Adds the flux dial; lime mortar makes furnace linings last 3x as many campaigns"]
@@ -408,15 +586,17 @@ nodes:
     kind: project
     critical_path: false
     problem: "Working the bellows is the most exhausting job in the colony, and it caps how big a furnace can be."
+    tradeoff: "Wheels blow the furnaces: every bloomery and blast furnace runs 30% faster. A large build that competes with the road to the blast furnace."
     requires:
       nodes: [bloom_smithing]
       state: ["river_sites > 0"]
       resources: {wood_kg: 40000, iron_kg: 400}
-      labor_person_days: 1000000
+      labor_person_days: 600000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
       effects: ["blast_source: water_wheel becomes available; each site gives ~3 kW (estimate) and can drive bellows, a trip hammer or a boring mill, one at a time until more wheels are built. Assigning the wheel is a recurring small decision"]
     reads_state: [river_sites]
     writes_state: [water_wheels_built]
+    modifiers: {rate: {smelt_iron_bloom: 1.3, run_blast_furnace: 1.3, run_coke_furnace: 1.3}}   # wheel-driven bellows; estimate
     pages_bundle: steam_engines
     without_pages: "Undershot wheels only (half output), 1.5x labor"
     numbers_status: "Du Shi (31 AD) sourced; power per wheel is an estimate"
@@ -437,9 +617,8 @@ nodes:
     problem: "A bloomery makes 30 kg a day and wastes most of the iron in slag. You need tons."
     requires:
       nodes: [bloom_smithing, lime_burning]
-      state: ["iron_kg_total > 20000"]
-      resources: {stone_kg: 400000, clay_kg: 60000, iron_kg: 2000}
-      labor_person_days: 2500000
+      resources: {stone_kg: 100000, clay_kg: 60000, iron_kg: 2000}   # was 400,000 stone and a cumulative-iron condition nothing measured; estimates
+      labor_person_days: 500000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     milestones:
       - {at: 0.5, id: furnace_stack_raised, effect: "The stack is up; the workshop shows the stack_height dial and a preview of tons/day before the first campaign"}
     unlocks:
@@ -458,6 +637,34 @@ nodes:
       1,150 C instead of 1,538 C. Now it comes out as a liquid you can tap and cast. Chinese
       founders poured cast iron by the 5th century BCE, nearly two thousand years before Europe.
 
+  - id: coke_blast
+    name: Coke in the blast furnace
+    stage: 2
+    beat: 5
+    kind: upgrade
+    critical_path: false
+    problem: "The blast furnace eats a forest a year in charcoal, and the woods can't keep up."
+    tradeoff: "Iron from coal instead of trees, so the forest stops shrinking for the furnace. Near-seam coke makes brittle iron."
+    requires:
+      nodes: [blast_furnace]
+      any_of: [[near_seam], [far_seam]]
+      resources: {coke_kg: 5000}
+      labor_person_days: 200000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
+    unlocks:
+      jobs: [run_coke_furnace]    # 60 kg ore + 80 kg coke + 4 kg lime -> 30 kg iron (estimate)
+      effects: ["A second way to run the furnace: coke instead of charcoal, so iron no longer costs trees"]
+    reads_state: [coal_sulfur]
+    writes_state: []
+    pages_bundle: metallurgy_2
+    without_pages: "1.5x labor"
+    numbers_status: "Darby's coke smelting at Coalbrookdale (1709) is sourced; rates are estimates"
+    sources: ["https://en.wikipedia.org/wiki/Abraham_Darby_I"]
+    tags: [substantive, new_energy_source]
+    notebook: >
+      Abraham Darby first smelted iron with coke at Coalbrookdale in 1709. Coke holds up a tall
+      charge without crumbling, and it comes from coal instead of trees, so the size of an ironworks
+      stopped depending on the size of its forest.
+
   - id: finery_forge
     name: Finery forge
     stage: 2
@@ -468,9 +675,10 @@ nodes:
     requires:
       nodes: [blast_furnace]
       resources: {iron_kg: 1000, charcoal_kg: 8000}
-      labor_person_days: 600000
+      labor_person_days: 400000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
+    modifiers: {yield: {forge_iron_tools: 1.25}}   # tougher bar: a quarter more tools per kg; estimate
     unlocks:
-      jobs: [fine_pig_iron]       # 1.3 kg pig + 1 kg charcoal -> 1 kg bar (estimate)
+      jobs: [fine_pig_iron]       # 1.3 kg pig + 1 kg charcoal -> 1 kg bar (estimate); no rates yet, see modifiers
       effects: ["Bar iron by the ton; bloomeries can be retired or kept for their lower fuel use per bar"]
     reads_state: [has_cast_iron]
     writes_state: [wrought_iron_capacity]
@@ -483,7 +691,6 @@ nodes:
       The same carbon that lets cast iron melt makes it brittle. A finery remelts pig iron in a
       blast of air so oxygen burns the carbon out, leaving a pasty lump to hammer into bars. It's
       the bloomery run backwards: add carbon to melt iron, then remove it to make iron useful.
-
   - id: sand_casting
     name: Sand-mold founding
     stage: 2
@@ -494,7 +701,7 @@ nodes:
     requires:
       nodes: [blast_furnace]
       resources: {iron_kg: 3000, wood_kg: 10000}
-      labor_person_days: 700000
+      labor_person_days: 300000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
       jobs: [cast_iron_parts]
     reads_state: [has_cast_iron]
@@ -517,12 +724,14 @@ nodes:
     kind: upgrade
     critical_path: false
     problem: "Hammering bars takes more smiths than you have, and the fined iron piles up unworked."
+    tradeoff: "Smiths and toolmakers work twice as fast. Only worth it once bar iron is the bottleneck."
     requires:
-      nodes: [water_wheels, finery_forge]
+      nodes: [water_wheels, bloom_smithing]   # was [water_wheels, finery_forge]: hammers worked blooms before fineries (2026-09-27)
       resources: {iron_kg: 800, wood_kg: 10000}
-      labor_person_days: 400000
+      labor_person_days: 250000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
-      effects: ["Bar and tool output x3 at a wheel site (competes with bellows and the boring mill for the wheel)"]
+      effects: ["Bar and tool output x2 at a wheel site"]
+    modifiers: {rate: {smith_bloom: 2, forge_iron_tools: 2}}   # estimate
     reads_state: [water_wheels_built]
     writes_state: []
     pages_bundle: steam_engines
@@ -547,12 +756,12 @@ nodes:
       nodes: [bloom_smithing]
       state: ["mine_water_m > 0"]
       resources: {iron_kg: 1500, wood_kg: 30000}
-      labor_person_days: 500000
+      labor_person_days: 200000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
-      jobs: [bail_mine]           # 100 pumpers keep ~2 m of water down (estimate); need grows with depth
-      effects: ["Introduces the mine water bar. The pumper count is a standing labor cost the engine will later remove"]
+      jobs: [bail_mine]           # each pumper lifts 0.0003 m a day (mine_water model); need grows with digging
+      effects: ["Pumpers can hold the water back. They are a standing labor cost the engine will later remove"]
     reads_state: [mine_water_m]
-    writes_state: [pump_workers]
+    writes_state: []
     pages_bundle: none
     without_pages: "No penalty"
     numbers_status: "Rag-and-chain pumps are well attested; flow rates are estimates"
@@ -571,11 +780,13 @@ nodes:
     kind: project
     critical_path: false
     problem: "Pumpers are a tenth of the colony and the water still gains in the wet season."
+    tradeoff: "A tunnel to the valley: a huge dig, then the mine drains itself forever with no fuel and no pumpers."
     requires:
       nodes: [mine_drainage_manual]
       state: ["terrain_allows_adit == true"]
-      resources: {iron_kg: 4000, wood_kg: 60000}
-      labor_person_days: 3000000
+      resources: {iron_kg: 2000, wood_kg: 60000}
+      labor_person_days: 700000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
+    pressure_per_day: {mine_water: -0.05}   # drains by gravity, forever; estimate
     milestones:
       - {at: 0.5, id: adit_halfway, effect: "The tunnel breaks into an old gallery: pumpers needed -30%"}
     unlocks:
@@ -600,12 +811,15 @@ nodes:
     kind: decision_option
     critical_path: false
     problem: "Rather than fight the water, you could abandon the deep workings and dig fresh pits."
+    tradeoff: "Cheap and quick: fresh pits put the diggers back above the water for a while. The deep workings stay flooded."
     requires:
       nodes: [mine_drainage_manual]
+      labor_person_days: 100000
+    adjusts_state: {mine_water_m: -5}   # the new workings start 5 m above the water; estimate
     unlocks:
       effects: ["Ore and coal output return to full for ~4 years per pit as the new workings deepen; each pit clears ~50 ha of land (forest_cover -2) and adds haul distance. Repeatable. Postpones the engine, never replaces it"]
     reads_state: [forest_cover]
-    writes_state: [forest_cover, haul_distance_days, mine_water_m]
+    writes_state: [haul_distance_days]
     pages_bundle: none
     without_pages: "Same"
     numbers_status: "Game values"
@@ -627,15 +841,16 @@ nodes:
     route: [T_savery]
     critical_path: false
     problem: "Pumpers can't keep up; steam might do it without pistons at all."
+    tradeoff: "Cheap and quick, but a suction pump can't lift water more than about 10 m: it drains only the top of the mine."
     requires:
-      nodes: [mine_drainage_manual, sand_casting]
-      state: ["pump_workers > 500"]
+      nodes: [mine_drainage_manual, bloom_smithing]   # was [..., sand_casting]: a copper boiler and pipes, no big castings (2026-09-27)
       resources: {copper_kg: 800, iron_kg: 2000}
       labor_person_days: 400000
     unlocks:
       effects:
         - "Opens the engine workshop with one dial: lift height. Set it above ~10 m and the screen explains why the pump stops there and what pushing harder does to the boiler"
         - "Built at 9 m: drains the top of the mine. Pumpers -20%"
+    modifiers: {rate: {bail_mine: 1.25}}   # drains the top 9 m: pumpers lift a quarter more; estimate
     reads_state: [mine_water_m]
     writes_state: [boiler_explosions, engine_type]
     pages_bundle: steam_engines
@@ -663,11 +878,11 @@ nodes:
     problem: "Steam can make a vacuum; a piston in a cylinder can turn that vacuum into a pumping stroke, at any depth."
     requires:
       nodes: [sand_casting, mine_drainage_manual]
-      state: ["pump_workers > 500"]
-      resources: {iron_kg: 20000, copper_kg: 1000, wood_kg: 30000}
-      labor_person_days: 1500000
+      any_of: [[near_seam], [far_seam]]   # an engine eats coal
+      resources: {iron_kg: 12000, copper_kg: 1000, wood_kg: 30000}   # was 20,000 iron; estimate
+      labor_person_days: 400000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
-      jobs: [tend_engine]
+      jobs: [tend_engine]         # 250 kg coal -> 10 kWh of pumping per tender-day (the 4 kW worked example)
       effects:
         - "Adds cylinder_diameter, boiler_pressure and plate dials, one per design session"
         - "At 1-2 atm with a loose cast cylinder: Newcomen. Drains the mine; burns ~4x the coal of a condensing engine"
@@ -695,11 +910,12 @@ nodes:
     critical_path: false
     route: [B_watt]
     problem: "Cast cylinders come out oval and tapered, so a tight piston jams in one place and leaks steam in another."
+    tradeoff: "True cylinders: the path to the condensing engine, four times the work from the same coal."
     requires:
       nodes: [sand_casting]
       any_of: [[water_wheels], [newcomen_engine]]
       resources: {iron_kg: 8000}
-      labor_person_days: 1200000
+      labor_person_days: 700000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
       effects: ["Bored cylinders: the condenser option becomes possible; machinists_trained +60 (estimate)"]
     reads_state: [draft_roster]
@@ -732,6 +948,7 @@ nodes:
       effects: ["Adds the condenser dial. A condensing design drains the same mine on ~1/4 the coal; rotative version powers Stage 3 workshops"]
     reads_state: [has_boring_mill, machinists_trained]
     writes_state: [engine_type, mine_drained_by_engine, coal_per_engine_kw]
+    modifiers: {yield: {tend_engine: 4}}   # ~75% coal saving: four times the work per ton (Watt, sourced)
     pages_bundle: steam_engines
     without_pages: "Different route: the condenser dial appears only after a Newcomen engine has run for 2 years (you must see the waste before the fix is conceivable); with the pages it's available at once"
     numbers_status: "Separate condenser (1765) and ~75% fuel saving are sourced"
@@ -751,10 +968,11 @@ nodes:
     critical_path: false
     route: [C_high_pressure]
     problem: "Hammered plate has thin spots, and the workshop's safety margin says so."
+    tradeoff: "Even plate: the path to the high-pressure engine, twice the work per ton of coal and compact enough to move."
     requires:
       nodes: [finery_forge, water_wheels]
       resources: {iron_kg: 15000}
-      labor_person_days: 1200000
+      labor_person_days: 700000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
     unlocks:
       jobs: [roll_plate]
       effects: ["plate: rolled becomes available; safe stress doubles, so the same margin needs half the thickness or allows twice the pressure"]
@@ -787,6 +1005,7 @@ nodes:
       effects: ["boiler_pressure above 3 atm becomes available. Compact engines; head start on locomotives. The margin bar decides the explosion date; rolled plate makes it safe"]
     reads_state: [plate_quality]
     writes_state: [engine_type, mine_drained_by_engine, boiler_explosions]
+    modifiers: {yield: {tend_engine: 2}}   # estimate
     pages_bundle: steam_engines
     without_pages: "2x labor on the first high-pressure boiler"
     numbers_status: "Trevithick's high-pressure engines (c. 1800) are sourced; the margin model is a game design"
@@ -809,7 +1028,7 @@ nodes:
     requires:
       nodes: [sand_casting]
       any_of: [[newcomen_engine], [watt_engine], [high_pressure_engine]]
-      state: ["energy_w_per_person >= 600", "mine_drained_by_engine == true"]
+      state: ["energy_w_per_person >= 600", "mine_drained_by_engine == true", "mine_water_m < 0"]   # the engine must actually keep the mine dry, not just exist
     unlocks:
       effects: ["Stage 3 opens: steam and steel"]
     reads_state: [engine_type, machinists_trained, boiler_explosions, forest_cover, coal_sulfur, iron_quality, has_adit]

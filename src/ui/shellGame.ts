@@ -50,7 +50,7 @@ import {
   type BarView,
   type IntroCard,
 } from "./pressures";
-import { fuelsFromTree, gameContent } from "./shellContent";
+import { fuelsFromTree, gameContent, workFromTree } from "./shellContent";
 import { defaultDraftOutcome, type DraftOutcome } from "./shellDraft";
 import { fmt, fmtRound, yearDay } from "./shellFormat";
 import { GATE_PAUSE, GateSystem, LogSystem, StandInCampaigns, SUPPLIED_METRICS } from "./shellSystems";
@@ -174,13 +174,33 @@ export interface GameOptions {
   draft?: DraftOutcome;
 }
 
-/** `bloom_kg > 500` -> "Bloom (kg) above 500"; null for anything but a plain comparison. */
+/** A condition in words: `bloom_kg > 500` -> "Bloom (kg) above 500"; AND/OR/NOT spelled out; null if unknown. */
 function conditionText(x: Expr, label: (ref: string) => string): string | null {
-  if (x.kind !== "cmp") return null;
-  const op = (STRINGS.stuck.ops as Record<string, string>)[x.op];
-  if (!op) return null;
-  const v = typeof x.value === "number" ? fmt(x.value) : String(x.value);
-  return fill(STRINGS.stuck.cond, { name: label(x.ref), op, value: v });
+  const T = STRINGS.stuck;
+  switch (x.kind) {
+    case "cmp": {
+      // `flag == true` reads as the flag itself; `== false` as "not" it.
+      if (typeof x.value === "boolean" && (x.op === "==" || x.op === "!="))
+        return x.value === (x.op === "==") ? label(x.ref) : fill(T.not, { cond: label(x.ref) });
+      const op = (T.ops as Record<string, string>)[x.op];
+      if (!op) return null;
+      const v = typeof x.value === "number" ? fmt(x.value) : String(x.value);
+      return fill(T.cond, { name: label(x.ref), op, value: v });
+    }
+    case "flag":
+      return label(x.ref);
+    case "has":
+      return fill(T.has, { name: label(x.ref), member: idWords(x.member).toLowerCase() });
+    case "not": {
+      const a = conditionText(x.arg, label);
+      return a === null ? null : fill(T.not, { cond: a });
+    }
+    case "and":
+    case "or": {
+      const parts = x.args.map((a) => conditionText(a, label));
+      return parts.some((p) => p === null) ? null : parts.join(x.kind === "and" ? T.and : T.or);
+    }
+  }
 }
 
 /** An id as words for the screen when content gives no name: `iron_kg_total` -> "Iron (kg) total". */
@@ -231,7 +251,7 @@ export class Game {
     this.intro = new IntroSystem(tree, book);
     this.pressures = new PressureSystem(tree, book, (c) => this.intro.isIntroduced(c));
     this.log = new LogSystem();
-    this.engine.addSystem(new EnergySystem(fuelsFromTree(tree)));
+    this.engine.addSystem(new EnergySystem(fuelsFromTree(tree), workFromTree(tree)));
     this.engine.addSystem(new StandInCampaigns());
     this.engine.addSystem(this.projects);
     this.engine.addSystem(new GateSystem(tree, this.projects));
@@ -431,7 +451,8 @@ export class Game {
       : gateStatus(this.tree, s.stage, this.engine).unmet.map((c) => {
           const x = c.expr;
           const now = x.kind === "cmp" ? this.engine.get(x.ref) : undefined;
-          return typeof now === "number" ? fill(STRINGS.goal.now, { text: c.text, n: fmtRound(now) }) : c.text;
+          const text = conditionText(x, (r) => this.labelFor(r)) ?? c.text;
+          return typeof now === "number" ? fill(STRINGS.goal.now, { text, n: fmtRound(now) }) : text;
         });
     // The gate's route requirement (any_of): none of its groups complete yet.
     const g = this.tree.nodes[s.gate.id];
@@ -446,6 +467,13 @@ export class Game {
   gateReached(stage: number): boolean {
     const s = this.tree.stages.find((x) => x.stage === stage);
     return !!s && this.projects.isComplete(s.gate.id);
+  }
+
+  /** A short name for anything a condition reads: a resource's, a bar that shows it, else the id in words. */
+  labelFor(ref: string): string {
+    if (this.tree.resources[ref]) return this.resourceName(ref);
+    if (ref === ENERGY_METRIC) return STRINGS.header.energyUnit;
+    return this.tree.stages.flatMap((s) => s.pressures).find((p) => p.drives === ref)?.name ?? idWords(ref);
   }
 
   resourceName(id: string): string {
@@ -769,8 +797,7 @@ export class Game {
     const cards = this.projectCards();
     if (cards.some((c) => c.status === "available" && (c.affordable || c.missing.every((m) => makeableNow(m.resource))))) return null;
 
-    const label = (ref: string): string =>
-      this.tree.resources[ref] ? this.resourceName(ref) : (this.tree.stateVariables[ref]?.description ?? idWords(ref));
+    const label = (ref: string): string => this.labelFor(ref);
     const waiting: StuckView["waiting"] = [];
     for (const id of this.tree.stages.find((s) => s.stage === stage)!.nodes) {
       const n = this.tree.nodes[id]!;

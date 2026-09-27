@@ -316,7 +316,7 @@ nodes:
       state: ["forest_cover < 90"]
       resources: {blades: 1000}
       labor_person_days: 200000
-    pressure_per_day: {wood_distance: 0.08}   # regrowth 0.01 -> 0.08 cover points a day; estimate
+    pressure_per_day: {wood_distance: 0.07}   # adds to the 0.01 regrowth: 0.08 cover points a day; estimate
     unlocks:
       effects: ["Forest regrows 8x as fast"]
     pages_bundle: primitive_technology

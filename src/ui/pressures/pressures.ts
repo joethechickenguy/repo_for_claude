@@ -106,16 +106,13 @@ export function barScale(tree: Tree, p: Pressure): number {
 }
 
 /**
- * A pressure's per-day drift: the model's, unless a completed node replaces it (node
- * `pressure_per_day:`, e.g. coppicing makes the forest regrow faster). The largest replacement wins.
+ * A pressure's per-day drift: the model's, plus what completed nodes add (node `pressure_per_day:`,
+ * e.g. coppicing makes the forest regrow faster, an adit drains the mine, a deep seam floods it).
  */
 export function perDayFor(tree: Tree, pressureId: string, base: number, book: Readonly<NodeBook>): number {
-  let out: number | null = null;
-  for (const id of book.completed) {
-    const v = tree.nodes[id]?.pressurePerDay?.[pressureId];
-    if (v !== undefined) out = out === null ? v : Math.max(out, v);
-  }
-  return out ?? base;
+  let out = base;
+  for (const id of book.completed) out += tree.nodes[id]?.pressurePerDay?.[pressureId] ?? 0;
+  return out;
 }
 
 export class PressureSystem implements EngineSystem {
@@ -136,9 +133,13 @@ export class PressureSystem implements EngineSystem {
     for (const p of openPressures(this.tree, book)) {
       const m = p.model;
       if (m && e.state.has(p.drives)) {
-        let v = e.state.getNumber(p.drives);
+        let v = m.flow ? 0 : e.state.getNumber(p.drives);
         for (const [r, k] of Object.entries(m.perUnitProduced)) v += (ctx.report.produced[r] ?? 0) * k;
         for (const [r, k] of Object.entries(m.perUnitConsumed)) v += (ctx.report.consumed[r] ?? 0) * k;
+        for (const [j, k] of Object.entries(m.perWorker ?? {})) {
+          const jr = ctx.report.jobs[j];
+          if (jr) v += jr.throughput * jr.fraction * k;
+        }
         v += perDayFor(this.tree, p.id, m.perDay, book);
         if (m.min !== undefined) v = Math.max(m.min, v);
         if (m.max !== undefined) v = Math.min(m.max, v);
@@ -178,14 +179,22 @@ export function barViews(
   shownNodes: readonly string[],
   currentStage: number,
 ): BarView[] {
-  // The current stage's bars; an earlier stage's bar only while it is red (it still bites).
+  // The current stage's bars; an earlier stage's bar only while it is red (it still bites) and none of
+  // its answers is built yet (once one is, it's handled: the bar would only be noise).
+  const answered = (p: Pressure): boolean => p.answers.some((a) => book.completed.includes(a));
   const bars = openPressures(tree, book).filter(
     (p) =>
       pressureArrived(tree, p, book) &&
       shownControl(pressureControl(p.id)) &&
-      (p.stage === currentStage || isRed(tree, p, engine)),
+      (p.stage === currentStage || (isRed(tree, p, engine) && !answered(p))),
   );
   bars.sort((a, b) => rank(b) - rank(a));
+  // Two stages' bars on the same variable (Stage 1's and Stage 2's tools): draw the higher-ranked one.
+  const seenDrives = new Set<string>();
+  for (let i = 0; i < bars.length; i++) {
+    if (seenDrives.has(bars[i]!.drives)) bars.splice(i--, 1);
+    else seenDrives.add(bars[i]!.drives);
+  }
   function rank(p: Pressure): number {
     return (p.stage === currentStage ? 2 : 0) + (p.heartbeat ? 1 : 0) + p.stage / 100;
   }

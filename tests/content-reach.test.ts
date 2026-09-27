@@ -10,11 +10,11 @@ import { describe, expect, it } from "vitest";
 import { exprRefs, jobFirstStage, producers, producibleBy, reach, stageGaps, tree, type Tree } from "../src/content";
 import { SUPPLIED_METRICS as SUPPLIED } from "../src/ui/shellSystems";
 
-export const PLAYABLE = [1];
+export const PLAYABLE = [1, 2];
 
-/** Everything before `stage` done, taking the first option of every choice (the rest closed). */
+/** Everything before `stage` done, taking the first option of every earlier stage's choice (the rest closed). */
 function doneBefore(t: Tree, stage: number): { done: string[]; closed: string[] } {
-  const closed = new Set(Object.values(t.choices ?? {}).flatMap((c) => c.options.slice(1)));
+  const closed = new Set(Object.values(t.choices ?? {}).filter((c) => c.stage < stage).flatMap((c) => c.options.slice(1)));
   const done = t.nodeOrder.filter((id) => t.nodes[id]!.stage < stage && !closed.has(id));
   return { done, closed: [...closed] };
 }

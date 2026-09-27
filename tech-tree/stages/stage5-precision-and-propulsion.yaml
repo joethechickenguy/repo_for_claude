@@ -425,7 +425,7 @@ nodes:
     critical_path: false
     problem: "Liquid oxygen boils away within days, and a lander must restart its engine after coasting to the Moon."
     requires:
-      nodes: [sulfuric_acid, coal_seam_choice]
+      nodes: [sulfuric_acid, coal_mining]   # was coal_seam_choice, split into near_seam / far_seam (2026-09-27)
       any_of: [[niter_beds], [nitrogen_fixation]]
       resources: {steel_kg: 3000, glass_kg: 500}
       labor_person_days: 1500000

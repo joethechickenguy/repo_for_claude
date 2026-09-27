@@ -93,5 +93,11 @@ describe("stuck", () => {
     expect(idWords("iron_kg_total")).toBe("Iron (kg) total");
     expect(idWords("terrain_allows_adit")).toBe("Terrain allows adit");
   });
+
+  it("the goal line reads as words, not condition code", () => {
+    const g = new Game(realTree);
+    g.step(); // the energy number exists from the first day
+    expect(g.gate().unmet).toEqual(["watts per person at least 250 (now 120)", "Metal tools at least 5,000 (now 0)"]);
+  });
 });
 

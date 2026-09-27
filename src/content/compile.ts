@@ -110,6 +110,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     if (meta.note !== undefined) r.note = String(meta.note);
     if (meta.name !== undefined) r.name = String(meta.name);
     if (meta.fuel !== undefined) r.fuel = String(meta.fuel);
+    if (meta.work === true) r.work = true;
     resources[id] = r;
   }
 
@@ -333,6 +334,17 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
       }
       node.pressurePerDay = ppd;
     }
+    if (n.adjusts_state !== undefined) {
+      const adj: Record<string, number> = {};
+      for (const [v, d] of Object.entries(obj(n.adjusts_state))) {
+        const sv = stateVariables[v];
+        if (!sv) errors.push(`${nid}: adjusts_state names undeclared variable ${JSON.stringify(v)}`);
+        else if (sv.type !== "number" && sv.type !== "count") errors.push(`${nid}: adjusts_state ${v} is a ${sv.type}, not a number`);
+        if (typeof d !== "number") errors.push(`${nid}: adjusts_state.${v} must be a number`);
+        adj[v] = Number(d);
+      }
+      node.adjustsState = adj;
+    }
     nodes[nid] = node;
   }
 
@@ -491,6 +503,10 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
   }
   for (const s of stages)
     for (const p of s.pressures)
+      for (const j of Object.keys(p.model?.perWorker ?? {}))
+        if (!jobs[j]) errors.push(`${s.file}: pressure ${p.id} model.per_worker names unknown job ${JSON.stringify(j)}`);
+  for (const s of stages)
+    for (const p of s.pressures)
       for (const m of p.redModifiers ?? [])
         if ((m.kind === "rate" || m.kind === "yield") && !jobs[m.target] && m.target !== "*")
           errors.push(`${s.file}: pressure ${p.id} red_modifiers names unknown job ${JSON.stringify(m.target)}`);
@@ -576,8 +592,10 @@ function pressureExtras(pr: Y, where: string, errors: string[]): { model?: Press
       perUnitConsumed: nums(m.per_unit_consumed, "model.per_unit_consumed"),
       perDay: typeof m.per_day === "number" ? m.per_day : 0,
     };
+    if (m.per_worker !== undefined) model.perWorker = nums(m.per_worker, "model.per_worker");
     if (typeof m.min === "number") model.min = m.min;
     if (typeof m.max === "number") model.max = m.max;
+    if (m.flow === true) model.flow = true;
     out.model = model;
   }
   if (pr.red_modifiers !== undefined) out.redModifiers = parseModifiers(pr.red_modifiers, `${where}: red_modifiers`, errors);

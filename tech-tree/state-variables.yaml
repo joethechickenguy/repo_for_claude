@@ -20,7 +20,7 @@ variables:
   dv_margin_km_s: {type: number, unit: km/s, description: "Vehicle Δv minus the 15.3 km/s budget. Below 0.3, guidance flaws become fatal."}
   forest_cover: {type: number, unit: percent, default: 100, description: "Forest within two days' walk. Charcoal, construction and fuel crops lower it; coppice sets a floor."}
   malachite_left_kg: {type: number, unit: kg, default: 80000, description: "Ore left in the Stage 1 outcrop. Below 20 t, ore per miner halves."}
-  mine_water_m: {type: number, unit: m, description: "Workings below the water table not yet drained. Rises with cumulative extraction and the wet season."}
+  mine_water_m: {type: number, unit: m, default: -2.5, description: "Workings below the water table not yet drained. Rises with cumulative extraction and the wet season."}
   haul_workers: {type: count, description: "People carrying things between sites. Roads and rails reduce it."}
   chemical_balance: {type: number, description: "Alkali and acid supply minus demand (Stage 4)."}
   iron_quality: {type: count, default: 3, description: "0-3, starts 3. Phosphorus ore -1, sulfur coke -1, over-blown steel -1. Below 2: tool life and plate strength fall a third."}
@@ -34,7 +34,7 @@ variables:
 
   # ---- Land, scars -----------------------------------------------------------------------------------
   coppice_area: {type: number, unit: ha, description: "Managed coppice; sets a sustainable charcoal ceiling."}
-  river_sites: {type: count, description: "Usable water-power sites. Caps wheels and hydro."}
+  river_sites: {type: count, default: 2, description: "Usable water-power sites. Caps wheels and hydro."}
   haul_distance_days: {type: number, unit: days, description: "Walking days between main mine and works."}
   cropland_ha: {type: number, unit: ha, description: "Land farmed for fuel alcohol."}
   hcl_pollution: {type: flag, description: "Scar: Leblanc soda. Kills nearby coppice growth."}
@@ -56,11 +56,11 @@ variables:
   has_bronze: {type: flag}
   has_tin_source: {type: flag}
   has_iron: {type: flag}
-  iron_tools: {type: count}
   has_steel_edges: {type: flag, description: "Quench-hardened edges; the lathe wants them."}
   has_cast_iron: {type: flag}
   has_foundry: {type: flag}
   has_coal: {type: flag}
+  terrain_allows_adit: {type: flag, default: true, description: "A valley lies below the workings, so a drainage adit can be dug."}
   has_coke: {type: flag}
   has_lime: {type: flag}
   has_rolling_mill: {type: flag}

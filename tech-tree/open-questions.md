@@ -234,3 +234,17 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     the numbers. Stages 2-6 still have prose-only effects; their G packages should convert them. The
     air-supply multipliers (wind x3, bellows x2) are rate modifiers on `smelt_copper` for now; E1's
     furnace workshop should take them over through its `air_supply` dial, not stack on them.
+52. **Stage 2 made playable (owner playtest 2026-09-27).** Stage 2 had no job rates, so nothing past
+    the bloomery could be made. It now has rates for every job it needs, resources for iron ore,
+    bloom, iron tools, coal, coke and engine work, and four exclusive choices (deposit, coal seam,
+    mine water, engine path). Several conditions nothing could satisfy were replaced: `bloom_kg`
+    (now a resource), `iron_kg_total` (dropped from the blast furnace), `pump_workers` (dropped;
+    the engines answer the water bar instead), `terrain_allows_adit` and `river_sites` (declared,
+    true and 2). Coal comes after bloom smithing, not after the forest or fuel go bad: a good player
+    never met that, and beat gating held beats 5-7 behind it. The gate now needs the mine actually
+    below the water line (`mine_water_m < 0`), not only an engine built. Labor costs were trimmed so
+    a decision comes at least every 365 days; a middling player reaches the gate in 3.2-4.8 years
+    (tests/ui/stage2-decisions.test.ts). Open for J: energy overshoots (a middling colony passes
+    600 W in the first year, so the energy half of the gate never binds), the fuel bar rarely goes
+    red because Stage 1 leaves huge wood stockpiles, and the engine workshop (E2) should replace the
+    fixed engine rates (`tend_engine`) with the designed engine.

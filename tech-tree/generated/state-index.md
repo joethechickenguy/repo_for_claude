@@ -14,12 +14,12 @@
 | `lox_balance` | number | (simulation / draft) | (gates, pressures or UI) |
 | `year` | number | `test_campaign` | (gates, pressures or UI) |
 | `dv_margin_km_s` | number | `crew_safety`, `midcourse_correction`, `rocket_workshop` | `gate_landing` |
-| `forest_cover` | number | `blast_furnace`, `charcoal_clamps`, `coppicing`, `ore_roasting`, `shallow_pits` | `blast_furnace`, `charcoal_clamps`, `coppicing`, `fuel_alcohol`, `gate_reliable_smelting`, `gate_steam`, `shallow_pits` |
+| `forest_cover` | number | `blast_furnace`, `charcoal_clamps`, `coppicing`, `ore_roasting` | `blast_furnace`, `charcoal_clamps`, `coppicing`, `fuel_alcohol`, `gate_reliable_smelting`, `gate_steam`, `shallow_pits` |
 | `malachite_left_kg` | number | `trail_green_stones` | `ore_roasting` |
-| `mine_water_m` | number | `coal_seam_choice`, `drainage_adit`, `shallow_pits` | `drainage_adit`, `mine_drainage_manual`, `savery_pump` |
+| `mine_water_m` | number | `drainage_adit` | `drainage_adit`, `mine_drainage_manual`, `savery_pump` |
 | `haul_workers` | count | `rails_wagonways` | (gates, pressures or UI) |
 | `chemical_balance` | number | (simulation / draft) | (gates, pressures or UI) |
-| `iron_quality` | count | `bessemer_converter`, `blast_furnace`, `deposit_choice` | `bloom_smithing`, `gate_steam` |
+| `iron_quality` | count | `bessemer_converter`, `blast_furnace` | `bloom_smithing`, `gate_steam` |
 | `tolerance_mm` | number | `measurement`, `precision_grinding`, `surface_plates` | `claude_expander`, `compressors`, `gate_generator`, `gyroscopes`, `precision_grinding` |
 | `known_flaws` | set | `test_campaign` | `gate_landing` |
 | `labor_tier` | enum | `departments`, `foremen` | (gates, pressures or UI) |
@@ -27,16 +27,16 @@
 | `works_active` | count | (simulation / draft) | (gates, pressures or UI) |
 | `coppice_area` | number | `coppicing` | `blast_furnace` |
 | `river_sites` | count | (simulation / draft) | `water_turbine`, `water_wheels` |
-| `haul_distance_days` | number | `coal_seam_choice`, `deposit_choice`, `shallow_pits`, `trail_green_stones` | `rails_wagonways` |
+| `haul_distance_days` | number | `bog_iron`, `hillside_ore`, `shallow_pits`, `trail_green_stones` | `rails_wagonways` |
 | `cropland_ha` | number | `fuel_alcohol` | (gates, pressures or UI) |
 | `hcl_pollution` | flag | `soda_ash` | (gates, pressures or UI) |
 | `arsenic_exposure` | number | `arsenical_copper` | `gate_reliable_smelting` |
 | `boiler_explosions` | count | `high_pressure_engine`, `newcomen_engine`, `savery_pump` | `gate_steam` |
-| `deposits_known` | set | `iron_prospecting` | `deposit_choice` |
+| `deposits_known` | set | `iron_prospecting` | `bog_iron`, `hillside_ore` |
 | `ore_type` | enum | `ore_roasting` | (gates, pressures or UI) |
-| `iron_ore_grade` | number | `deposit_choice` | `bloomery` |
-| `iron_ore_phosphorus` | enum | `deposit_choice` | `bessemer_converter` |
-| `coal_sulfur` | enum | `coal_seam_choice` | `bessemer_converter`, `blast_furnace`, `gate_steam` |
+| `iron_ore_grade` | number | `bog_iron`, `hillside_ore` | `bloomery` |
+| `iron_ore_phosphorus` | enum | `bog_iron`, `hillside_ore` | `bessemer_converter` |
+| `coal_sulfur` | enum | `far_seam`, `near_seam` | `bessemer_converter`, `blast_furnace`, `coke_blast`, `gate_steam` |
 | `coke_rate` | number | `hot_blast` | (gates, pressures or UI) |
 | `mineral_sites` | set | `mineral_prospecting` | `alloy_steels`, `aluminum`, `arc_furnace`, `bessemer_converter`, `electronics_lab`, `nitrogen_fixation`, `oil` |
 | `has_copper_ore` | flag | `trail_green_stones` | (gates, pressures or UI) |
@@ -44,12 +44,12 @@
 | `has_bronze` | flag | `tin_bronze` | `bearings_lubrication`, `gate_reliable_smelting` |
 | `has_tin_source` | flag | `tin_survey_kestel` | (gates, pressures or UI) |
 | `has_iron` | flag | `bloomery` | (gates, pressures or UI) |
-| `iron_tools` | count | `bloom_smithing` | (gates, pressures or UI) |
 | `has_steel_edges` | flag | `quench_temper` | (gates, pressures or UI) |
 | `has_cast_iron` | flag | `blast_furnace` | `finery_forge`, `sand_casting` |
 | `has_foundry` | flag | `sand_casting` | (gates, pressures or UI) |
-| `has_coal` | flag | `coal_mining` | `coal_seam_choice`, `newcomen_engine` |
-| `has_coke` | flag | `coal_seam_choice` | `soda_ash` |
+| `has_coal` | flag | `coal_mining` | `far_seam`, `near_seam`, `newcomen_engine` |
+| `terrain_allows_adit` | flag | (simulation / draft) | (gates, pressures or UI) |
+| `has_coke` | flag | `far_seam`, `near_seam` | `soda_ash` |
 | `has_lime` | flag | `lime_burning` | `blast_furnace` |
 | `has_rolling_mill` | flag | `plate_rolling` | (gates, pressures or UI) |
 | `plate_quality` | enum | `plate_rolling` | `high_pressure_engine`, `newcomen_engine` |
@@ -110,7 +110,7 @@
 | `cryo_process` | enum | `cascade_liquefier`, `claude_expander`, `linde_liquefier` | `air_separation`, `gate_liquid_oxygen`, `lox_plant_scaleup` |
 | `has_lox` | flag | `air_separation` | `capsule` |
 | `lox_kg_per_day` | number | `air_separation`, `launch_complex`, `lox_plant_scaleup` | `launch_complex` |
-| `pump_workers` | count | `mine_drainage_manual` | (gates, pressures or UI) |
+| `pump_workers` | count | (simulation / draft) | (gates, pressures or UI) |
 | `rail_km` | number | `rails_wagonways` | `gate_generator`, `launch_complex`, `mineral_prospecting`, `oil` |
 | `has_adit` | flag | `drainage_adit` | `gate_steam` |
 | `has_tubes` | flag | `electronics_lab` | `lander_stage` |

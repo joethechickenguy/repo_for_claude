@@ -118,6 +118,9 @@ export class ProjectsSystem implements EngineSystem {
       for (const job of ev.jobs) if (this.engine.jobDef(job)) this.engine.unlockJob(job);
       // Node `modifiers:` apply for good (they live in the engine's save like any modifier).
       for (const m of this.tree.nodes[ev.node]?.modifiers ?? []) this.engine.setModifier(m.kind, m.target, `node:${ev.node}`, m.factor);
+      // Node `adjusts_state:` shifts a number once (two sources of the same flaw add up).
+      for (const [v, d] of Object.entries(this.tree.nodes[ev.node]?.adjustsState ?? {}))
+        if (this.engine.state.has(v)) this.engine.state.set(v, this.engine.state.getNumber(v) + d);
       pauses.push({ kind: "node_complete", subject: ev.node });
       if (ev.opensWorkshop) pauses.push({ kind: "workshop_open", subject: ev.opensWorkshop });
     }

@@ -18,9 +18,17 @@ resources:
   tin_ore_kg:        {produced_by: mine_cassiterite, name: "Cassiterite (kg)"}
   tin_kg:            {produced_by: smelt_tin, name: "Tin (kg)"}
   bronze_tools:      {produced_by: cast_bronze_tools, name: "Bronze tools"}
-  stone_kg:          {produced_by: quarry_stone}
-  lime_kg:           {produced_by: burn_lime}
-  iron_kg:           {produced_by: smelt_iron_bloom, note: "Also run_blast_furnace (pig) and fine_pig_iron (bar). Costs accept any."}
+  stone_kg:          {produced_by: quarry_stone, name: "Stone (kg)"}
+  lime_kg:           {produced_by: burn_lime, name: "Lime (kg)"}
+  # Stage 2 (owner playtest 2026-09-27: nothing here was made by any job before).
+  iron_ore_kg:       {produced_by: mine_iron_ore, name: "Iron ore (kg)"}
+  bloom_kg:          {produced_by: smelt_iron_bloom, name: "Bloom (kg)"}
+  iron_kg:           {produced_by: smith_bloom, name: "Iron (kg)", note: "Also run_blast_furnace and run_coke_furnace (pig iron). Costs accept any."}
+  iron_tools:        {produced_by: forge_iron_tools, name: "Iron tools"}
+  coal_kg:           {produced_by: mine_coal, name: "Coal (kg)", fuel: coal}
+  coke_kg:           {produced_by: coke_coal, name: "Coke (kg)", fuel: coal}
+  # Delivered shaft work, 1 kWh per unit; counted x2.5 in the energy number (energy.md rule 5).
+  engine_work_kwh:   {produced_by: tend_engine, name: "Engine work (kWh)", work: true}
   steel_kg:          {produced_by: blow_steel}
   alloy_steel_kg:    {produced_by: make_alloy_steel}
   glass_kg:          {produced_by: make_glass}

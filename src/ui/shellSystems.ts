@@ -53,9 +53,10 @@ export const SUPPLIED_METRICS: ReadonlySet<string> = new Set([ENERGY_METRIC, CAM
 export class StandInCampaigns implements EngineSystem {
   readonly id = "campaigns";
   private days = 0;
-  constructor(private readonly metalResource = "copper_kg") {}
+  /** A day smelting any of these counts (copper in Stage 1, bloom and iron from Stage 2). */
+  constructor(private readonly metals: readonly string[] = ["copper_kg", "bloom_kg", "iron_kg"]) {}
   tick(ctx: TickContext): void {
-    if ((ctx.report.produced[this.metalResource] ?? 0) > 0) this.days++;
+    if (this.metals.some((m) => (ctx.report.produced[m] ?? 0) > 0)) this.days++;
     ctx.engine.setMetric(CAMPAIGNS_METRIC, Math.floor(this.days / STANDIN_CAMPAIGN_DAYS));
   }
   save(): JsonValue {

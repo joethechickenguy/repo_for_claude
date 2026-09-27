@@ -12,8 +12,14 @@ export const ELECTRICITY_KW_METRIC = "electricity_kw";
 export class EnergySystem implements EngineSystem {
   readonly id = "energy";
 
-  /** `fuels` maps a resource id to the fuel it is when burned (`{wood_kg: "wood", charcoal_kg: "charcoal"}`). */
-  constructor(private readonly fuels: Readonly<Record<string, FuelKind>>) {}
+  /**
+   * `fuels` maps a resource id to the fuel it is when burned (`{wood_kg: "wood", charcoal_kg: "charcoal"}`).
+   * `workResources` are resources whose every unit produced is 1 kWh of delivered shaft work (engines).
+   */
+  constructor(
+    private readonly fuels: Readonly<Record<string, FuelKind>>,
+    private readonly workResources: readonly string[] = [],
+  ) {}
 
   tick(ctx: TickContext): void {
     const e = ctx.engine;
@@ -22,9 +28,11 @@ export class EnergySystem implements EngineSystem {
       const kg = ctx.report.burned[resource] ?? 0;
       if (kg > 0) fuel[kind] = (fuel[kind] ?? 0) + kg;
     }
+    // kWh of shaft work produced today, as average kW over the day.
+    const workKw = this.workResources.reduce((s, r) => s + (ctx.report.produced[r] ?? 0), 0) / 24;
     const b = energyPerPerson({
       fuel_kg_per_day: fuel,
-      work_kw: e.metric(WORK_KW_METRIC) ?? 0,
+      work_kw: (e.metric(WORK_KW_METRIC) ?? 0) + workKw,
       electricity_kw: e.metric(ELECTRICITY_KW_METRIC) ?? 0,
       population: e.population,
     });
