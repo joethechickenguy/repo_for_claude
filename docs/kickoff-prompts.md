@@ -8,7 +8,9 @@ Common preamble for every prompt:
 
 > Read `CLAUDE.md`, then `DESIGN.md`, then your package in `docs/work-packages.md`. Work only in the
 > files your package owns. Commit small with `[X]` in the message and push to
-> `claude/new-session-vd0f1w` after every green test run. When done, tick your box in the Status
+> `claude/new-session-vd0f1w` after every green test run: commit as soon as a piece works, never
+> hold more than ~15 minutes uncommitted, and push a green slice at least every ~30 minutes rather
+> than at the end. When done, tick your box in the Status
 > list and add 3-5 lines of what shipped and what's open. If the design blocks you, add a line to
 > `tech-tree/open-questions.md` and take the simplest reading rather than redesigning.
 

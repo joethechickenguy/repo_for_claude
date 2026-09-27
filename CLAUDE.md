@@ -14,6 +14,10 @@ the data contract. Do not redesign; if the design blocks you, write the question
   from the Stage 1 prototype (linked in README.md).
 - Commit small and often to this branch with a message naming the package (e.g. `[C] furnace model`).
   Push after every green test run. Never leave the tree or the build red at the end of a session.
+- Sessions run in throwaway containers: only pushed work survives. Commit locally as soon as a piece
+  works (a file plus its tests) and never hold more than ~15 minutes of uncommitted work. Push a
+  green slice at least every ~30 minutes; keep unfinished parts out of the commit rather than
+  waiting for the whole package. Your first push should come early, not at the end.
 - Finish a package by ticking its box in `docs/work-packages.md` and writing 3-5 lines under "Status".
 
 ## Stack
