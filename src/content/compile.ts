@@ -31,6 +31,8 @@ import type {
   TreeNode,
   Workshop,
   WorkshopPlay,
+  WorksSpec,
+  DepartmentSpec,
 } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -548,6 +550,36 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
       choices[id] = { id, stage: Number(d.stage), prompt: String(c.prompt ?? ""), options };
     }
   }
+  // Works and departments (stage `works:` / `departments:`): the labor tiers' facilities.
+  const works: WorksSpec[] = [];
+  const departments: DepartmentSpec[] = [];
+  for (const { file, data } of raw.stages) {
+    const d = obj(data);
+    for (const w of arr(d.works)) {
+      const id = String(w?.id ?? "");
+      const spec: WorksSpec = {
+        id,
+        name: String(w?.name ?? id),
+        output: String(w?.output ?? ""),
+        primaryJob: String(w?.primary_job ?? ""),
+        supportJobs: arr(w?.support_jobs).map(String),
+        stage: Number(d.stage),
+      };
+      if (w?.department !== undefined) spec.department = String(w.department);
+      if (!id || works.some((x) => x.id === id)) errors.push(`${file}: works ${JSON.stringify(id)} has no id or is defined twice`);
+      if (!(spec.output in resources)) errors.push(`${file}: works ${id} output ${JSON.stringify(spec.output)} is not a resource`);
+      for (const j of [spec.primaryJob, ...spec.supportJobs]) if (!jobs[j]?.rates) errors.push(`${file}: works ${id} job ${JSON.stringify(j)} has no rates`);
+      if (!jobs[spec.primaryJob]?.rates?.outputs?.[spec.output]) errors.push(`${file}: works ${id}: ${spec.primaryJob} doesn't make ${spec.output}`);
+      works.push(spec);
+    }
+    for (const dp of arr(d.departments)) {
+      const id = String(dp?.id ?? "");
+      if (!id || departments.some((x) => x.id === id)) errors.push(`${file}: department ${JSON.stringify(id)} has no id or is defined twice`);
+      departments.push({ id, name: String(dp?.name ?? id), priority: Number(dp?.priority ?? 0) });
+    }
+  }
+  for (const w of works) if (w.department && !departments.some((x) => x.id === w.department)) errors.push(`works ${w.id}: unknown department ${w.department}`);
+
   const pressureIds = new Set(stages.flatMap((s) => s.pressures.map((p) => p.id)));
   for (const nid of nodeOrder) {
     const n = nodes[nid]!;
@@ -574,6 +606,8 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     warnings,
     tools,
     choices,
+    ...(works.length ? { works } : {}),
+    ...(departments.length ? { departments } : {}),
   };
   return { tree, errors, warnings };
 }

@@ -383,4 +383,27 @@ export interface Tree {
   tools?: Record<string, ToolSpec>;
   /** Exclusive choices from the stage files' `choices:` lists, keyed by id. */
   choices?: Record<string, Choice>;
+  /** Facilities of the works tier (stage `works:` lists), in staffing order. */
+  works?: WorksSpec[];
+  /** Departments of the departments tier (stage `departments:`), with starting priorities. */
+  departments?: DepartmentSpec[];
+}
+
+/** A works: a facility with a target output, staffed from its primary job and feeders (DESIGN.md, Labor). */
+export interface WorksSpec {
+  id: string;
+  name: string;
+  /** Resource the target is in. */
+  output: string;
+  primaryJob: string;
+  /** Jobs staffed to feed the primary job's inputs. */
+  supportJobs: string[];
+  department?: string;
+  stage: number;
+}
+
+export interface DepartmentSpec {
+  id: string;
+  name: string;
+  priority: number;
 }

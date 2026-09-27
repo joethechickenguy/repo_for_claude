@@ -42,6 +42,17 @@ choices:
   - id: storable
     prompt: "Some jobs need propulsion that waits for months and starts at once. Nitric-acid hypergolics, or solid motors?"
     options: [hypergolic_propellants, solid_motors]
+works:
+  - {id: distillery, name: "Fuel distillery", output: ethanol_kg, primary_job: ferment_and_distill, support_jobs: [farm_fuel_crops], department: propulsion}
+
+# The departments tier: a priority per department staffs the works beneath it, highest first.
+departments:
+  - {id: propulsion, name: "Propulsion", priority: 5}
+  - {id: power, name: "Power", priority: 4}
+  - {id: metals, name: "Metals", priority: 3}
+  - {id: chemistry, name: "Chemistry", priority: 2}
+  - {id: testing, name: "Testing", priority: 1}
+
 pressures:
   - id: stand_time
     name: Test stand
@@ -110,7 +121,7 @@ nodes:
     kind: project
     critical_path: false
     problem: "Twelve works and an oxygen plant, and you're still setting furnace targets by hand while the engine program waits."
-    tradeoff: "Department priorities instead of crews by hand; the works tier's targets stay one expander away."
+    tradeoff: "Five priorities instead of a dozen targets: the foremen fill works in department order, and the lowest department waits."
     requires:
       nodes: [gate_liquid_oxygen]
       state: ["works_active >= 10"]

@@ -54,13 +54,18 @@ import {
 import { fuelsFromTree, gameContent, workFromTree } from "./shellContent";
 import { defaultDraftOutcome, type DraftOutcome } from "./shellDraft";
 import { fmt, fmtRound, yearDay } from "./shellFormat";
-import { GATE_PAUSE, GateSystem, LogSystem, StandInCampaigns, SUPPLIED_METRICS } from "./shellSystems";
+import { GATE_PAUSE, GateSystem, LogSystem, StandInCampaigns, SUPPLIED_METRICS, TiersSystem } from "./shellSystems";
 import { fill, STRINGS } from "./strings";
 
 /** People moved by one ± on a job row (DESIGN.md: "± blocks"; the prototype's block). */
 export const PEOPLE_BLOCK = 100;
-/** A works' target moves by this many units a day per ± (works tier). */
+/** A works' target moves by at least this many units a day per ± (works tier). */
 export const WORKS_TARGET_STEP = 1;
+
+/** ± on a works target: the power of ten below the target (6,000 kg/day moves by 1,000), at least WORKS_TARGET_STEP. */
+export function worksStep(target: number): number {
+  return Math.max(WORKS_TARGET_STEP, Math.pow(10, Math.floor(Math.log10(Math.max(1, target)))));
+}
 /** A department's priority moves by one per ± (departments tier). */
 export const DEPARTMENT_PRIORITY_STEP = 1;
 
@@ -267,6 +272,7 @@ export class Game {
     this.engine.addSystem(new StandInCampaigns());
     this.engine.addSystem(this.projects);
     this.engine.addSystem(new GateSystem(tree, this.projects));
+    this.engine.addSystem(new TiersSystem(tree));
     this.engine.addSystem(this.pressures);
     this.engine.addSystem(this.intro);
     this.engine.addSystem(this.log);
@@ -364,7 +370,9 @@ export class Game {
     const works = e.works().find((w) => w.def.id === path[0]);
     if (works && path.length === 1) {
       const cur = typeof works.target === "number" ? works.target : 0;
-      e.setWorksTarget(works.def.id, Math.max(0, cur + Math.sign(delta) * WORKS_TARGET_STEP));
+      // Going down from a round number steps by the smaller power (1,000 -> 900, not 0).
+      const step = delta < 0 ? worksStep(Math.max(0, cur - 1)) : worksStep(cur);
+      e.setWorksTarget(works.def.id, Math.max(0, cur + Math.sign(delta) * step));
       return;
     }
     if (works && path.length === 2) {
@@ -581,7 +589,7 @@ export class Game {
             value: people,
             detail: short > 0 ? `${target} · ${fill(STRINGS.people.shortfall, { n: fmt(short) })}` : target,
             tone: short > 0 ? "short" : "normal",
-            step: WORKS_TARGET_STEP,
+            step: worksStep(typeof w.target === "number" ? w.target : 0),
             // The number is people at work; ± moves the output target. Typing a target here would
             // be confusing, so works rows take ± only (their job rows are typed).
             editable: false,

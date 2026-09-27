@@ -2,7 +2,7 @@
 // under departments and jobs under works; ± on a works moves its target, ± on a job pins it.
 import { describe, expect, it } from "vitest";
 import { tree } from "../../src/content";
-import { Game, WORKS_TARGET_STEP } from "../../src/ui/shellGame";
+import { Game, worksStep } from "../../src/ui/shellGame";
 
 function worksGame(): Game {
   const g = new Game(tree);
@@ -21,7 +21,7 @@ describe("people rows at higher tiers", () => {
     expect(kiln.value).toBe(kiln.children!.reduce((s, c) => s + c.value, 0));
     expect(kiln.value).toBeGreaterThan(0);
     g.adjust(["kiln_1"], 1);
-    expect(g.engine.works()[0]!.target).toBe(10 + WORKS_TARGET_STEP);
+    expect(g.engine.works()[0]!.target).toBe(10 + worksStep(10));
     g.adjust(["kiln_1", "dig_clay"], 100);
     const pinned = g.peopleRows().find((r) => r.id === "kiln_1")!.children!.find((c) => c.id === "dig_clay")!;
     expect(pinned.pinned).toBe(true);
@@ -39,6 +39,6 @@ describe("people rows at higher tiers", () => {
     g.adjust(["ceramics"], 1);
     expect(g.engine.departmentPriority("ceramics")).toBe(1);
     g.adjust(["ceramics", "kiln_1"], 1);
-    expect(g.engine.works()[0]!.target).toBe(11);
+    expect(g.engine.works()[0]!.target).toBe(10 + worksStep(10));
   });
 });

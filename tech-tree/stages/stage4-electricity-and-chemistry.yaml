@@ -70,6 +70,14 @@ choices:
   - id: liquefier_method
     prompt: "The cascade proved air can be liquefied, a few liters at a time. Scale it with a throttle and a long exchanger, or with a cold expansion engine?"
     options: [linde_liquefier, claude_expander]
+works:
+  - {id: power_station, name: "Power station", output: electricity_kwh, primary_job: run_power_station, support_jobs: [mine_coal], department: power}
+  - {id: arc_works, name: "Arc furnace", output: steel_kg, primary_job: run_arc_furnace, support_jobs: [], department: metals}
+  - {id: alloy_works, name: "Alloy works", output: alloy_steel_kg, primary_job: make_alloy_steel, support_jobs: [], department: metals}
+  - {id: soda_works, name: "Soda works", output: soda_ash_kg, primary_job: make_soda_ash, support_jobs: [make_sulfuric_acid], department: chemistry}
+  - {id: chlor_alkali_plant, name: "Chlor-alkali plant", output: caustic_kg, primary_job: electrolyze_brine, support_jobs: [mine_mineral], department: chemistry}
+  - {id: refinery, name: "Refinery", output: kerosene_kg, primary_job: refine_crude, support_jobs: [pump_crude], department: propulsion}
+
 pressures:
   - id: power_balance
     name: Power

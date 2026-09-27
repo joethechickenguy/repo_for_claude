@@ -287,7 +287,8 @@ Tick when done; add 3-5 lines of what shipped and what was left open.
     parts slow their jobs; firings burn fuel; a second stand.
   - Open: questions 59-62: the game is ~2.6 hours at 1x (the design says 10), the bot's lulls reach ~290
     days (target 3 minutes), Stage 2's bot run has a 443-day gap, and the hauling bar flickers in Stage 4.
-    Works and departments tiers still have no works in content.
+  - The works and departments tiers have content: 16 works and 5 departments; foremen switch to works
+    and each works starts at its crew's output (question 63).
 - [x] H test campaign
   - `src/models/flaws.ts` (pure: exposure, severity with escape tower/suit/margin, seeded launch) and
     `src/ui/workshops/campaign.ts` (screen and system: tests with months and LOX, reveals by kind,

@@ -75,6 +75,37 @@ export class StandInCampaigns implements EngineSystem {
   }
 }
 
+/**
+ * The labor tiers (DESIGN.md, Labor): once foremen (or departments) take over, each works in the
+ * stage files joins the engine as its primary job unlocks, with a first target of what that job's
+ * current crew makes a day, so nothing lurches at the switch. The player then moves targets, not people.
+ */
+export class TiersSystem implements EngineSystem {
+  readonly id = "tiers";
+  constructor(private readonly tree: Tree) {}
+  tick(ctx: TickContext): void {
+    const e = ctx.engine;
+    if (e.laborTier() === "people") return;
+    for (const w of this.tree.works ?? []) {
+      if (e.works().some((x) => x.def.id === w.id) || !e.isJobUnlocked(w.primaryJob)) continue;
+      const jr = ctx.report.jobs[w.primaryJob];
+      const perWorker = (e.jobDef(w.primaryJob)?.outputs?.[w.output] ?? 0) * e.modifier("yield", w.primaryJob);
+      const target = jr ? Math.round(jr.throughput * perWorker) : 0;
+      e.addWorks(
+        {
+          id: w.id,
+          name: w.name,
+          output: w.output,
+          primaryJob: w.primaryJob,
+          supportJobs: w.supportJobs.filter((j) => !!e.jobDef(j)),
+          ...(w.department ? { department: w.department } : {}),
+        },
+        target,
+      );
+    }
+  }
+}
+
 /** One log line, structured: the shell turns it into text from strings and content. */
 export interface LogEntry {
   day: number;

@@ -34,8 +34,12 @@ const STAGE3_PEOPLE: [string, number][] = [
   ["make_sulfuric_acid", 20], ["make_cement", 60],
 ];
 
+/** The bot stays on the people tier: foremen and departments are the player's call (tests/ui/worksTier.test.ts covers them). */
+const TIER_NODES = ["foremen", "departments"];
+
 export const STAGE3: StagePlan = {
   people: STAGE3_PEOPLE,
+  skip: TIER_NODES,
   train: { trade: "machinists_trained", people: 100 },
   picks: ["rails_wagonways", "steam_engine_house"],
   energyJob: "run_coke_furnace",
@@ -52,6 +56,7 @@ export const STAGE4: StagePlan = {
     ["make_soda_ash", 20], ["electrolyze_brine", 30],
   ],
   train: { trade: "machinists_trained", people: 50 },
+  skip: TIER_NODES,
   picks: ["linde_liquefier", "tool_steel"],
   energyJob: "run_power_station",
   daily(g) {
@@ -73,6 +78,7 @@ export const STAGE5: StagePlan = {
     ["farm_fuel_crops", 150], ["ferment_and_distill", 60],
   ],
   train: { trade: "rocket_engineers_trained", people: 50 },
+  skip: TIER_NODES,
   picks: ["gas_generator_turbopump", "hypergolic_propellants"],
   energyJob: "run_power_station",
   daily(g) {

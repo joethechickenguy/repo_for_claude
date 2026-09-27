@@ -64,6 +64,19 @@ choices:
   - id: dynamo_drive
     prompt: "What turns the first big generator: a steam engine house, or a water turbine on the river?"
     options: [steam_engine_house, water_turbine]
+# The works tier (DESIGN.md, Labor): with foremen, each facility gets a target output and is staffed
+# from the pool, its primary job and the feeders its inputs need. Joins as its primary job unlocks.
+works:
+  - {id: coal_mine, name: "Coal mine", output: coal_kg, primary_job: mine_coal, support_jobs: [], department: power}
+  - {id: ironworks, name: "Ironworks (coke furnace)", output: iron_kg, primary_job: run_coke_furnace, support_jobs: [mine_iron_ore, coke_coal, burn_lime], department: metals}
+  - {id: charcoal_furnace, name: "Charcoal blast furnace", output: iron_kg, primary_job: run_blast_furnace, support_jobs: [mine_iron_ore, burn_charcoal, burn_lime], department: metals}
+  - {id: tool_forge, name: "Tool forge", output: iron_tools, primary_job: forge_iron_tools, support_jobs: [], department: metals}
+  - {id: copper_works, name: "Copper works", output: copper_kg, primary_job: smelt_copper, support_jobs: [mine_malachite, burn_charcoal, fire_pottery], department: metals}
+  - {id: bessemer_works, name: "Bessemer works", output: steel_kg, primary_job: blow_steel, support_jobs: [], department: metals}
+  - {id: glassworks, name: "Glassworks", output: glass_kg, primary_job: make_glass, support_jobs: [mine_mineral, burn_lime], department: chemistry}
+  - {id: acid_works, name: "Acid works", output: acid_kg, primary_job: make_sulfuric_acid, support_jobs: [mine_mineral], department: chemistry}
+  - {id: cement_works, name: "Cement works", output: cement_kg, primary_job: make_cement, support_jobs: [quarry_stone, dig_clay], department: chemistry}
+
 pressures:
   - id: shop_hours
     name: Machine shop
@@ -186,6 +199,7 @@ nodes:
     kind: project
     critical_path: false
     problem: "Forty jobs, and half your day is moving people between them."
+    tradeoff: "Foremen staff each works to a target output: you set tons a day, not people; pins keep any row by hand."
     requires:
       nodes: [gate_steam]
       state: ["jobs_active >= 20"]
@@ -193,6 +207,7 @@ nodes:
     unlocks:
       effects: ["Labor tier: works. Each facility gets a target output; foremen staff it from the pool and report the crew it took. Jobs stay one expander away and can be pinned"]
     writes_state: [labor_tier]
+    writes_values: {labor_tier: works}
     pages_bundle: none
     without_pages: "No penalty"
     numbers_status: "Game structure"

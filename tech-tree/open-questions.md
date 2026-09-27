@@ -316,8 +316,7 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     game is ~26 in-game years and ~2.6 hours at 1x, against DESIGN.md's 100-200 years and 10 hours
     (question 50). Owner's call: longer stages with more decisions in them, or a shorter game.
     Mineral prospecting finds every site in reach (the "missing ones use substitutes" mechanic isn't
-    modelled). The works and departments tiers still have no works in content, so foremen and
-    departments change nothing yet (question 30).
+    modelled). The works and departments tiers now have content (see 63).
 60. **Beat gating and optional beats.** A beat waits on the nearest lower beat that has a
     critical-path node, and a gate only on its own requirements: Stage 4's gate waited ~600 days for
     oil (its only beat-7 node, optional, and impossible on the canals route). Nodes moved to the beat
@@ -339,3 +338,10 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     result ("test more, fix, or launch?"). The bot is middling on purpose: it never misreads a card,
     builds optional projects only when fewer than two builds are underway, adds people to whatever a
     stalled project lacks, and runs the workshops with fixed habits (tests/play/workshops.ts).
+63. **Works and departments in content (question 30).** Stages 3-5 list their works (`works:`: a
+    facility's output, primary job, feeder jobs and department) and Stage 5 its five departments with
+    starting priorities. Foremen set `labor_tier: works`; each works joins as its primary job unlocks,
+    with a first target of what that job's crew made a day, so production holds through the switch
+    (tests/ui/worksTier.test.ts). ± on a target moves by the power of ten below it. Jobs outside any
+    works (wood, flint, Build, the machine shop's lathes) stay rows of people. Foremen and departments
+    are optional: the playtest bot stays on the people tier.
