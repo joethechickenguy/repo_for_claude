@@ -4,23 +4,33 @@
 
 | Variable | Type | Written by | Read by |
 | --- | --- | --- | --- |
-| `bundles_taken` | set | (starting value / draft) | `alloy_steels`, `bayer_alumina`, `coal_mining`, `human_computers`, `iron_prospecting`, `mineral_prospecting`, `oil_drilling`, `tin_survey_kestel`, `trail_green_stones` |
+| `bundles_taken` | set | (starting value / draft) | `alloy_steels`, `bayer_alumina`, `coal_mining`, `human_computers`, `iron_prospecting`, `mineral_prospecting`, `oil_drilling`, `quench_temper`, `tin_survey_kestel`, `trail_green_stones` |
 | `draft_roster` | set | (starting value / draft) | `apprentice_system`, `boring_mill`, `small_liquid_rocket` |
-| `forest_cover` | number | `blast_furnace_charcoal`, `charcoal_clamps`, `coppicing` | `blast_furnace_charcoal`, `charcoal_clamps`, `coppicing`, `fuel_alcohol`, `gate_reliable_smelting`, `gate_steam` |
-| `coppice_area` | number | `coppicing` | `blast_furnace_charcoal` |
+| `forest_cover` | number | `blast_furnace`, `charcoal_clamps`, `coppicing`, `shallow_pits` | `blast_furnace`, `charcoal_clamps`, `coppicing`, `fuel_alcohol`, `gate_reliable_smelting`, `gate_steam`, `shallow_pits` |
+| `coppice_area` | number | `coppicing` | `blast_furnace` |
 | `river_sites` | count | (starting value / draft) | `water_turbine`, `water_wheels` |
-| `haul_distance_days` | number | `ore_road` | `rails_wagonways` |
-| `mine_depth_m` | number | (starting value / draft) | `mine_drainage_manual`, `savery_pump` |
+| `haul_distance_days` | number | `coal_seam_choice`, `deposit_choice`, `ore_road`, `shallow_pits` | `rails_wagonways` |
+| `mine_depth_m` | number | (starting value / draft) | (gates or UI only) |
 | `cropland_ha` | number | `fuel_alcohol` | (gates or UI only) |
 | `hcl_pollution` | flag | `soda_ash` | `gate_generator` |
 | `arsenic_exposure` | number | `arsenical_copper` | `gate_reliable_smelting` |
-| `boiler_explosions` | count | `high_pressure_engine`, `savery_pump` | `gate_steam` |
+| `boiler_explosions` | count | `high_pressure_engine`, `newcomen_engine`, `savery_pump` | `gate_steam` |
+| `fuel_balance` | number | (starting value / draft) | (gates or UI only) |
+| `mine_water_m` | number | `coal_seam_choice`, `drainage_adit`, `shallow_pits` | `drainage_adit`, `mine_drainage_manual`, `savery_pump` |
+| `metal_tools` | count | (starting value / draft) | (gates or UI only) |
+| `iron_quality` | count | `blast_furnace`, `deposit_choice` | `bloom_smithing`, `gate_steam` |
+| `deposits_known` | set | `iron_prospecting` | `deposit_choice` |
+| `bloom_kg` | number | (starting value / draft) | (gates or UI only) |
+| `iron_kg_total` | number | (starting value / draft) | (gates or UI only) |
+| `campaigns_run` | count | (starting value / draft) | (gates or UI only) |
+| `terrain_allows_adit` | flag | (starting value / draft) | (gates or UI only) |
+| `has_adit` | flag | `drainage_adit` | `gate_steam` |
 | `malachite_mined_kg` | number | (starting value / draft) | `ore_roasting` |
 | `ore_type` | enum | `ore_roasting` | (gates or UI only) |
-| `iron_ore_grade` | number | `iron_prospecting` | `bloomery` |
-| `iron_ore_phosphorus` | enum | `iron_prospecting` | `basic_lining`, `bessemer_converter` |
-| `coal_sulfur` | enum | `coal_mining` | `coking`, `gate_steam` |
-| `iron_sulfur` | enum | `coking` | `bessemer_converter`, `manganese_additions` |
+| `iron_ore_grade` | number | `deposit_choice` | `bloomery` |
+| `iron_ore_phosphorus` | enum | `deposit_choice` | `basic_lining`, `bessemer_converter` |
+| `coal_sulfur` | enum | `coal_seam_choice` | `blast_furnace`, `gate_steam` |
+| `iron_sulfur` | enum | (starting value / draft) | `bessemer_converter`, `manganese_additions` |
 | `coke_rate` | number | `hot_blast` | (gates or UI only) |
 | `has_copper_ore` | flag | `trail_green_stones` | `ore_road` |
 | `has_copper` | flag | `crucibles_blowpipes` | (gates or UI only) |
@@ -29,14 +39,14 @@
 | `has_iron` | flag | `bloomery` | (gates or UI only) |
 | `iron_tools` | count | `bloom_smithing` | (gates or UI only) |
 | `has_steel_edges` | flag | `quench_temper` | `screw_cutting_lathe` |
-| `has_cast_iron` | flag | `blast_furnace_charcoal` | `finery_forge`, `sand_casting` |
+| `has_cast_iron` | flag | `blast_furnace` | `finery_forge`, `sand_casting` |
 | `has_foundry` | flag | `sand_casting` | (gates or UI only) |
-| `has_coal` | flag | `coal_mining` | `newcomen_engine` |
-| `has_coke` | flag | `coking` | `coal_gas_tar`, `hot_blast`, `puddling` |
-| `has_lime` | flag | `lime_burning` | `blast_furnace_charcoal`, `portland_cement` |
+| `has_coal` | flag | `coal_mining` | `coal_seam_choice`, `newcomen_engine` |
+| `has_coke` | flag | `coal_seam_choice` | `coal_gas_tar`, `hot_blast`, `puddling` |
+| `has_lime` | flag | `lime_burning` | `blast_furnace`, `portland_cement` |
 | `has_rolling_mill` | flag | `plate_rolling` | (gates or UI only) |
-| `plate_quality` | enum | `plate_rolling` | `high_pressure_engine` |
-| `wrought_iron_capacity` | number | `puddling` | (gates or UI only) |
+| `plate_quality` | enum | `plate_rolling` | `high_pressure_engine`, `newcomen_engine` |
+| `wrought_iron_capacity` | number | `finery_forge`, `puddling` | (gates or UI only) |
 | `has_steel` | flag | `bessemer_converter` | (gates or UI only) |
 | `steel_quality` | count | `basic_lining`, `bessemer_converter`, `manganese_additions`, `open_hearth` | `compressors`, `gate_generator`, `steam_turbine` |
 | `has_open_hearth` | flag | `open_hearth` | (gates or UI only) |
@@ -68,9 +78,9 @@
 | `has_peroxide` | flag | `hydrogen_peroxide` | `steam_turbopump` |
 | `has_hypergolics` | flag | `hypergolic_propellants` | `gate_engine`, `lander_stage`, `midcourse_correction`, `rocket_workshop` |
 | `has_solids` | flag | `solid_motors` | `launch_escape`, `rocket_workshop`, `stage_separation` |
-| `water_wheels_built` | count | `water_wheels` | `trip_hammer` |
-| `engine_type` | enum | `high_pressure_engine`, `newcomen_engine`, `watt_engine` | `dynamo`, `gate_steam`, `locomotive`, `rotative_engine_shafting` |
-| `coal_per_engine_kw` | number | `newcomen_engine` | (gates or UI only) |
+| `water_wheels_built` | count | `water_wheels` | `blast_furnace`, `trip_hammer` |
+| `engine_type` | enum | `high_pressure_engine`, `newcomen_engine`, `savery_pump`, `watt_engine` | `dynamo`, `gate_steam`, `locomotive`, `rotative_engine_shafting` |
+| `coal_per_engine_kw` | number | `newcomen_engine`, `watt_engine` | (gates or UI only) |
 | `mine_drained_by_engine` | flag | `high_pressure_engine`, `newcomen_engine`, `watt_engine` | (gates or UI only) |
 | `factory_power_kw` | number | `rotative_engine_shafting` | (gates or UI only) |
 | `hydro_kw` | number | `water_turbine` | `birkeland_eyde`, `dynamo` |
@@ -83,7 +93,7 @@
 | `has_battery` | flag | `voltaic_cells` | (gates or UI only) |
 | `trained_smiths` | count | `apprentice_system` | `bloom_smithing`, `crucibles_blowpipes` |
 | `trained_miners` | count | `apprentice_system` | (gates or UI only) |
-| `machinists_trained` | count | `boring_mill`, `screw_cutting_lathe`, `surface_plates`, `watt_engine` | `claude_expander`, `gate_generator`, `gate_steam`, `planer_milling`, `precision_grinding`, `surface_plates`, `watt_engine` |
+| `machinists_trained` | count | `boring_mill`, `screw_cutting_lathe`, `surface_plates` | `claude_expander`, `gate_generator`, `gate_steam`, `planer_milling`, `precision_grinding`, `surface_plates`, `watt_engine` |
 | `glassblowers_trained` | count | `glassworks` | `dewar_flasks`, `vacuum_pumps`, `vacuum_tubes` |
 | `welders_trained` | count | `welding` | `regenerative_cooling`, `weld_radiography` |
 | `electrical_engineers_trained` | count | `dynamo` | (gates or UI only) |
@@ -140,5 +150,5 @@
 | `lunar_landers_flown` | count | `uncrewed_lunar_landing` | (gates or UI only) |
 | `known_flaws` | set | `test_campaign` | `gate_landing` |
 | `fixed_flaws` | set | `test_campaign` | `gate_landing` |
-| `has_bellows` | flag | `pot_bellows` | `bloomery`, `gate_reliable_smelting` |
-| `has_wind_furnaces` | flag | `wind_furnaces` | `gate_reliable_smelting` |
+| `has_bellows` | flag | `forced_draft_for_iron`, `pot_bellows` | `bloomery`, `forced_draft_for_iron`, `gate_reliable_smelting` |
+| `has_wind_furnaces` | flag | `forced_draft_for_iron`, `wind_furnaces` | `bloomery`, `forced_draft_for_iron`, `gate_reliable_smelting` |

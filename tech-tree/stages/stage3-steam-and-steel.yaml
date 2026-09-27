@@ -162,7 +162,7 @@ nodes:
     critical_path: false
     problem: "Blast furnaces burn tons of coal per ton of iron, and the coal pits can't keep up."
     requires:
-      nodes: [gate_steam, coking]
+      nodes: [gate_steam, coal_seam_choice]
       resources: {iron_kg: 8000, clay_kg: 20000}
       labor_person_days: 800000
     unlocks:
@@ -189,7 +189,7 @@ nodes:
     critical_path: false
     problem: "Finery forges need charcoal and are slow; you need tons of wrought iron from coke pig iron."
     requires:
-      nodes: [gate_steam, coking]
+      nodes: [gate_steam, coal_seam_choice]
       resources: {iron_kg: 6000, clay_kg: 15000}
       labor_person_days: 900000
     unlocks:
@@ -322,6 +322,35 @@ nodes:
       collide, which pushes metal-bearing rock up near the surface. The hard part is knowing where
       to dig.
 
+  - id: niter_beds
+    name: Niter beds and black powder
+    stage: 3
+    kind: project
+    critical_path: false
+    problem: "Hard rock in the deep galleries stops the picks, and fire-setting fills the mine with smoke."
+    requires:
+      nodes: [mineral_prospecting, lime_burning]
+      resources: {wood_kg: 20000, sulfur_kg: 500}
+      labor_person_days: 800000
+    unlocks:
+      jobs: [tend_niter_beds, make_black_powder]  # beds need 1-2 years before the first harvest (estimate)
+      effects: ["Blasting: hard-rock mining and tunnelling x2.5 once powder is available"]
+    reads_state: []
+    writes_state: [has_nitrate, nitrate_source]
+    pages_bundle: industrial_chemistry
+    without_pages: "Different route: the beds are built by imitation of dung-heap lore but the leaching and crystallizing steps must be found by trial; first usable powder after ~3 years instead of ~1.5"
+    fallback: "Fire-setting (slow, smoky)"
+    energy_effect: "Negligible"
+    numbers_status: "Niter beds took on the order of a year or more to mature (commonly cited; estimate); blasting in mines from the 1600s is sourced"
+    sources: ["https://en.wikipedia.org/wiki/Saltpeter"]
+    tags: [slow_payoff]
+    notebook: >
+      Black powder needs saltpeter, potassium nitrate, and before the 20th century nitrate came
+      from rot. Piles of dung, straw and lime, kept damp and turned for a year or more, let soil
+      bacteria convert ammonia into nitrate, which was leached out and crystallized. Mixed with
+      charcoal and sulfur, it burns without outside air. The same nitrate problem returns, much
+      bigger, in Stage 4.
+
   - id: portland_cement
     name: Portland cement
     stage: 3
@@ -411,7 +440,7 @@ nodes:
     critical_path: false
     problem: "Coke ovens pour clouds of tar, gas and ammonia into the air, and your chemists want all three."
     requires:
-      nodes: [coking, glassworks]
+      nodes: [coal_seam_choice, glassworks]
       resources: {iron_kg: 6000}
       labor_person_days: 700000
     unlocks:
@@ -438,7 +467,7 @@ nodes:
     critical_path: true
     problem: "Puddled iron comes a few hundred kilograms at a time, and real steel is still a luxury."
     requires:
-      nodes: [blast_furnace_charcoal, measurement_standards]
+      nodes: [blast_furnace, measurement_standards]
       resources: {iron_kg: 30000, clay_kg: 20000}
       labor_person_days: 2000000
     unlocks:

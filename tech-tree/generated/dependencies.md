@@ -59,65 +59,64 @@ Critical path: Fire-hardened digging sticks → Pit kiln → Charcoal clamps →
 flowchart TD
   iron_prospecting["Iron prospecting"]
   gate_reliable_smelting --> iron_prospecting
+  deposit_choice["Which deposit to open"]
+  iron_prospecting --> deposit_choice
   bloomery["Bloomery furnace"]
-  iron_prospecting --> bloomery
+  deposit_choice --> bloomery
   pot_bellows -.-> bloomery
   wind_furnaces -.-> bloomery
+  forced_draft_for_iron["Forced draft at the iron site"]
+  bloomery --> forced_draft_for_iron
   bloom_smithing["Smithing the bloom"]
   bloomery --> bloom_smithing
-  lime_burning["Lime burning"]
-  bloomery --> lime_burning
+  quench_temper["Quench trials"]
+  bloom_smithing --> quench_temper
   coppicing["Coppiced woodland"]
   bloomery --> coppicing
+  coal_mining["Coal"]
+  iron_prospecting --> coal_mining
+  coal_seam_choice["Which seam to work"]
+  coal_mining --> coal_seam_choice
+  lime_burning["Lime burning"]
+  bloomery --> lime_burning
   water_wheels["Water wheels"]
   bloom_smithing --> water_wheels
+  blast_furnace["Blast furnace"]
+  bloom_smithing --> blast_furnace
+  lime_burning --> blast_furnace
+  finery_forge["Finery forge"]
+  blast_furnace --> finery_forge
+  sand_casting["Sand-mold founding"]
+  blast_furnace --> sand_casting
   trip_hammer["Trip hammers"]
   water_wheels --> trip_hammer
-  wheelbarrows_carts["Wheelbarrows and handcarts"]
-  bloom_smithing --> wheelbarrows_carts
-  fire_setting["Fire-setting"]
-  iron_prospecting --> fire_setting
-  quench_temper["Steeling and quenching"]
-  bloom_smithing --> quench_temper
-  blast_furnace_charcoal["Charcoal blast furnace"]
-  lime_burning --> blast_furnace_charcoal
-  water_wheels -.-> blast_furnace_charcoal
-  treadwheel_bellows -.-> blast_furnace_charcoal
-  treadwheel_bellows["Treadwheel bellows"]
-  bloom_smithing --> treadwheel_bellows
-  finery_forge["Finery forge"]
-  blast_furnace_charcoal --> finery_forge
-  coal_mining["Coal from the outcrop"]
-  iron_prospecting --> coal_mining
+  finery_forge --> trip_hammer
   mine_drainage_manual["Bucket chains and rag pumps"]
-  coal_mining --> mine_drainage_manual
   bloom_smithing --> mine_drainage_manual
-  coking["Coke ovens"]
-  coal_mining --> coking
-  blast_furnace_charcoal --> coking
-  sand_casting["Sand-mold iron founding"]
-  blast_furnace_charcoal --> sand_casting
-  niter_beds["Niter beds and black powder"]
-  fire_setting --> niter_beds
-  lime_burning --> niter_beds
+  drainage_adit["Drainage adit"]
+  mine_drainage_manual --> drainage_adit
+  shallow_pits["New shallow pits"]
+  mine_drainage_manual --> shallow_pits
   savery_pump["Savery fire engine"]
   mine_drainage_manual --> savery_pump
   sand_casting --> savery_pump
-  newcomen_engine["Newcomen engine"]
+  newcomen_engine["Atmospheric engine"]
   sand_casting --> newcomen_engine
   mine_drainage_manual --> newcomen_engine
   boring_mill["Cylinder boring mill"]
   sand_casting --> boring_mill
   water_wheels -.-> boring_mill
   newcomen_engine -.-> boring_mill
-  watt_engine["Watt engine with separate condenser"]
+  watt_engine["Condensing engine"]
   boring_mill --> watt_engine
+  newcomen_engine --> watt_engine
   plate_rolling["Rolling mill for boiler plate"]
   finery_forge --> plate_rolling
   water_wheels --> plate_rolling
   high_pressure_engine["High-pressure engine"]
-  plate_rolling --> high_pressure_engine
-  sand_casting --> high_pressure_engine
+  newcomen_engine --> high_pressure_engine
+  plate_rolling -.-> high_pressure_engine
+  finery_forge -.-> high_pressure_engine
   gate_steam["Gate: a working steam engine"]
   sand_casting --> gate_steam
   newcomen_engine -.-> gate_steam
@@ -127,10 +126,10 @@ flowchart TD
   pot_bellows("Pot bellows (S1)")
   wind_furnaces("Wind-draft furnaces on the ridge (S1)")
   classDef crit stroke-width:3px
-  class iron_prospecting,bloomery,bloom_smithing,blast_furnace_charcoal,coal_mining,sand_casting,gate_steam crit
+  class iron_prospecting,deposit_choice,bloomery,bloom_smithing,coal_mining,coal_seam_choice,blast_furnace,sand_casting,newcomen_engine,gate_steam crit
 ```
 
-Critical path: Iron prospecting → Bloomery furnace → Smithing the bloom → Charcoal blast furnace → Coal from the outcrop → Sand-mold iron founding → Gate: a working steam engine
+Critical path: Iron prospecting → Which deposit to open → Bloomery furnace → Smithing the bloom → Coal → Which seam to work → Blast furnace → Sand-mold founding → Atmospheric engine → Gate: a working steam engine
 
 ## Stage 3: Steam and steel
 
@@ -149,10 +148,10 @@ flowchart TD
   measurement_standards --> planer_milling
   hot_blast["Hot blast"]
   gate_steam --> hot_blast
-  coking --> hot_blast
+  coal_seam_choice --> hot_blast
   puddling["Puddling furnace"]
   gate_steam --> puddling
-  coking --> puddling
+  coal_seam_choice --> puddling
   rails_wagonways["Iron rails"]
   rotative_engine_shafting --> rails_wagonways
   puddling -.-> rails_wagonways
@@ -166,6 +165,9 @@ flowchart TD
   mineral_prospecting --> glassworks
   mineral_prospecting["Prospecting for minor minerals"]
   gate_steam --> mineral_prospecting
+  niter_beds["Niter beds and black powder"]
+  mineral_prospecting --> niter_beds
+  lime_burning --> niter_beds
   portland_cement["Portland cement"]
   lime_burning --> portland_cement
   coal_mining --> portland_cement
@@ -176,10 +178,10 @@ flowchart TD
   soda_ash["Soda ash"]
   sulfuric_acid --> soda_ash
   coal_gas_tar["Coke-oven by-products"]
-  coking --> coal_gas_tar
+  coal_seam_choice --> coal_gas_tar
   glassworks --> coal_gas_tar
   bessemer_converter["Bessemer converter"]
-  blast_furnace_charcoal --> bessemer_converter
+  blast_furnace --> bessemer_converter
   measurement_standards --> bessemer_converter
   manganese_additions["Manganese additions"]
   bessemer_converter --> manganese_additions
@@ -216,9 +218,9 @@ flowchart TD
   dynamo --> gate_generator
   bessemer_converter --> gate_generator
   glassworks --> gate_generator
-  blast_furnace_charcoal("Charcoal blast furnace (S2)")
-  coal_mining("Coal from the outcrop (S2)")
-  coking("Coke ovens (S2)")
+  blast_furnace("Blast furnace (S2)")
+  coal_mining("Coal (S2)")
+  coal_seam_choice("Which seam to work (S2)")
   finery_forge("Finery forge (S2)")
   gate_steam("Gate: a working steam engine (S2)")
   high_pressure_engine("High-pressure engine (S2)")
@@ -308,7 +310,7 @@ flowchart TD
   gate_generator("Gate: electric power (S3)")
   glassworks("Glassworks (S3)")
   measurement_standards("Gauges and standard measures (S3)")
-  niter_beds("Niter beds and black powder (S2)")
+  niter_beds("Niter beds and black powder (S3)")
   open_hearth("Open-hearth furnace (S3)")
   soda_ash("Soda ash (S3)")
   classDef crit stroke-width:3px
@@ -409,7 +411,7 @@ flowchart TD
   gate_liquid_oxygen("Gate: liquid oxygen on tap (S4)")
   glassworks("Glassworks (S3)")
   hall_heroult("Aluminum smelting (S4)")
-  niter_beds("Niter beds and black powder (S2)")
+  niter_beds("Niter beds and black powder (S3)")
   oil_refining("Fractional distillation of crude (S4)")
   ostwald_nitric("Nitric acid from ammonia (S4)")
   portland_cement("Portland cement (S3)")
@@ -517,7 +519,7 @@ flowchart TD
   gate_engine("Gate: a booster-class engine (S5)")
   gyroscopes("Gyroscopes (S5)")
   hypergolic_propellants("Storable hypergolic propellants (S5)")
-  niter_beds("Niter beds and black powder (S2)")
+  niter_beds("Niter beds and black powder (S3)")
   open_hearth("Open-hearth furnace (S3)")
   precision_grinding("Precision grinding and ball bearings (S5)")
   radio("Radio transmitters and receivers (S5)")

@@ -1,476 +1,533 @@
-# Stage 2: Iron
+# Stage 2: Iron  (redesigned; see ../stage2-redesign.md)
 # Bloomery iron to the first working steam engine.
-# Target: ~90 min of play, ~12 in-game years.
+# Target: ~90 min of play, ~22 in-game years, ~25 substantive decisions, several hundred small ones.
+#
+# Three layers: pressures (bars that move on their own), workshops (design screens with dials),
+# nodes (projects, upgrades, forks). Nodes carry `beat` (1-8) for the order they're introduced.
 
 stage: 2
 name: Iron
-opening_problem: "Copper and bronze tools keep your crews working, but ore of copper is scarce and iron ore is everywhere, if you can get a fire hot enough."
+opening_problem: "Copper and bronze keep your crews working, but copper ore is scarce and iron ore is everywhere, if you can get a fire hot enough."
+heartbeat: fuel_balance
 gate:
   id: gate_steam
   name: A working steam engine
   condition:
-    energy_w_per_person: 600      # proposed; prototype used 1,500
+    energy_w_per_person: 600
     state: ["mine_drained_by_engine == true"]
   routes: [A_newcomen, B_watt, C_high_pressure, T_savery]
 
+# ---------------------------------------------------------------------------------------------
+# Pressures: simulated bars. `drives` names the state variable; `red_when` is the failing threshold;
+# `effect_when_red` is what the player sees stop working. Nothing here ends the run.
+# ---------------------------------------------------------------------------------------------
+pressures:
+  - id: fuel_balance
+    name: Fuel
+    drives: fuel_balance
+    heartbeat: true
+    rises_with: ["every furnace, kiln and engine draws charcoal or coal per day"]
+    red_when: "daily fuel use exceeds daily fuel production for more than 10 days"
+    effect_when_red: "Furnaces run short and stop mid-campaign; engines idle; output falls"
+    answers: [charcoal_clamps, coppicing, coal_mining, watt_engine]
+    introduced_in_beat: 4
+
+  - id: forest
+    name: Forest within two days' walk
+    drives: forest_cover
+    rises_with: ["charcoal burning (100 kg wood per 20 kg charcoal)", "construction wood"]
+    red_when: "forest_cover < 30"
+    effect_when_red: "Wood per burner falls by half; charcoal haul labor triples"
+    answers: [coppicing, coal_mining]
+    introduced_in_beat: 4
+
+  - id: mine_water
+    name: Water in the mine
+    drives: mine_water_m
+    rises_with: ["cumulative ore and coal dug: the workings deepen ~1 m per 2,000 t (estimate)", "seasonal: wet season adds 2 m"]
+    red_when: "mine_water_m > 0 (workings below the water table)"
+    effect_when_red: "Ore and coal output from the flooded galleries falls to zero unless pumped; upper galleries keep producing at 40%"
+    answers: [mine_drainage_manual, drainage_adit, shallow_pits, savery_pump, newcomen_engine, watt_engine, high_pressure_engine]
+    introduced_in_beat: 6
+
+  - id: tool_wear
+    name: Tools
+    drives: metal_tools
+    rises_with: ["every tool user wears a tool; iron lasts 3x bronze, quenched iron 6x"]
+    red_when: "tools < tool users"
+    effect_when_red: "Workers without tools drop to quarter speed (as in Stage 1)"
+    answers: [bloom_smithing, quench_temper]
+    introduced_in_beat: 1   # carried from Stage 1
+
+  - id: iron_quality
+    name: Iron quality
+    drives: iron_quality
+    rises_with: ["sulfur from high-sulfur coke", "phosphorus from bog iron"]
+    red_when: "iron_quality < 2 (of 3)"
+    effect_when_red: "Tool life and boiler plate strength fall by a third; the smiths report cracks at the forge"
+    answers: [deposit_choice, coal_seam_choice, furnace_workshop]
+    introduced_in_beat: 3
+
+# ---------------------------------------------------------------------------------------------
+# Workshops: design screens. Dials are added in the order listed, each by the node named.
+# ---------------------------------------------------------------------------------------------
+workshops:
+  - id: furnace_workshop
+    name: Furnace workshop
+    opens_with: bloomery
+    loop: "A campaign is one furnace run of ~30 days. Set the dials, run, read yield / carbon / sulfur / fuel, adjust. 60-100 campaigns per stage."
+    dials:
+      - {id: fuel_ratio, name: "Charcoal : ore", range: [0.5, 2.0], added_by: bloomery,
+         effect: "Below ~0.8 the ore doesn't fully reduce and yield collapses; above ~1.3 the iron picks up carbon and comes out as brittle cast lumps the smiths can't work",
+         basis: "Experimental bloomery smelts run near 1:1; higher ratios raise carbon ([Bloomery](https://en.wikipedia.org/wiki/Bloomery))"}
+      - {id: air_supply, name: "Air supply", options: [blowpipes, bellows_crews, wind_site], added_by: bloomery,
+         effect: "Sets furnace temperature. Below ~1,150 C the slag freezes and the campaign fails",
+         basis: "Forced draft lifts a charcoal fire from ~900 C to 1,200 C+"}
+      - {id: ore_choice, name: "Ore", options: [bog_iron, hillside_ore], added_by: deposit_choice,
+         effect: "Grade sets yield (bog ~40% Fe, hillside ~60%); bog iron carries phosphorus and lowers iron_quality",
+         basis: "Bloomeries want ore above ~50% Fe ([Rom & Bohr](https://donwagner.dk/arch-iron/resources/Rom_Bohr_Bloomery.pdf))"}
+      - {id: stack_height, name: "Stack height (m)", range: [3, 10], added_by: blast_furnace,
+         effect: "Above ~5 m with a strong blast, iron absorbs enough carbon to melt and run continuously: cast iron, ~1 t/day, instead of 30 kg blooms",
+         basis: "Cast iron at ~4% C melts near 1,150 C"}
+      - {id: blast_source, name: "Blast", options: [treadwheels, water_wheel], added_by: blast_furnace,
+         effect: "A water wheel blows a tall furnace with no walkers; treadwheels need ~60 walkers per furnace (estimate)",
+         basis: "Du Shi's water-powered bellows, 31 AD ([Du Shi](https://en.wikipedia.org/wiki/Du_Shi))"}
+      - {id: furnace_fuel, name: "Fuel", options: [charcoal, coke], added_by: coal_seam_choice,
+         effect: "Coke frees the forest. Coke from the high-sulfur seam carries sulfur into the iron: iron_quality -1 (hot shortness)",
+         basis: "Darby's 1709 coke smelting relied on unusually low-sulfur coal ([Darby](https://en.wikipedia.org/wiki/Abraham_Darby_I))"}
+      - {id: flux, name: "Lime per ton of ore", range: [0, 300], added_by: lime_burning,
+         effect: "Lime lets slag flow without taking iron with it: yield +25% in the blast furnace. Too much thickens the slag",
+         basis: "Limestone flux forms calcium silicate slag"}
+    outputs: [yield_pct, carbon_pct, sulfur_flag, fuel_per_ton, tons_per_day]
+
+  - id: engine_workshop
+    name: Engine workshop
+    opens_with: savery_pump
+    loop: "Design, see live outputs, build (costs iron and months), run. 5-10 design iterations per stage."
+    dials:
+      - {id: lift_height, name: "Lift height (m)", range: [5, 60], added_by: savery_pump,
+         effect: "A suction pump stops at ~10 m however well it's made. Above that the Savery design needs steam pressure, and its soldered boiler bursts",
+         basis: "The atmosphere supports a water column of ~10 m"}
+      - {id: cylinder_diameter, name: "Cylinder diameter (m)", range: [0.3, 1.5], added_by: newcomen_engine,
+         effect: "Piston force = pressure difference x area. 0.5 m at 12 strokes/min of 2 m: ~4 kW (estimate), enough to drain a mid-size mine",
+         basis: "Atmospheric engine: ~50 kPa effective vacuum x piston area"}
+      - {id: boiler_pressure, name: "Boiler pressure (atm)", range: [1, 6], added_by: newcomen_engine,
+         effect: "More power from the same cylinder, more coal, more stress on the boiler",
+         basis: "Force scales with pressure; Trevithick's engines ran several atmospheres"}
+      - {id: plate, name: "Plate thickness (mm) and type", range: [3, 20], options: [hammered, rolled], added_by: newcomen_engine,
+         effect: "Hoop stress = P x r / t must stay under the plate's safe limit. Hammered plate has thin spots (safe limit ~half of rolled). The screen shows a safety margin and, for margins under 1.5, the year the boiler will burst",
+         basis: "Thin-wall pressure vessel: sigma = P r / t"}
+      - {id: condenser, name: "Separate condenser", options: [none, separate], added_by: watt_engine,
+         effect: "Cuts coal by about three quarters. Needs a bored cylinder (boring_mill) to seal against steam",
+         basis: "Watt 1765; ~75% fuel saving ([Watt engine](https://en.wikipedia.org/wiki/Watt_steam_engine))"}
+    outputs: [water_lifted_per_day, coal_per_day, iron_cost_kg, safety_margin, years_to_failure]
+    failure_rule: "Deterministic: years_to_failure = f(safety_margin, plate type). Shown before building. A burst kills the crew, destroys the engine, and adds 1 to boiler_explosions."
+
+# ---------------------------------------------------------------------------------------------
+# Nodes
+# ---------------------------------------------------------------------------------------------
 nodes:
 
+  # ---- Beat 1: finding iron -----------------------------------------------------------------
   - id: iron_prospecting
     name: Iron prospecting
     stage: 2
+    beat: 1
     kind: project
     critical_path: true
-    problem: "Iron ore is common, but your crews can't tell rich ore from red rock."
+    problem: "Iron ore is everywhere, but your crews can't tell rich ore from red rock."
     requires:
       nodes: [gate_reliable_smelting]
       labor_person_days: 400000
     unlocks:
-      jobs: [mine_iron_ore]       # 30 kg ore per worker-day with a tool (estimate)
+      jobs: [prospect]
+      effects: ["Finds two deposits and presents them as deposit_choice"]
     reads_state: [bundles_taken]
-    writes_state: [iron_ore_grade, iron_ore_phosphorus]
+    writes_state: [deposits_known]
     pages_bundle: geological_survey
-    without_pages: "Streak and weight testing by trial; finds a lower-grade, higher-phosphorus deposit first"
-    fallback: "Bog iron from marshes (lower grade, phosphorus-rich)"
+    without_pages: "Different route: the deposits are found in the order prospecting parties stumble on them (bog iron first, hillside after ~3 more years of searching), so the phosphorus problem is met before the choice exists"
+    fallback: "Bog iron only until the hillside is found"
     energy_effect: "None"
-    numbers_status: "Bloomery needs ore above roughly 50% Fe to give a reasonable yield (sourced); rates are estimates"
+    numbers_status: "Estimate"
     sources: ["https://donwagner.dk/arch-iron/resources/Rom_Bohr_Bloomery.pdf"]
     tags: []
     notebook: >
-      Iron is the fourth most common element in Earth's crust, but most of it is locked in
-      rocks too lean to smelt. Good ore is heavy for its size and leaves a red-brown streak when
-      scraped on unglazed pottery. In a bloomery the slag must carry away the rock, and it does
-      that by taking iron with it, so lean ore can yield almost nothing.
+      Iron is the fourth most common element in the crust, but most of it is locked in rock too
+      lean to smelt. Good ore is heavy for its size and leaves a red-brown streak on unglazed
+      pottery. Bog iron forms where groundwater carries dissolved iron into marshes; it's easy to
+      dig and full of phosphorus. Hillside hematite is richer and cleaner and usually farther away.
 
+  - id: deposit_choice
+    name: Which deposit to open
+    stage: 2
+    beat: 1
+    kind: decision_option
+    critical_path: true
+    problem: "Two deposits: bog iron a day's walk away, lean and phosphorus-rich, or hillside ore three days away, rich and clean, that needs a road."
+    requires:
+      nodes: [iron_prospecting]
+    unlocks:
+      jobs: [mine_iron_ore]       # 30 kg/day with a tool (estimate)
+      effects:
+        - "Bog iron: ore now, ~40% Fe, iron_quality -1 (phosphorus) for everything made from it"
+        - "Hillside: a 1.5M person-day road first (with a milestone: wheelbarrows and carts halve haul labor at 50%), then ~60% Fe clean ore"
+        - "Both can be opened; the second later. Adds the ore_choice dial to the furnace workshop"
+    reads_state: [deposits_known]
+    writes_state: [iron_ore_grade, iron_ore_phosphorus, iron_quality, haul_distance_days]
+    pages_bundle: geological_survey
+    without_pages: "See iron_prospecting"
+    fallback: "None needed"
+    energy_effect: "None"
+    numbers_status: "Grades and distances are estimates; phosphorus in bog iron is well attested"
+    sources: ["https://en.wikipedia.org/wiki/Bog_iron"]
+    tags: [substantive]
+    notebook: >
+      Phosphorus dissolves into iron and can't be hammered out. A little makes iron harder; more
+      makes it brittle when cold. In a bloomery some phosphorus goes into the slag, but bog iron
+      carries so much that the bars stay cold-short. Ancient smiths worked around it; your Stage 3
+      steelmakers will find it's the one thing the Bessemer converter can't remove.
+
+  # ---- Beat 2: the bloomery -----------------------------------------------------------------
   - id: bloomery
     name: Bloomery furnace
     stage: 2
-    kind: project
+    beat: 2
+    kind: workshop
+    workshop: furnace_workshop
     critical_path: true
     problem: "Iron doesn't melt until 1,538 C, far beyond what your copper furnaces reach."
     requires:
-      nodes: [iron_prospecting]
+      nodes: [deposit_choice]
       any_of: [[pot_bellows], [wind_furnaces]]
       resources: {clay_kg: 40000, charcoal_kg: 10000}
-      labor_person_days: 900000
+      labor_person_days: 700000
     unlocks:
-      jobs: [smelt_iron_bloom]    # 10 kg ore + 10 kg charcoal -> ~1.7 kg bloom per smelt crew-day (estimate)
-    reads_state: [iron_ore_grade, has_bellows]
+      jobs: [smelt_iron_bloom]    # per campaign: 1 t ore + ratio x 1 t charcoal -> yield% bloom
+      effects: ["Opens the furnace workshop with two dials: charcoal:ore and air supply"]
+    reads_state: [iron_ore_grade, has_bellows, has_wind_furnaces]
     writes_state: [has_iron]
     pages_bundle: metallurgy_1
-    without_pages: "About 3x labor; first dozens of smelts fail as slag freezes"
-    fallback: "Hard wall without forced air: no bellows or wind furnace means no iron. The game explains why and points back to Stage 1 upgrades."
-    energy_effect: "Charcoal at 75 MJ/kg; iron needs roughly 1 kg charcoal per kg ore, far more than copper per kg metal"
-    numbers_status: "Charcoal:ore about 1:1 and ore-to-bloom around 0.17 in experiments are sourced; labor is an estimate"
+    without_pages: "Different route: the dials start at wrong defaults and the notebook entry is blank until three campaigns have run; the player finds the ratio by trial (typically 8-10 campaigns instead of 2-3)"
+    fallback: "Hard wall without forced air: no bellows or wind furnace means no iron. The game says so and points back to the Stage 1 upgrades, which stay buildable"
+    energy_effect: "Charcoal at 75 MJ/kg; iron needs ~1 kg charcoal per kg ore"
+    numbers_status: "Charcoal:ore ~1:1 and ore-to-bloom ~0.17 are sourced from experimental smelts; campaign length is a game value"
     sources:
       - "https://en.wikipedia.org/wiki/Bloomery"
       - "https://www.tandfonline.com/doi/full/10.1080/00934690.2018.1479085"
-    tags: [hard_wall_explained]
+    tags: [hard_wall_explained, substantive]
     notebook: >
       A bloomery never melts iron. At around 1,200 C, carbon monoxide strips oxygen from the ore
-      and leaves a spongy lump of solid iron soaked in liquid slag, called a bloom. The rock in
-      the ore melts into that slag, which is mostly iron silicate, so a lot of iron leaves with
-      the waste. Experimental smelts often recover only a sixth of the ore's weight as usable
-      iron. Without a forced draft the fire never reaches the needed heat.
+      and leaves a spongy lump of solid iron soaked in liquid slag, called a bloom. The rock in the
+      ore melts into that slag, which is mostly iron silicate, so much of the iron leaves with the
+      waste. Experimental smelts often recover only a sixth of the ore's weight as usable iron.
 
+  - id: forced_draft_for_iron
+    name: Forced draft at the iron site
+    stage: 2
+    beat: 2
+    kind: decision_option
+    critical_path: false
+    problem: "Your Stage 1 blast works only where it was built. The iron ore is somewhere else."
+    requires:
+      nodes: [bloomery]
+      state: ["NOT has_bellows OR NOT has_wind_furnaces"]
+    unlocks:
+      effects: ["Whichever Stage 1 option you skipped (pot_bellows or wind_furnaces) is offered now at the iron site, at its Stage 1 cost"]
+    reads_state: [has_bellows, has_wind_furnaces]
+    writes_state: [has_bellows, has_wind_furnaces]
+    pages_bundle: metallurgy_1
+    without_pages: "Same"
+    fallback: "Haul ore to the ridge furnaces (more porters)"
+    energy_effect: "None"
+    numbers_status: "Game structure"
+    sources: []
+    tags: [substantive]
+    notebook: >
+      Wind furnaces are tied to a ridge; bellows go where the ore is. A colony that chose wind in
+      Stage 1 now pays for bellows or for porters. Real Bronze and Iron Age smelting sites cluster
+      where ore, fuel and draft could all be had at once, and that was rare.
+
+  # ---- Beat 3: smithing and steel edges -------------------------------------------------------
   - id: bloom_smithing
     name: Smithing the bloom
     stage: 2
+    beat: 3
     kind: project
     critical_path: true
     problem: "The bloom is a spongy lump full of slag that crumbles if you try to use it."
     requires:
       nodes: [bloomery]
+      state: ["bloom_kg > 500"]
       resources: {copper_kg: 300, charcoal_kg: 5000}
-      labor_person_days: 600000
+      labor_person_days: 500000
     unlocks:
-      jobs: [forge_iron_tools]    # 1.5 kg bar iron per tool; tools last 3x bronze
-    reads_state: [trained_smiths]
+      jobs: [forge_iron_tools]    # 1.5 kg bar per tool; lasts 3x bronze
+      effects: ["Iron enters the tool mix. Toolmakers choose bronze or iron per batch; bronze stays better for bearings and bellows fittings"]
+    reads_state: [trained_smiths, iron_quality]
     writes_state: [iron_tools]
     pages_bundle: metallurgy_1
-    without_pages: "1.5x labor"
+    without_pages: "1.5x labor; first bars are slaggy"
     fallback: "Stone anvils and hammers (slower)"
     energy_effect: "Forge charcoal counts"
     numbers_status: "Estimate"
     sources: []
-    tags: []
+    tags: [substantive]
     notebook: >
-      Reheat the bloom to a bright yellow and hammer it, and the liquid slag squirts out while
-      the iron grains weld together. Repeat, fold, repeat. The strands of slag left inside give
-      wrought iron its fibrous grain, which is why it bends slowly before it breaks. A good
-      smith loses a third or more of the bloom to scale and slag on the way to a bar.
-
-  - id: lime_burning
-    name: Lime burning
-    stage: 2
-    kind: project
-    critical_path: false
-    problem: "Slag carries away too much iron, and your kiln and furnace walls crumble."
-    requires:
-      nodes: [bloomery]
-      resources: {wood_kg: 30000, clay_kg: 10000}
-      labor_person_days: 500000
-    unlocks:
-      jobs: [quarry_stone, burn_lime]   # 100 kg limestone + 50 kg wood -> 56 kg lime (stoichiometric limit)
-      effects: ["Enables flux in blast furnaces; lime mortar for large structures"]
-    reads_state: []
-    writes_state: [has_lime]
-    pages_bundle: primitive_technology
-    without_pages: "No penalty; lime plaster was known in this region by the Neolithic"
-    fallback: "Clay-bonded walls, shorter-lived"
-    energy_effect: "Lime burning is a real heat load; counts at 15 MJ/kg wood"
-    numbers_status: "CaCO3 -> CaO + CO2 mass ratio (56%) is exact chemistry; wood per kg is an estimate"
-    sources: ["https://en.wikipedia.org/wiki/Lime_kiln"]
-    tags: []
-    notebook: >
-      Heat limestone above about 900 C and it gives off carbon dioxide, leaving quicklime. Mixed
-      with water and left in air, lime slowly reabsorbs CO2 and turns back into stone, which is
-      why lime mortar hardens. In a furnace, lime does a different job: it bonds with the silica
-      in ore rock and forms a slag that doesn't need to steal iron to flow.
-
-  - id: coppicing
-    name: Coppiced woodland
-    stage: 2
-    kind: project
-    critical_path: false
-    problem: "Charcoal crews now walk a day or more to reach standing forest, and the woods are retreating."
-    requires:
-      nodes: [bloomery]
-      state: ["forest_cover < 60"]
-      labor_person_days: 1500000
-    unlocks:
-      effects: ["Managed forest regrows on a 15-year cycle; sets a sustainable charcoal ceiling instead of a cliff"]
-    reads_state: [forest_cover]
-    writes_state: [forest_cover, coppice_area]
-    pages_bundle: primitive_technology
-    without_pages: "Workers notice regrowth from stumps after 2 years; 1.5x labor"
-    fallback: "Keep clear-cutting and walk further"
-    energy_effect: "Caps sustainable charcoal; makes the need for coal visible"
-    numbers_status: "Coppice rotations of roughly 7-20 years are sourced; yields are estimates"
-    sources: ["https://en.wikipedia.org/wiki/Coppicing"]
-    tags: [labor_sink, teaches_bottleneck]
-    notebook: >
-      Cut many broadleaf trees near the ground and the stump sends up a crowd of straight new
-      shoots. Harvest them every decade or two and the same root system keeps producing for
-      centuries. Medieval English ironworks ran for generations on coppiced woodland. The catch
-      is area: a single charcoal blast furnace could need thousands of hectares of coppice.
-
-  - id: water_wheels
-    name: Water wheels
-    stage: 2
-    kind: project
-    critical_path: false
-    problem: "Working the bellows is the most exhausting job in the colony, and it caps how big a furnace can get."
-    requires:
-      nodes: [bloom_smithing]
-      resources: {wood_kg: 40000, iron_kg: 400}
-      labor_person_days: 1200000
-    unlocks:
-      effects: ["Water-powered bellows free bellows workers; each wheel ~2-5 kW mechanical at a river site"]
-    reads_state: [river_sites]
-    writes_state: [water_wheels_built]
-    pages_bundle: steam_engines
-    without_pages: "Undershot wheels only (lower output), 1.5x labor"
-    fallback: "Treadwheels driven by workers (large labor sink)"
-    energy_effect: "Counts as mechanical energy; a few watts per person per wheel. Mechanical energy weighted x2.5 (see energy.md)"
-    numbers_status: "Du Shi's water-powered bellows (31 AD, Han China) are sourced; power per wheel is an estimate"
-    sources: ["https://en.wikipedia.org/wiki/Du_Shi"]
-    tags: [new_energy_source]
-    notebook: >
-      A water wheel turns the weight of falling water into rotation. An overshot wheel, where
-      water pours onto the top, can capture more than half the energy of the fall. In 31 AD a
-      Han official named Du Shi connected wheels to furnace bellows. From then until steam,
-      industry clustered on rivers because that's where the power was.
-
-  - id: trip_hammer
-    name: Trip hammers
-    stage: 2
-    kind: upgrade
-    critical_path: false
-    problem: "Hammering blooms into bars takes more smiths than you have."
-    requires:
-      nodes: [water_wheels]
-      resources: {iron_kg: 800, wood_kg: 10000}
-      labor_person_days: 500000
-    unlocks:
-      effects: ["forge_iron_tools and bar production x3 at wheel sites"]
-    reads_state: [water_wheels_built]
-    writes_state: []
-    pages_bundle: steam_engines
-    without_pages: "1.5x labor"
-    fallback: "More smiths"
-    energy_effect: "Mechanical"
-    numbers_status: "Estimate"
-    sources: []
-    tags: []
-    notebook: >
-      A cam on a turning shaft lifts a heavy hammer and drops it, dozens of times a minute, for
-      as long as the river runs. Trip hammers turned smithing from a craft of strength into a
-      craft of positioning. They were in use in Han China and spread through medieval Europe.
-
-  - id: wheelbarrows_carts
-    name: Wheelbarrows and handcarts
-    stage: 2
-    kind: upgrade
-    critical_path: false
-    problem: "Half your miners' day is spent carrying ore, not digging it."
-    requires:
-      nodes: [bloom_smithing]
-      resources: {iron_kg: 300, wood_kg: 8000}
-      labor_person_days: 300000
-    unlocks:
-      effects: ["Haul labor for ore, coal and limestone halved within a site"]
-    reads_state: []
-    writes_state: []
-    pages_bundle: primitive_technology
-    without_pages: "No penalty"
-    fallback: "Baskets"
-    energy_effect: "None"
-    numbers_status: "Estimate. No draft animals in base rules (see open questions)."
-    sources: ["https://en.wikipedia.org/wiki/Wheelbarrow"]
-    tags: [quick_win]
-    notebook: >
-      A wheelbarrow is a lever with a wheel as its fulcrum: the wheel carries most of the load,
-      and the worker only lifts and balances the rest. It appears in Han China by the first
-      centuries AD, over a millennium before it reached Europe. Iron axles and rims make wheels
-      that last.
-
-  - id: fire_setting
-    name: Fire-setting
-    stage: 2
-    kind: upgrade
-    critical_path: false
-    problem: "The iron ore runs into hard rock that bronze and iron picks barely scratch."
-    requires:
-      nodes: [iron_prospecting]
-      resources: {wood_kg: 20000}
-      labor_person_days: 200000
-    unlocks:
-      effects: ["mine_iron_ore and mine_coal work in hard rock at 60% speed instead of 20%"]
-    reads_state: []
-    writes_state: []
-    pages_bundle: primitive_technology
-    without_pages: "Found by accident in months"
-    fallback: "Pick at the rock very slowly"
-    energy_effect: "Wood burned counts"
-    numbers_status: "Technique is well attested from antiquity to the 1700s; rates are estimates"
-    sources: ["https://en.wikipedia.org/wiki/Fire-setting"]
-    tags: []
-    notebook: >
-      Build a fire against the rock face, let it burn, then let the rock cool. Different
-      minerals expand by different amounts when heated, and the stress cracks the rock so picks
-      can pry it off. Miners used fire-setting for thousands of years until gunpowder blasting
-      replaced it in the 1600s. It fills tunnels with smoke, so it's done in shifts.
+      Reheat the bloom to bright yellow and hammer it, and the liquid slag squirts out while the
+      iron grains weld together. Repeat, fold, repeat. The slag strands left inside give wrought
+      iron its fibrous grain, which is why it bends slowly before it breaks. A good smith loses a
+      third of the bloom to scale and slag on the way to a bar.
 
   - id: quench_temper
-    name: Steeling and quenching
+    name: Quench trials
     stage: 2
-    kind: upgrade
+    beat: 3
+    kind: project
     critical_path: false
     problem: "Wrought-iron edges are soft; iron tools bend and need constant resharpening."
     requires:
       nodes: [bloom_smithing]
-      resources: {charcoal_kg: 4000}
-      labor_person_days: 400000
+      state: ["iron_tools > 1000"]
+      resources: {charcoal_kg: 4000, iron_kg: 500}
+      labor_person_days: 300000
     unlocks:
-      effects: ["Iron tools last 2x longer; unlocks steel_edges state used by later machining nodes"]
-    reads_state: []
+      effects:
+        - "A research loop: each trial (a month, 20 smiths, 50 kg iron) tests one carburizing time and quench. Deterministic sequence: with Metallurgy I pages, trial 2 succeeds; without, trial 6"
+        - "Success: iron tools last 2x longer (6x bronze); has_steel_edges for Stage 3 machining"
+    reads_state: [bundles_taken]
     writes_state: [has_steel_edges]
     pages_bundle: metallurgy_1
-    without_pages: "2x labor; many cracked blades before the right quench is found"
+    without_pages: "Different route: more trials, each shown with its result (too soft, cracked in the quench, right), so the player learns the window by seeing it"
     fallback: "Work-hardening only"
     energy_effect: "Small"
-    numbers_status: "Metallurgy standard (roughly 0.6-1% carbon for hardenable tool steel); rates are estimates"
+    numbers_status: "Roughly 0.6-1% carbon for hardenable tool steel is standard; trial counts are game values"
     sources: ["https://en.wikipedia.org/wiki/Quenching"]
-    tags: []
+    tags: [substantive, research_loop]
     notebook: >
       Pure iron is soft. Pack it in charcoal and hold it red-hot for hours, and carbon soaks into
       the surface. Heat that steel skin until it's no longer magnetic, then plunge it into water,
       and the carbon gets trapped in a strained, very hard crystal called martensite. Too hard is
       brittle, so smiths reheat it gently to temper it back.
 
-  - id: blast_furnace_charcoal
-    name: Charcoal blast furnace
+  # ---- Beat 4: the forest ---------------------------------------------------------------------
+  - id: coppicing
+    name: Coppiced woodland
     stage: 2
-    kind: project
-    critical_path: true
-    problem: "Bloomeries make a few kilograms per smelt and waste most of the iron in slag."
-    requires:
-      nodes: [lime_burning]
-      any_of: [[water_wheels], [treadwheel_bellows]]
-      resources: {stone_kg: 400000, clay_kg: 60000, iron_kg: 2000}
-      labor_person_days: 3000000
-    unlocks:
-      jobs: [run_blast_furnace]   # continuous; ~1 t pig iron/day per furnace; ~1.5-2 t charcoal per t iron (estimate)
-    reads_state: [forest_cover, coppice_area, has_lime]
-    writes_state: [has_cast_iron, forest_cover]
-    pages_bundle: metallurgy_2
-    without_pages: "2x labor; first campaigns end with the furnace choked by frozen iron"
-    fallback: "More bloomeries (no cast iron, so no cylinders; the gate then requires a finery route)"
-    energy_effect: "Largest single charcoal user; big surge. Forest decline becomes the visible bottleneck."
-    numbers_status: "Chinese cast iron by the 5th century BCE and Han blast furnaces are sourced; tonnages and charcoal rates are estimates"
-    sources: ["https://en.wikipedia.org/wiki/History_of_metallurgy_in_China"]
-    tags: [labor_sink]
-    notebook: >
-      Make the furnace tall, blow harder, and keep feeding ore, charcoal and limestone from the
-      top. Iron sinking through the hot zone absorbs carbon, and iron with about 4% carbon melts
-      near 1,150 C instead of 1,538 C. Now the iron comes out as a liquid you can tap and cast.
-      Chinese founders were pouring cast iron by the 5th century BCE, nearly two thousand years
-      before Europe.
-
-  - id: treadwheel_bellows
-    name: Treadwheel bellows
-    stage: 2
+    beat: 4
     kind: project
     critical_path: false
-    problem: "No river on your furnace site can turn a wheel, but the furnace needs a strong, steady blast."
+    problem: "Charcoal crews walk a day or more to standing forest, and the woods are retreating."
     requires:
-      nodes: [bloom_smithing]
-      resources: {wood_kg: 20000, iron_kg: 200}
+      nodes: [bloomery]
+      state: ["forest_cover < 60"]
+      labor_person_days: 1500000
+    unlocks:
+      effects: ["Managed forest regrows on a 15-year cycle; sets a sustainable charcoal ceiling (~1 t charcoal per 4 ha per year, estimate) instead of a cliff. Repeatable: more area, more ceiling"]
+    reads_state: [forest_cover]
+    writes_state: [forest_cover, coppice_area]
+    pages_bundle: primitive_technology
+    without_pages: "Workers notice regrowth from stumps after 2 years; 1.5x labor"
+    fallback: "Keep clear-cutting and walk further"
+    energy_effect: "Caps sustainable charcoal; makes the need for coal visible"
+    numbers_status: "Coppice rotations of 7-20 years are sourced; yields are estimates"
+    sources: ["https://en.wikipedia.org/wiki/Coppicing"]
+    tags: [labor_sink, substantive]
+    notebook: >
+      Cut many broadleaf trees near the ground and the stump sends up a crowd of straight new
+      shoots. Harvest them every decade or two and the same roots keep producing for centuries.
+      Medieval English ironworks ran for generations on coppice. The catch is area: one charcoal
+      blast furnace could need thousands of hectares.
+
+  - id: coal_mining
+    name: Coal
+    stage: 2
+    beat: 4
+    kind: project
+    critical_path: true
+    problem: "The forest can't feed both the charcoal kilns and the furnaces."
+    requires:
+      nodes: [iron_prospecting]
+      state: ["forest_cover < 50 OR fuel_balance < 0"]
+      labor_person_days: 600000
+    unlocks:
+      effects: ["Prospecting finds two seams and presents them as coal_seam_choice"]
+    reads_state: [bundles_taken]
+    writes_state: [has_coal]
+    pages_bundle: geological_survey
+    without_pages: "Different route: only the near seam is found at first; its sulfur is discovered by using it. The far seam turns up after 3 more years of prospecting"
+    fallback: "Charcoal and coppice; energy growth stalls"
+    energy_effect: "Coal counts at ~27 MJ/kg when burned for work. Opens the steep part of the energy curve"
+    numbers_status: "Heating values standard; rates are estimates"
+    sources: ["https://en.wikipedia.org/wiki/Coal"]
+    tags: [new_energy_source]
+    notebook: >
+      Coal is plant matter buried for millions of years and cooked until it's mostly carbon. A
+      kilogram holds about as much energy as a kilogram of charcoal, but nobody had to grow it this
+      century. The catch is what was buried with the plants, especially sulfur.
+
+  - id: coal_seam_choice
+    name: Which seam to work
+    stage: 2
+    beat: 4
+    kind: decision_option
+    critical_path: true
+    problem: "A seam at the surface a day away, sulfurous, or a deeper, cleaner seam three days off."
+    requires:
+      nodes: [coal_mining]
+    unlocks:
+      jobs: [mine_coal, coke_coal]   # 500 kg coal per worker-day at the outcrop; 1.6 kg coal -> 1 kg coke (estimates)
+      effects:
+        - "Near seam: coal now; coke from it carries sulfur (furnace_fuel dial shows sulfur_flag)"
+        - "Far seam: a road and a deeper pit first (~2M person-days, mine_water rises faster), then clean coke"
+        - "Adds the furnace_fuel dial to the furnace workshop; coke ovens are built as part of the choice"
+    reads_state: [has_coal]
+    writes_state: [coal_sulfur, has_coke, haul_distance_days, mine_water_m]
+    pages_bundle: geological_survey
+    without_pages: "See coal_mining"
+    fallback: "None needed"
+    energy_effect: "Coking losses count"
+    numbers_status: "Coke yield 60-70% is typical (estimate); seam properties are game values"
+    sources: ["https://en.wikipedia.org/wiki/Coke_(fuel)"]
+    tags: [substantive]
+    notebook: >
+      Bake coal without air and the tar, gas and some of the sulfur cook off, leaving coke: hard,
+      porous carbon strong enough to hold up a tall furnace charge. Some sulfur stays. In iron it
+      forms a film between the grains that melts at forging heat, so the bar cracks under the
+      hammer. Metallurgists call it hot shortness.
+
+  # ---- Beat 5: the blast furnace --------------------------------------------------------------
+  - id: lime_burning
+    name: Lime burning
+    stage: 2
+    beat: 5
+    kind: project
+    critical_path: false
+    problem: "Slag carries away too much iron, and furnace walls crumble after a few campaigns."
+    requires:
+      nodes: [bloomery]
+      state: ["campaigns_run > 10"]
+      resources: {wood_kg: 30000, clay_kg: 10000}
       labor_person_days: 400000
     unlocks:
-      jobs: [walk_treadwheel]     # 1 worker ~ 75 W sustained (estimate)
+      jobs: [quarry_stone, burn_lime]   # 100 kg limestone + 50 kg wood -> 56 kg lime
+      effects: ["Adds the flux dial; lime mortar makes furnace linings last 3x as many campaigns"]
     reads_state: []
-    writes_state: []
-    pages_bundle: none
-    without_pages: "No penalty"
-    fallback: "None needed"
-    energy_effect: "Muscle power only; does not raise watts per person"
-    numbers_status: "Sustained human output of roughly 75-100 W is a commonly cited figure; treat as estimate"
-    sources: []
-    tags: [labor_sink]
+    writes_state: [has_lime]
+    pages_bundle: primitive_technology
+    without_pages: "No penalty; lime plaster was known here in the Neolithic"
+    fallback: "Clay-bonded walls, relined every few campaigns"
+    energy_effect: "Kiln wood counts"
+    numbers_status: "CaCO3 -> CaO + CO2 (56% by mass) is exact; wood per kg is an estimate"
+    sources: ["https://en.wikipedia.org/wiki/Lime_kiln"]
+    tags: []
     notebook: >
-      A person walking inside a large wheel can deliver about as much steady power as a bright
-      light bulb, all day. Medieval cranes on cathedral building sites ran this way. It's a real
-      way to blow a furnace, and a vivid lesson in why engines mattered: one small water wheel
-      replaces dozens of walkers.
+      Heat limestone above about 900 C and it gives off carbon dioxide, leaving quicklime. Mixed
+      with water and left in air, lime slowly turns back into stone, which is why mortar hardens.
+      In a furnace it does a different job: it bonds with the silica in the ore and forms a slag
+      that flows without stealing iron.
+
+  - id: water_wheels
+    name: Water wheels
+    stage: 2
+    beat: 5
+    kind: project
+    critical_path: false
+    problem: "Working the bellows is the most exhausting job in the colony, and it caps how big a furnace can be."
+    requires:
+      nodes: [bloom_smithing]
+      state: ["river_sites > 0"]
+      resources: {wood_kg: 40000, iron_kg: 400}
+      labor_person_days: 1000000
+    unlocks:
+      effects: ["blast_source: water_wheel becomes available; each site gives ~3 kW (estimate) and can drive bellows, a trip hammer or a boring mill, one at a time until more wheels are built. Assigning the wheel is a recurring small decision"]
+    reads_state: [river_sites]
+    writes_state: [water_wheels_built]
+    pages_bundle: steam_engines
+    without_pages: "Undershot wheels only (half output), 1.5x labor"
+    fallback: "Treadwheels: ~60 walkers per blast furnace (labor sink)"
+    energy_effect: "Mechanical work x 2.5 (see energy.md)"
+    numbers_status: "Du Shi (31 AD) sourced; power per wheel is an estimate"
+    sources: ["https://en.wikipedia.org/wiki/Du_Shi"]
+    tags: [new_energy_source, substantive]
+    notebook: >
+      A water wheel turns the weight of falling water into rotation. An overshot wheel, fed from the
+      top, captures more than half the energy of the fall. In 31 AD a Han official named Du Shi
+      connected wheels to furnace bellows. From then until steam, industry clustered on rivers.
+
+  - id: blast_furnace
+    name: Blast furnace
+    stage: 2
+    beat: 5
+    kind: workshop
+    workshop: furnace_workshop
+    critical_path: true
+    problem: "A bloomery makes 30 kg a day and wastes most of the iron in slag. You need tons."
+    requires:
+      nodes: [bloom_smithing, lime_burning]
+      state: ["iron_kg_total > 20000"]
+      resources: {stone_kg: 400000, clay_kg: 60000, iron_kg: 2000}
+      labor_person_days: 2500000
+    milestones:
+      - {at: 0.5, id: furnace_stack_raised, effect: "The stack is up; the workshop shows the stack_height dial and a preview of tons/day before the first campaign"}
+    unlocks:
+      jobs: [run_blast_furnace]   # continuous; ~1 t pig iron/day; 1.5-2 t charcoal or coke per t (estimate)
+      effects: ["Adds stack_height and blast_source dials. Cast iron output; pig iron must be fined for tools or cast for parts"]
+    reads_state: [forest_cover, coppice_area, has_lime, water_wheels_built, coal_sulfur]
+    writes_state: [has_cast_iron, forest_cover, iron_quality]
+    pages_bundle: metallurgy_2
+    without_pages: "Different route: the first two campaigns freeze (too short a stack, too weak a blast) and the notebook fills in only after; ~3 more campaigns"
+    fallback: "More bloomeries (no cast iron, so no cylinders; the engine needs a finery-and-forge route, slower)"
+    energy_effect: "Largest single fuel user; big surge. Forest or coal becomes the visible bottleneck"
+    numbers_status: "Chinese cast iron by the 5th century BCE is sourced; tonnage and fuel rates are estimates"
+    sources: ["https://en.wikipedia.org/wiki/History_of_metallurgy_in_China"]
+    tags: [labor_sink, substantive]
+    notebook: >
+      Make the furnace tall, blow harder, and keep feeding ore, fuel and limestone from the top.
+      Iron sinking through the hot zone absorbs carbon, and iron with about 4% carbon melts near
+      1,150 C instead of 1,538 C. Now it comes out as a liquid you can tap and cast. Chinese
+      founders poured cast iron by the 5th century BCE, nearly two thousand years before Europe.
 
   - id: finery_forge
     name: Finery forge
     stage: 2
+    beat: 5
     kind: project
     critical_path: false
-    problem: "Cast iron shatters under a hammer; you need tough wrought iron for tools and chains."
+    problem: "Cast iron shatters under a hammer; you need tough wrought iron for tools, chains and plate."
     requires:
-      nodes: [blast_furnace_charcoal]
+      nodes: [blast_furnace]
       resources: {iron_kg: 1000, charcoal_kg: 8000}
-      labor_person_days: 800000
+      labor_person_days: 600000
     unlocks:
-      jobs: [fine_pig_iron]       # 1.3 kg pig + 1 kg charcoal -> 1 kg bar iron (estimate)
+      jobs: [fine_pig_iron]       # 1.3 kg pig + 1 kg charcoal -> 1 kg bar (estimate)
+      effects: ["Bar iron by the ton; bloomeries can be retired or kept for their lower fuel use per bar"]
     reads_state: [has_cast_iron]
-    writes_state: []
+    writes_state: [wrought_iron_capacity]
     pages_bundle: metallurgy_2
     without_pages: "1.5x labor"
     fallback: "Keep bloomeries for wrought iron"
-    energy_effect: "More charcoal per ton of bar iron"
+    energy_effect: "More charcoal per ton of bar"
     numbers_status: "Estimate"
     sources: ["https://en.wikipedia.org/wiki/Finery_forge"]
-    tags: []
+    tags: [substantive]
     notebook: >
-      The same carbon that lets cast iron melt makes it brittle. A finery forge remelts pig iron
-      in a blast of air so oxygen burns the carbon out, leaving a pasty lump of low-carbon iron
-      to hammer into bars. It's the bloomery run backwards: first you add carbon to melt iron,
-      then you remove it to make iron useful.
-
-  - id: coal_mining
-    name: Coal from the outcrop
-    stage: 2
-    kind: project
-    critical_path: true
-    problem: "The forest can't feed both the charcoal kilns and the furnaces; your survey marks a black seam to the north."
-    requires:
-      nodes: [iron_prospecting]
-      state: ["forest_cover < 50 OR blast_furnace_charcoal built"]
-      labor_person_days: 1000000
-    unlocks:
-      jobs: [mine_coal]           # 500 kg coal per worker-day at an outcrop (estimate)
-      resources: [coal_kg]
-    reads_state: [bundles_taken]
-    writes_state: [coal_sulfur, has_coal]
-    pages_bundle: geological_survey
-    without_pages: "Found by a 300,000 person-day survey; the first seam found is high-sulfur"
-    fallback: "Stay on charcoal and coppice; energy growth stalls"
-    energy_effect: "Coal counts at ~25-29 MJ/kg when burned for work. Opens the steep part of the energy curve."
-    numbers_status: "Heating values are standard; mining rate is an estimate"
-    sources: ["https://en.wikipedia.org/wiki/Coal"]
-    tags: [new_energy_source]
-    notebook: >
-      Coal is plant matter buried for millions of years and cooked by heat and pressure until
-      it's mostly carbon. A kilogram holds about as much energy as a kilogram of charcoal, but
-      nobody had to grow it this century. The catch is what else was buried with the plants,
-      especially sulfur. Where a seam reaches the surface, you can dig it with a shovel.
-
-  - id: mine_drainage_manual
-    name: Bucket chains and rag pumps
-    stage: 2
-    kind: project
-    critical_path: false
-    problem: "The coal and ore galleries flood below the water table faster than buckets can bail them."
-    requires:
-      nodes: [coal_mining, bloom_smithing]
-      state: ["mine_depth_m > 15"]
-      resources: {iron_kg: 1500, wood_kg: 30000}
-      labor_person_days: 700000
-    unlocks:
-      jobs: [bail_mine]           # each 100 workers remove water from ~X m depth (see open questions)
-      effects: ["Mines keep working below the water table as long as enough people pump"]
-    reads_state: [mine_depth_m]
-    writes_state: [pump_workers]
-    pages_bundle: none
-    without_pages: "No penalty"
-    fallback: "Abandon deep workings and open new shallow pits (slower, more land)"
-    energy_effect: "Muscle only"
-    numbers_status: "Rag-and-chain pumps are well attested; flow rates are estimates"
-    sources: ["https://en.wikipedia.org/wiki/Chain_pump"]
-    tags: [labor_sink, teaches_bottleneck]
-    notebook: >
-      Every mine below the water table is a well that you're trying to keep empty. A rag-and-
-      chain pump drags balls of rag up a tight pipe on an endless chain, and each ball pushes a
-      slug of water ahead of it. It works, but the deeper the mine, the more people it takes to
-      lift the same water. That growing crowd of pumpers is the problem the steam engine solves.
-
-  - id: coking
-    name: Coke ovens
-    stage: 2
-    kind: project
-    critical_path: false
-    problem: "Raw coal in the furnace crumbles, chokes the draft, and poisons the iron with sulfur."
-    requires:
-      nodes: [coal_mining, blast_furnace_charcoal]
-      resources: {clay_kg: 30000, stone_kg: 100000}
-      labor_person_days: 1200000
-    unlocks:
-      jobs: [coke_coal]           # 1.6 kg coal -> 1 kg coke (estimate; 60-70% yield typical)
-      effects: ["Blast furnaces can run on coke; forest no longer caps iron output"]
-    reads_state: [coal_sulfur]
-    writes_state: [has_coke, iron_sulfur]
-    pages_bundle: metallurgy_2
-    without_pages: "3x labor; high-sulfur coal gives brittle iron until manganese additions (Stage 3)"
-    fallback: "Charcoal and coppice"
-    energy_effect: "Coke burned in the furnace counts; coking losses count as well"
-    numbers_status: "Darby's coke smelting at Coalbrookdale in 1709, using low-sulfur coal, is sourced; yields are estimates"
-    sources:
-      - "https://en.wikipedia.org/wiki/Abraham_Darby_I"
-      - "https://www.britannica.com/biography/Abraham-Darby"
-    tags: []
-    notebook: >
-      Bake coal without air and the tar, gas and some of the sulfur cook off, leaving coke: hard,
-      porous carbon strong enough to hold up a tall furnace charge. Abraham Darby made it work at
-      Coalbrookdale in 1709, helped by an unusually low-sulfur local coal. Sulfur that stays in
-      iron forms a film between the grains that melts at forging heat, so the iron cracks when
-      it's hammered hot.
+      The same carbon that lets cast iron melt makes it brittle. A finery remelts pig iron in a
+      blast of air so oxygen burns the carbon out, leaving a pasty lump to hammer into bars. It's
+      the bloomery run backwards: add carbon to melt iron, then remove it to make iron useful.
 
   - id: sand_casting
-    name: Sand-mold iron founding
+    name: Sand-mold founding
     stage: 2
+    beat: 5
     kind: project
     critical_path: true
-    problem: "Stone and clay molds are too small and slow for the large iron parts pumps and engines need."
+    problem: "Stone and clay molds are too small and slow for pipes, cylinders and gears."
     requires:
-      nodes: [blast_furnace_charcoal]
+      nodes: [blast_furnace]
       resources: {iron_kg: 3000, wood_kg: 10000}
-      labor_person_days: 900000
+      labor_person_days: 700000
     unlocks:
-      jobs: [cast_iron_parts]     # pipes, cylinders, gears
+      jobs: [cast_iron_parts]
     reads_state: [has_cast_iron]
     writes_state: [has_foundry]
     pages_bundle: metallurgy_2
@@ -482,108 +539,203 @@ nodes:
     tags: []
     notebook: >
       Pack damp sand with a little clay around a wooden pattern, lift the pattern out, and you
-      have a cavity in the exact shape of the part. Pour, cool, break the sand away, reuse it.
-      Sand lets gas escape, so fewer bubbles get trapped in the metal. Darby patented a way of
-      casting thin iron pots in sand in 1707, and it made cheap cast iron an everyday material.
+      have a cavity in the shape of the part. Pour, cool, break the sand away, reuse it. Sand lets
+      gas escape, so fewer bubbles get trapped. Darby patented sand-cast iron pots in 1707, and
+      cheap cast iron became an everyday material.
 
-  - id: niter_beds
-    name: Niter beds and black powder
+  - id: trip_hammer
+    name: Trip hammers
     stage: 2
+    beat: 5
+    kind: upgrade
+    critical_path: false
+    problem: "Hammering bars takes more smiths than you have, and the fined iron piles up unworked."
+    requires:
+      nodes: [water_wheels, finery_forge]
+      resources: {iron_kg: 800, wood_kg: 10000}
+      labor_person_days: 400000
+    unlocks:
+      effects: ["Bar and tool output x3 at a wheel site (competes with bellows and the boring mill for the wheel)"]
+    reads_state: [water_wheels_built]
+    writes_state: []
+    pages_bundle: steam_engines
+    without_pages: "1.5x labor"
+    fallback: "More smiths"
+    energy_effect: "Mechanical"
+    numbers_status: "Estimate"
+    sources: []
+    tags: []
+    notebook: >
+      A cam on a turning shaft lifts a heavy hammer and drops it, dozens of times a minute, for as
+      long as the river runs. Trip hammers turned smithing from a craft of strength into a craft
+      of positioning. They were in use in Han China and spread through medieval Europe.
+
+  # ---- Beat 6: water in the mine --------------------------------------------------------------
+  - id: mine_drainage_manual
+    name: Bucket chains and rag pumps
+    stage: 2
+    beat: 6
     kind: project
     critical_path: false
-    problem: "Fire-setting in deep, wet galleries is slow and fills the mine with smoke."
+    problem: "The galleries have gone below the water table, and they're flooding faster than buckets can bail."
     requires:
-      nodes: [fire_setting, lime_burning]
-      resources: {wood_kg: 20000}
-      labor_person_days: 800000
+      nodes: [bloom_smithing]
+      state: ["mine_water_m > 0"]
+      resources: {iron_kg: 1500, wood_kg: 30000}
+      labor_person_days: 500000
     unlocks:
-      jobs: [tend_niter_beds, make_black_powder]  # beds need 1-2 years before the first harvest (estimate)
-      effects: ["Blasting: hard-rock mining x2.5 once powder is available"]
-    reads_state: []
-    writes_state: [has_nitrate, nitrate_source]
-    pages_bundle: industrial_chemistry
-    without_pages: "Unavailable; the nitrate chemistry is not obvious. Fire-setting remains."
-    fallback: "Fire-setting"
-    energy_effect: "Negligible"
-    numbers_status: "Niter beds took on the order of a year or more to mature (commonly cited, treat as estimate); blasting in mines from the 1600s is sourced"
-    sources: ["https://en.wikipedia.org/wiki/Saltpeter"]
-    tags: [slow_payoff]
+      jobs: [bail_mine]           # 100 pumpers keep ~2 m of water down (estimate); need grows with depth
+      effects: ["Introduces the mine water bar. The pumper count is a standing labor cost the engine will later remove"]
+    reads_state: [mine_water_m]
+    writes_state: [pump_workers]
+    pages_bundle: none
+    without_pages: "No penalty"
+    fallback: "Accept reduced ore from the upper galleries"
+    energy_effect: "Muscle only"
+    numbers_status: "Rag-and-chain pumps are well attested; flow rates are estimates"
+    sources: ["https://en.wikipedia.org/wiki/Chain_pump"]
+    tags: [labor_sink, teaches_bottleneck, substantive]
     notebook: >
-      Black powder needs saltpeter, potassium nitrate, and before the 20th century nitrate came
-      from rot. Piles of dung, straw and lime, kept damp and turned for a year or more, let soil
-      bacteria convert ammonia into nitrate, which was leached out with water and crystallized.
-      Mixed with charcoal and sulfur, it burns without outside air. That same nitrate problem
-      will return, much bigger, in Stage 4.
+      Every mine below the water table is a well you're trying to keep empty. A rag-and-chain pump
+      drags balls of rag up a tight pipe on an endless chain, each pushing a slug of water ahead of
+      it. The deeper the mine, the more people it takes to lift the same water. That growing crowd
+      of pumpers is the problem the steam engine solves.
 
+  - id: drainage_adit
+    name: Drainage adit
+    stage: 2
+    beat: 6
+    kind: project
+    critical_path: false
+    problem: "Pumpers are a tenth of the colony and the water still gains in the wet season."
+    requires:
+      nodes: [mine_drainage_manual]
+      state: ["terrain_allows_adit == true"]
+      resources: {iron_kg: 4000, wood_kg: 60000}
+      labor_person_days: 3000000
+    milestones:
+      - {at: 0.5, id: adit_halfway, effect: "The tunnel breaks into an old gallery: pumpers needed -30%"}
+    unlocks:
+      effects: ["Drains the mine by gravity down to the adit level, forever, with no fuel. Water below that level still needs pumping. Only offered where a valley lies below the workings"]
+    reads_state: [mine_water_m]
+    writes_state: [has_adit, mine_water_m]
+    pages_bundle: none
+    without_pages: "No penalty"
+    fallback: "Pumps or engines"
+    energy_effect: "None; frees labor"
+    numbers_status: "Estimate. Historic adits ran for kilometers and took decades"
+    sources: ["https://en.wikipedia.org/wiki/Adit"]
+    tags: [labor_sink, substantive]
+    notebook: >
+      An adit is a tunnel driven from a hillside into the mine so water runs out on its own.
+      Cornish and German miners cut adits kilometers long, some taking a generation. It costs
+      labor once and nothing after, which is a good trade for a colony with idle hands. It can't
+      go below the valley floor, so eventually the pumps come back.
+
+  - id: shallow_pits
+    name: New shallow pits
+    stage: 2
+    beat: 6
+    kind: decision_option
+    critical_path: false
+    problem: "Rather than fight the water, you could abandon the deep workings and dig fresh pits."
+    requires:
+      nodes: [mine_drainage_manual]
+    unlocks:
+      effects: ["Ore and coal output return to full for ~4 years per pit as the new workings deepen; each pit clears ~50 ha of land (forest_cover -2) and adds haul distance. Repeatable. Postpones the engine, never replaces it"]
+    reads_state: [forest_cover]
+    writes_state: [forest_cover, haul_distance_days, mine_water_m]
+    pages_bundle: none
+    without_pages: "Same"
+    fallback: "None"
+    energy_effect: "None"
+    numbers_status: "Game values"
+    sources: []
+    tags: [substantive]
+    notebook: >
+      Bell pits, shallow shafts widened at the bottom, were how most coal and ore was dug before
+      pumps. When one flooded or collapsed, miners moved a few meters and sank another. It works
+      as long as there's land, and it leaves a pocked landscape that's still visible in old
+      mining districts.
+
+  # ---- Beat 7: fire engines -------------------------------------------------------------------
   - id: savery_pump
     name: Savery fire engine
     stage: 2
-    kind: decision_option
-    critical_path: false
+    beat: 7
+    kind: workshop
+    workshop: engine_workshop
     route: [T_savery]
-    problem: "Pumpers can't keep up with the water; steam might do it without pistons at all."
+    critical_path: false
+    problem: "Pumpers can't keep up; steam might do it without pistons at all."
     requires:
       nodes: [mine_drainage_manual, sand_casting]
+      state: ["pump_workers > 500"]
       resources: {copper_kg: 800, iron_kg: 2000}
-      labor_person_days: 600000
+      labor_person_days: 400000
     unlocks:
       effects:
-        - "Works for shallow lifts only; each engine drains ~9 m of suction plus a little pushed by steam pressure"
-        - "Pushing higher needs boiler pressures that soldered boilers can't hold: explosion risk rises sharply"
-    reads_state: [mine_depth_m]
-    writes_state: [boiler_explosions]
+        - "Opens the engine workshop with one dial: lift height. Set it above ~10 m and the screen explains why the pump stops there and what pushing harder does to the boiler"
+        - "Built at 9 m: drains the top of the mine. Pumpers -20%"
+    reads_state: [mine_water_m]
+    writes_state: [boiler_explosions, engine_type]
     pages_bundle: steam_engines
-    without_pages: "Players can still build it; it fails for the same reason"
-    fallback: "Newcomen or Watt"
-    energy_effect: "Burns coal but achieves little; watts rise, gate stays closed"
-    numbers_status: "Suction lift limit of about 9-10 m and Savery's boiler explosions are sourced"
+    without_pages: "Same; the trap is the same for everyone"
+    fallback: "Newcomen"
+    energy_effect: "Burns coal for little work; watts rise, gate stays closed"
+    numbers_status: "Suction lift of ~9-10 m and Savery's boiler failures are sourced"
     sources:
       - "https://en.wikipedia.org/wiki/Steam_power_during_the_Industrial_Revolution"
       - "https://www.britannica.com/biography/Thomas-Savery"
-    tags: [trap]
+    tags: [trap, substantive]
     trap_lesson: "A pump that sucks can never lift water more than ~10 m, because it's air pressure, not the pump, that pushes the water up."
     notebook: >
-      A suction pump doesn't pull water; it removes air above the water so the atmosphere can
-      push the water up the pipe. The atmosphere weighs as much as a column of water about
-      10 meters tall, so that's the limit, however good the pump. Thomas Savery's 1698 engine
-      condensed steam to create the vacuum and then used steam pressure to push water higher,
-      but his soldered boilers burst. Mines are much deeper than 10 meters.
+      A suction pump doesn't pull water; it removes air above the water so the atmosphere can push
+      it up the pipe. The atmosphere weighs as much as a water column about 10 meters tall, so
+      that's the limit however good the pump. Savery's 1698 engine then used steam pressure to push
+      water higher, and his soldered boilers burst. Mines are much deeper than 10 meters.
 
   - id: newcomen_engine
-    name: Newcomen engine
+    name: Atmospheric engine
     stage: 2
-    kind: decision_option
-    critical_path: false
+    beat: 7
+    kind: workshop
+    workshop: engine_workshop
     route: [A_newcomen]
-    problem: "The deep galleries are flooding faster than any crew can pump."
+    critical_path: true
+    problem: "Steam can make a vacuum; a piston in a cylinder can turn that vacuum into a pumping stroke, at any depth."
     requires:
       nodes: [sand_casting, mine_drainage_manual]
+      state: ["pump_workers > 500"]
       resources: {iron_kg: 20000, copper_kg: 1000, wood_kg: 30000}
-      labor_person_days: 2000000
+      labor_person_days: 1500000
     unlocks:
       jobs: [tend_engine]
-      effects: ["Drains the mine; releases pump workers. Burns ~4x the coal of a Watt engine; only sensible on a coalfield"]
-    reads_state: [has_coal]
-    writes_state: [engine_type, mine_drained_by_engine, coal_per_engine_kw]
+      effects:
+        - "Adds cylinder_diameter, boiler_pressure and plate dials, one per design session"
+        - "At 1-2 atm with a loose cast cylinder: Newcomen. Drains the mine; burns ~4x the coal of a condensing engine"
+        - "The safety margin is shown before building; a thin boiler is a choice with a known date"
+    reads_state: [has_coal, plate_quality]
+    writes_state: [engine_type, mine_drained_by_engine, coal_per_engine_kw, boiler_explosions]
     pages_bundle: steam_engines
-    without_pages: "Possible from first principles; 2x labor"
+    without_pages: "Different route: the plate dial starts hidden and the first boiler is built at the default (margin 1.3); the dial appears after the first failure or after 2 years, whichever comes first"
     fallback: "None needed"
-    energy_effect: "Very large coal burn for small work output: a big watt surge. Thermal efficiency roughly 0.5-1%."
-    numbers_status: "Early Newcomen efficiency about a third of a percent and Watt using ~75% less fuel are sourced; tonnages are estimates"
+    energy_effect: "Large coal burn for small work: a big watt surge under raw accounting; flat under work x 2.5"
+    numbers_status: "Newcomen efficiency ~0.3-0.5% and Watt's ~75% saving are sourced; the 4 kW / 2-3 t coal per day example is an estimate"
     sources:
       - "https://en.wikipedia.org/wiki/Newcomen_atmospheric_engine"
       - "https://en.wikipedia.org/wiki/Steam_engine"
-    tags: []
+    tags: [substantive]
     notebook: >
       Newcomen's 1712 engine fills a cylinder with steam, then sprays in cold water. The steam
-      collapses into a few drops, leaving a partial vacuum, and the atmosphere pushes the piston
-      down. The piston only needs to fit roughly, sealed by a layer of water on top. But the
-      cylinder is chilled every stroke and reheated by the next, so most of the coal goes into
-      warming iron back up.
+      collapses, leaving a partial vacuum, and the atmosphere pushes the piston down. The piston
+      only needs to fit roughly, sealed by a layer of water on top. But the cylinder is chilled
+      every stroke and reheated by the next, so most of the coal goes into warming iron back up.
 
   - id: boring_mill
     name: Cylinder boring mill
     stage: 2
+    beat: 7
     kind: project
     critical_path: false
     route: [B_watt]
@@ -592,120 +744,118 @@ nodes:
       nodes: [sand_casting]
       any_of: [[water_wheels], [newcomen_engine]]
       resources: {iron_kg: 8000}
-      labor_person_days: 1500000
+      labor_person_days: 1200000
     unlocks:
-      effects: ["Accurate cylinders; trains machinists"]
+      effects: ["Bored cylinders: the condenser option becomes possible; machinists_trained +60 (estimate)"]
     reads_state: [draft_roster]
     writes_state: [has_boring_mill, machinists_trained]
     pages_bundle: machine_tools
-    without_pages: "3x labor; first cylinders still out of round"
+    without_pages: "Different route: not offered until an engine has run 2 years and the workshop has shown its steam leakage; then 2x labor"
     fallback: "Hand-scraping cylinders (very slow)"
     energy_effect: "Small"
-    numbers_status: "Wilkinson's 1774 boring machine, with the bar supported at both ends, is sourced"
+    numbers_status: "Wilkinson's 1774 boring machine is sourced"
     sources:
       - "https://en.wikipedia.org/wiki/John_Wilkinson_(industrialist)"
       - "https://www.gracesguide.co.uk/Early_Boring_Mills"
-    tags: [skill_builder]
+    tags: [skill_builder, substantive]
     notebook: >
       Earlier borers held the cutter on a bar supported at one end, so it sagged and wandered.
-      John Wilkinson ran the boring bar right through the casting and supported it at both ends.
-      His cylinders were round and straight enough that James Watt, who had spent years unable to
-      find anyone to make one, could finally build his engine. It's often called the first
-      modern machine tool.
+      John Wilkinson ran the bar right through the casting and supported it at both ends. His
+      cylinders were round and straight enough that James Watt, who had spent years unable to find
+      anyone to make one, could finally build his engine.
 
   - id: watt_engine
-    name: Watt engine with separate condenser
+    name: Condensing engine
     stage: 2
-    kind: decision_option
-    critical_path: false
+    beat: 7
+    kind: workshop
+    workshop: engine_workshop
     route: [B_watt]
-    problem: "Atmospheric engines waste most of their coal reheating the cylinder every stroke."
+    critical_path: false
+    problem: "The atmospheric engine spends most of its coal reheating the cylinder every stroke."
     requires:
-      nodes: [boring_mill]
-      resources: {iron_kg: 25000, copper_kg: 2000}
-      labor_person_days: 3000000
+      nodes: [boring_mill, newcomen_engine]
     unlocks:
-      jobs: [tend_engine]
-      effects: ["Drains the mine using ~1/4 the coal; can work away from the coalfield. Rotative version unlocks factory power in Stage 3"]
+      effects: ["Adds the condenser dial. A condensing design drains the same mine on ~1/4 the coal; rotative version powers Stage 3 workshops"]
     reads_state: [has_boring_mill, machinists_trained]
-    writes_state: [engine_type, mine_drained_by_engine, machinists_trained]
+    writes_state: [engine_type, mine_drained_by_engine, coal_per_engine_kw]
     pages_bundle: steam_engines
-    without_pages: "4x labor; the separate condenser is not obvious"
+    without_pages: "Different route: the condenser dial appears only after a Newcomen engine has run for 2 years (you must see the waste before the fix is conceivable); with the pages it's available at once"
     fallback: "Newcomen"
-    energy_effect: "Smaller watt surge than Newcomen for the same work (efficiency roughly 2-4%)"
+    energy_effect: "Same work, a quarter of the coal: the fuel bar relaxes"
     numbers_status: "Separate condenser (1765) and ~75% fuel saving are sourced"
     sources: ["https://en.wikipedia.org/wiki/Watt_steam_engine"]
-    tags: [skill_builder]
+    tags: [skill_builder, substantive]
     notebook: >
-      Watt's fix was to condense the steam in a separate vessel kept cold, while the working
-      cylinder stays hot all the time. Nothing gets reheated, so the fuel goes into work. His
-      engines burned roughly a quarter of the coal of a Newcomen engine doing the same job. They
-      also needed a cylinder accurate enough to seal against steam, which is why the boring mill
-      comes first.
+      Watt condensed the steam in a separate vessel kept cold, while the working cylinder stayed
+      hot all the time. Nothing gets reheated, so the fuel goes into work. His engines burned about
+      a quarter of the coal of a Newcomen engine doing the same job. They needed a cylinder accurate
+      enough to seal against steam, which is why the boring mill comes first.
 
   - id: plate_rolling
     name: Rolling mill for boiler plate
     stage: 2
+    beat: 7
     kind: project
     critical_path: false
     route: [C_high_pressure]
-    problem: "Hammered iron sheets are uneven and weak at the thin spots, so a boiler would split along them."
+    problem: "Hammered plate has thin spots, and the workshop's safety margin says so."
     requires:
       nodes: [finery_forge, water_wheels]
       resources: {iron_kg: 15000}
-      labor_person_days: 1500000
+      labor_person_days: 1200000
     unlocks:
       jobs: [roll_plate]
-      effects: ["Uniform wrought-iron plate; riveted boilers"]
+      effects: ["plate: rolled becomes available; safe stress doubles, so the same margin needs half the thickness or allows twice the pressure"]
     reads_state: []
     writes_state: [has_rolling_mill, plate_quality]
     pages_bundle: metallurgy_2
     without_pages: "2x labor"
-    fallback: "Hammered plate (lower pressure rating)"
+    fallback: "Hammered plate at thick gauges (heavier, slower to make)"
     energy_effect: "Mechanical"
     numbers_status: "Estimate"
     sources: ["https://en.wikipedia.org/wiki/Rolling_(metalworking)"]
-    tags: []
+    tags: [substantive]
     notebook: >
-      Passing hot iron between two heavy rollers squeezes it to a uniform thickness, far faster
-      and more evenly than hammering. A boiler is only as strong as its thinnest spot, because
-      the hoop stress in a cylinder rises with pressure times radius divided by wall thickness.
-      Rolled plate is what made high-pressure steam survivable.
+      Passing hot iron between heavy rollers squeezes it to a uniform thickness, far more evenly
+      than hammering. A boiler is only as strong as its thinnest spot, because the hoop stress in a
+      cylinder is pressure times radius over wall thickness. Rolled plate is what made high-pressure
+      steam survivable.
 
   - id: high_pressure_engine
     name: High-pressure engine
     stage: 2
-    kind: decision_option
-    critical_path: false
+    beat: 7
+    kind: workshop
+    workshop: engine_workshop
     route: [C_high_pressure]
+    critical_path: false
     problem: "Beam engines are huge; you want power small enough to move."
     requires:
-      nodes: [plate_rolling, sand_casting]
-      resources: {iron_kg: 18000}
-      labor_person_days: 2200000
+      nodes: [newcomen_engine]
+      any_of: [[plate_rolling], [finery_forge]]
     unlocks:
-      jobs: [tend_engine]
-      effects:
-        - "Drains the mine; compact; head start on locomotives in Stage 3"
-        - "Boiler explosion risk each year until safety valves and pressure testing (deterministic: fixed number of years at risk based on plate_quality)"
+      effects: ["boiler_pressure above 3 atm becomes available. Compact engines; head start on locomotives. The margin bar decides the explosion date; rolled plate makes it safe"]
     reads_state: [plate_quality]
     writes_state: [engine_type, mine_drained_by_engine, boiler_explosions]
     pages_bundle: steam_engines
-    without_pages: "2x labor; more explosions"
-    fallback: "Newcomen"
-    energy_effect: "Efficiency similar to early Watt; compact"
-    numbers_status: "Trevithick's high-pressure engines (c. 1800) are sourced; risk model is a game design"
+    without_pages: "2x labor on the first high-pressure boiler"
+    fallback: "Stay at low pressure"
+    energy_effect: "Efficiency like early Watt; compact"
+    numbers_status: "Trevithick's high-pressure engines (c. 1800) are sourced; the margin model is a game design"
     sources: ["https://en.wikipedia.org/wiki/Richard_Trevithick"]
-    tags: [scar]
+    tags: [scar, substantive]
     notebook: >
       Instead of using steam only to make a vacuum, a high-pressure engine pushes the piston with
       steam at several atmospheres. Double the pressure and you get roughly double the power from
       the same cylinder, so the engine shrinks. Richard Trevithick built them around 1800 and put
       one on wheels. The price is stored energy: a burst boiler releases it all at once.
 
+  # ---- Beat 8: the gate -----------------------------------------------------------------------
   - id: gate_steam
     name: "Gate: a working steam engine"
     stage: 2
+    beat: 8
     kind: gate
     critical_path: true
     problem: "An engine, not people, keeps a mine dry."
@@ -715,7 +865,7 @@ nodes:
       state: ["energy_w_per_person >= 600", "mine_drained_by_engine == true"]
     unlocks:
       effects: ["Stage 3 opens: steam and steel"]
-    reads_state: [engine_type, machinists_trained, boiler_explosions, forest_cover, coal_sulfur]
+    reads_state: [engine_type, machinists_trained, boiler_explosions, forest_cover, coal_sulfur, iron_quality, has_adit]
     writes_state: []
     notebook: >
       For the first time, the colony's output isn't capped by muscle. A single engine does the work

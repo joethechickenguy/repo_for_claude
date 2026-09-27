@@ -18,6 +18,8 @@ resources:
   stone_kg:          {produced_by: quarry_stone}
   lime_kg:           {produced_by: burn_lime}
   iron_kg:           {produced_by: smelt_iron_bloom, note: "Later also run_blast_furnace (pig) and fine_pig_iron / puddle_iron (bar). Nodes asking for iron_kg accept any."}
+  coke_kg:           {produced_by: coke_coal}
+  coal_kg:           {produced_by: mine_coal}
   black_powder_kg:   {produced_by: make_black_powder}
   sand_kg:           {produced_by: mine_mineral}
   salt_kg:           {produced_by: mine_mineral}

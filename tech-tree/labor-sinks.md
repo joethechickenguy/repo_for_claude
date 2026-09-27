@@ -15,8 +15,9 @@ months for a crew of 1,000 at full speed; 10 million is a multi-year undertaking
 | `ore_road` | 1 | 2.0M | Halves porter labor forever; teaches the hidden cost of hauling |
 | `wind_furnaces` | 1 | 2.4M | Triples smelting |
 | `tin_survey_kestel` | 1 | 2.5M | Weeks-long expedition; trains miners on the way |
-| `coppicing` | 2 | 1.5M | Plants a sustainable fuel supply |
-| `blast_furnace_charcoal` | 2 | 3.0M | The big masonry furnace |
+| `coppicing` | 2 | 1.5M, repeatable | Plants a sustainable fuel supply |
+| `blast_furnace` | 2 | 2.5M | The big masonry furnace |
+| `drainage_adit` | 2 | 3.0M | Drains the mine by gravity, forever |
 | `surface_plates` | 3 | 0.6M | Hours of scraping per plate, but trains machinists |
 | `rails_wagonways` | 3 | 5.0M, repeatable | Each route permanently frees haul labor |
 | `mineral_prospecting` | 3 | 1.5M | Survey parties across the region |
@@ -35,9 +36,9 @@ months for a crew of 1,000 at full speed; 10 million is a multi-year undertaking
 | --- | --- | --- | --- |
 | `grind_axes` | `ground_stone_axes` | Wood demand | Grinding is slow; a real Neolithic labor sink |
 | `hunt_for_hides` | `pot_bellows` | Number of bellows | Upkeep for leather diaphragms |
-| `bail_mine` | `mine_drainage_manual` | `mine_depth_m` | Grows as mines deepen, which makes the steam engine's value visible as freed people |
-| `walk_treadwheel` | `treadwheel_bellows` | Furnace count | ~75 W per walker; one water wheel replaces dozens |
-| `tend_niter_beds` | `niter_beds` | Nitrate demand | A year or more before the first harvest |
+| `bail_mine` | `mine_drainage_manual` | `mine_water_m` | Grows as mines deepen, which makes the steam engine's value visible as freed people |
+| `walk_treadwheel` | `blast_furnace` (blast_source dial) | Furnace count | ~60 walkers per furnace; one water wheel replaces them |
+| `tend_niter_beds` | `niter_beds` (Stage 3) | Nitrate demand | A year or more before the first harvest |
 | `puddle_iron` | `puddling` | Wrought iron demand | Brutal, skilled; replaced by steel later |
 | `mine_mineral` | `mineral_prospecting` | Number of sites | One crew per mineral |
 | `compute` | `human_computers` | Design and tracking work | Hundreds of human computers; the orbital mechanics pages replace much of it |

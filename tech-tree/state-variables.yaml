@@ -29,6 +29,16 @@ variables:
   hcl_pollution: {type: flag, description: "Scar from Leblanc soda. Kills nearby coppice growth until Solvay replaces it."}
   arsenic_exposure: {type: number, unit: person-years, description: "Scar from arsenical copper. At thresholds, some smelters die (deterministic at fixed levels)."}
   boiler_explosions: {type: count, description: "Scar: explosions so far. Each kills workers and destroys the engine; rises only on the high-pressure and Savery routes before pressure testing."}
+  fuel_balance: {type: number, unit: kg per day, description: "Stage 2 heartbeat: daily fuel production minus daily fuel use (charcoal-equivalent). Negative for 10 days turns the fuel bar red and furnaces stall."}
+  mine_water_m: {type: number, unit: m, description: "Meters of workings below the water table not yet drained. Rises with cumulative extraction and the wet season; pumps, adits and engines lower it."}
+  metal_tools: {type: count, description: "All metal tools in stock (copper, bronze, iron). Stage 1 gate condition and the tool-wear pressure."}
+  iron_quality: {type: count, description: "0-3. Starts 3; phosphorus (bog iron) and sulfur (high-S coke) each subtract 1. Below 2, tool life and plate strength fall by a third."}
+  deposits_known: {type: set, description: "Iron deposits found by prospecting (bog_iron, hillside_ore)."}
+  bloom_kg: {type: number, unit: kg, description: "Cumulative bloom smelted; triggers smithing."}
+  iron_kg_total: {type: number, unit: kg, description: "Cumulative iron made; triggers the blast furnace."}
+  campaigns_run: {type: count, description: "Furnace campaigns completed; triggers lime burning and lining wear."}
+  terrain_allows_adit: {type: flag, description: "Whether a valley lies below the main workings (set by the map/survey). Enables the drainage adit."}
+  has_adit: {type: flag, description: "Gravity drainage down to the adit level."}
   malachite_mined_kg: {type: number, unit: kg, description: "Cumulative oxide ore mined. Past a threshold, the outcrop is exhausted and ore_roasting appears."}
 
   # ---- Ores and fuel quality ----------------------------------------------------

@@ -33,7 +33,7 @@ import yaml
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tech-tree")
 ROOT = os.path.normpath(ROOT)
 
-KINDS = {"project", "upgrade", "decision_option", "gate", "hub"}
+KINDS = {"project", "upgrade", "decision_option", "gate", "hub", "workshop"}
 REQUIRED = ["id", "name", "stage", "kind", "critical_path", "problem", "requires", "notebook"]
 REQUIRED_NON_GATE = ["unlocks", "pages_bundle", "without_pages", "fallback",
                      "energy_effect", "numbers_status"]
@@ -81,6 +81,10 @@ def validate(stages, state_vars, bundles, resources):
             for src in n.get("sources") or []:
                 if not str(src).startswith(("http://", "https://")):
                     errors.append(f"{fname}: {nid} source is not a URL: {src}")
+            if n.get("kind") == "workshop":
+                ws = {w["id"] for w in data.get("workshops") or []}
+                if n.get("workshop") not in ws:
+                    errors.append(f"{fname}: {nid} names unknown workshop {n.get('workshop')!r}")
             if "trap" in (n.get("tags") or []) and "trap_lesson" not in n:
                 warnings.append(f"{fname}: trap {nid} has no trap_lesson")
             sentences = str(n.get("notebook", "")).count(". ") + 1
@@ -89,6 +93,20 @@ def validate(stages, state_vars, bundles, resources):
 
     declared_vars = set(state_vars)
     bundle_ids = set(bundles["bundles"]) | {"none"}
+    # pressures and workshop dials must reference real state variables and nodes
+    for fname, data in stages:
+        for pr in data.get("pressures") or []:
+            if pr.get("drives") not in declared_vars:
+                errors.append(f"{fname}: pressure {pr['id']} drives undeclared variable {pr.get('drives')!r}")
+            for a in pr.get("answers") or []:
+                if a not in nodes and a not in {w["id"] for w in data.get("workshops") or []}:
+                    errors.append(f"{fname}: pressure {pr['id']} answer {a!r} is not a node or workshop")
+        for w in data.get("workshops") or []:
+            if w.get("opens_with") not in nodes:
+                errors.append(f"{fname}: workshop {w['id']} opens_with unknown node {w.get('opens_with')!r}")
+            for d in w.get("dials") or []:
+                if d.get("added_by") not in nodes:
+                    errors.append(f"{fname}: dial {w['id']}.{d['id']} added_by unknown node {d.get('added_by')!r}")
     for nid, n in nodes.items():
         direct, alts = prereqs(n)
         for p in direct + [x for g in alts for x in g]:
@@ -253,15 +271,17 @@ def write_generated(stages, nodes, state_vars, bundles):
 
     # summary.md
     lines = [header, "# Tree summary\n\n",
-             "| Stage | Name | Nodes | Critical | Traps | Labor sinks | Routes to gate |\n",
-             "| --- | --- | --- | --- | --- | --- | --- |\n"]
+             "| Stage | Name | Nodes | Critical | Substantive | Pressures | Workshops | Traps | Labor sinks | Routes to gate |\n",
+             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |\n"]
     tot = 0
     for fname, data in stages:
         ns = data["nodes"]
         tot += len(ns)
-        lines.append("| {} | {} | {} | {} | {} | {} | {} |\n".format(
+        lines.append("| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |\n".format(
             data["stage"], data["name"], len(ns),
             sum(1 for n in ns if n.get("critical_path")),
+            sum(1 for n in ns if "substantive" in (n.get("tags") or [])),
+            len(data.get("pressures") or []), len(data.get("workshops") or []),
             sum(1 for n in ns if "trap" in (n.get("tags") or [])),
             sum(1 for n in ns if "labor_sink" in (n.get("tags") or [])),
             ", ".join(data["gate"].get("routes", []))))

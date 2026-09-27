@@ -11,9 +11,7 @@ Flint, cordage, clay, lime, charcoal basics, water-lifting. The first year depen
 - S1 `ground_stone_axes` Ground-stone axes: without pages, About 2x labor; first axes break often
 - S1 `pit_kiln` Pit kiln: without pages, 1.5x labor; a third of early firings crack
 - S2 `coppicing` Coppiced woodland: without pages, Workers notice regrowth from stumps after 2 years; 1.5x labor
-- S2 `fire_setting` Fire-setting: without pages, Found by accident in months
-- S2 `lime_burning` Lime burning: without pages, No penalty; lime plaster was known in this region by the Neolithic
-- S2 `wheelbarrows_carts` Wheelbarrows and handcarts: without pages, No penalty
+- S2 `lime_burning` Lime burning: without pages, No penalty; lime plaster was known here in the Neolithic
 - S3 `portland_cement` Portland cement: without pages, 2x labor; early batches are hydraulic lime rather than true cement
 
 ## Geological survey: Anatolia and the Caucasus (60 pages)
@@ -22,8 +20,10 @@ Where the copper, tin, iron, coal, chromite, bauxite and oil actually are, and w
 
 - S1 `tin_survey_kestel` Expedition to the Taurus tin: without pages, Unavailable: without the survey there is no reason to go. Arsenical copper is the substitute.
 - S1 `trail_green_stones` Trail to the green stones: without pages, Prospecting parties search; adds a random-free but slow 200,000 person-day survey before the trail
-- S2 `coal_mining` Coal from the outcrop: without pages, Found by a 300,000 person-day survey; the first seam found is high-sulfur
-- S2 `iron_prospecting` Iron prospecting: without pages, Streak and weight testing by trial; finds a lower-grade, higher-phosphorus deposit first
+- S2 `coal_mining` Coal: without pages, Different route: only the near seam is found at first; its sulfur is discovered by using it. The far seam turns up after 3 more years of prospecting
+- S2 `coal_seam_choice` Which seam to work: without pages, See coal_mining
+- S2 `deposit_choice` Which deposit to open: without pages, See iron_prospecting
+- S2 `iron_prospecting` Iron prospecting: without pages, Different route: the deposits are found in the order prospecting parties stumble on them (bog iron first, hillside after ~3 more years of searching), so the phosphorus problem is met before the choice exists
 - S3 `mineral_prospecting` Prospecting for minor minerals: without pages, 3x labor, and scarce minerals (tungsten, platinum, chromite) are found late or not at all; their nodes then use fallbacks
 - S4 `oil_drilling` Cable-tool oil wells: without pages, Hand-dug pits at seeps (tiny yield)
 
@@ -39,19 +39,19 @@ Smelting, fluxes, bellows, forging, quenching, charcoal kilns.
 - S1 `stone_molds` Stone molds: without pages, 1.5x labor
 - S1 `tin_bronze` Tin bronze: without pages, 1.5x labor
 - S1 `wind_furnaces` Wind-draft furnaces on the ridge: without pages, Still possible; 1.5x labor
-- S2 `bloom_smithing` Smithing the bloom: without pages, 1.5x labor
-- S2 `bloomery` Bloomery furnace: without pages, About 3x labor; first dozens of smelts fail as slag freezes
-- S2 `quench_temper` Steeling and quenching: without pages, 2x labor; many cracked blades before the right quench is found
+- S2 `bloom_smithing` Smithing the bloom: without pages, 1.5x labor; first bars are slaggy
+- S2 `bloomery` Bloomery furnace: without pages, Different route: the dials start at wrong defaults and the notebook entry is blank until three campaigns have run; the player finds the ratio by trial (typically 8-10 campaigns instead of 2-3)
+- S2 `forced_draft_for_iron` Forced draft at the iron site: without pages, Same
+- S2 `quench_temper` Quench trials: without pages, Different route: more trials, each shown with its result (too soft, cracked in the quench, right), so the player learns the window by seeing it
 
 ## Metallurgy II: blast furnace to alloy steel (70 pages)
 
 Coke, hot blast, puddling, Bessemer, manganese, the basic lining, open hearth, alloying, age hardening.
 
-- S2 `blast_furnace_charcoal` Charcoal blast furnace: without pages, 2x labor; first campaigns end with the furnace choked by frozen iron
-- S2 `coking` Coke ovens: without pages, 3x labor; high-sulfur coal gives brittle iron until manganese additions (Stage 3)
+- S2 `blast_furnace` Blast furnace: without pages, Different route: the first two campaigns freeze (too short a stack, too weak a blast) and the notebook fills in only after; ~3 more campaigns
 - S2 `finery_forge` Finery forge: without pages, 1.5x labor
 - S2 `plate_rolling` Rolling mill for boiler plate: without pages, 2x labor
-- S2 `sand_casting` Sand-mold iron founding: without pages, 1.5x labor; many castings full of holes
+- S2 `sand_casting` Sand-mold founding: without pages, 1.5x labor; many castings full of holes
 - S3 `basic_lining` Basic converter lining: without pages, Very hard to find: historically took 22 years after Bessemer. 4x labor.
 - S3 `bessemer_converter` Bessemer converter: without pages, 3x labor; first blows are over-oxidized and brittle
 - S3 `hot_blast` Hot blast: without pages, 1.5x labor
@@ -66,12 +66,12 @@ Coke, hot blast, puddling, Bessemer, manganese, the basic lining, open hearth, a
 
 Working drawings and the reasons behind each improvement; water wheels and turbines.
 
-- S2 `high_pressure_engine` High-pressure engine: without pages, 2x labor; more explosions
-- S2 `newcomen_engine` Newcomen engine: without pages, Possible from first principles; 2x labor
-- S2 `savery_pump` Savery fire engine: without pages, Players can still build it; it fails for the same reason
+- S2 `high_pressure_engine` High-pressure engine: without pages, 2x labor on the first high-pressure boiler
+- S2 `newcomen_engine` Atmospheric engine: without pages, Different route: the plate dial starts hidden and the first boiler is built at the default (margin 1.3); the dial appears after the first failure or after 2 years, whichever comes first
+- S2 `savery_pump` Savery fire engine: without pages, Same; the trap is the same for everyone
 - S2 `trip_hammer` Trip hammers: without pages, 1.5x labor
-- S2 `water_wheels` Water wheels: without pages, Undershot wheels only (lower output), 1.5x labor
-- S2 `watt_engine` Watt engine with separate condenser: without pages, 4x labor; the separate condenser is not obvious
+- S2 `water_wheels` Water wheels: without pages, Undershot wheels only (half output), 1.5x labor
+- S2 `watt_engine` Condensing engine: without pages, Different route: the condenser dial appears only after a Newcomen engine has run for 2 years (you must see the waste before the fix is conceivable); with the pages it's available at once
 - S3 `locomotive` Locomotives: without pages, 2x labor
 - S3 `rails_wagonways` Iron rails: without pages, No penalty
 - S3 `rotative_engine_shafting` Rotative engines and line shafting: without pages, 2x labor; crank and flywheel geometry learned by trial
@@ -82,7 +82,7 @@ Working drawings and the reasons behind each improvement; water wheels and turbi
 
 Scraping flat plates, cutting accurate screws, boring cylinders, gauges, grinding, welding practice.
 
-- S2 `boring_mill` Cylinder boring mill: without pages, 3x labor; first cylinders still out of round
+- S2 `boring_mill` Cylinder boring mill: without pages, Different route: not offered until an engine has run 2 years and the workshop has shown its steam leakage; then 2x labor
 - S3 `measurement_standards` Gauges and standard measures: without pages, 2x labor
 - S3 `planer_milling` Planers and milling machines: without pages, 2x labor
 - S3 `screw_cutting_lathe` Screw-cutting lathe: without pages, 3x labor
@@ -94,9 +94,9 @@ Scraping flat plates, cutting accurate screws, boring cylinders, gauges, grindin
 
 Acids, alkalis, glass, electrolysis, aluminum, ammonia synthesis and its catalyst, nitric acid, peroxide, propellants.
 
-- S2 `niter_beds` Niter beds and black powder: without pages, Unavailable; the nitrate chemistry is not obvious. Fire-setting remains.
 - S3 `coal_gas_tar` Coke-oven by-products: without pages, 1.5x labor
 - S3 `glassworks` Glassworks: without pages, 2x labor; cloudy glass until the lime ratio is right
+- S3 `niter_beds` Niter beds and black powder: without pages, Different route: the beds are built by imitation of dung-heap lore but the leaching and crystallizing steps must be found by trial; first usable powder after ~3 years instead of ~1.5
 - S3 `soda_ash` Soda ash: without pages, Leblanc only, 2x labor
 - S3 `sulfuric_acid` Lead-chamber sulfuric acid: without pages, Unavailable except as small-scale burning of sulfur over water (tiny, weak yield). Hard to rediscover.
 - S4 `bayer_alumina` Alumina refining: without pages, 3x labor
