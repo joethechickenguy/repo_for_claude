@@ -9,7 +9,7 @@ Content for the design in `../DESIGN.md`, in a form an engine can load. One YAML
 | `stages/stageN-*.yaml` | The stage: gate, pressures, workshops, nodes (beats 1-8) |
 | `state-variables.yaml` | Every variable a node, pressure or gate reads or writes |
 | `draft.yaml` | Stage 0: roster pools, page categories and topics, defaults, weakest-area rule |
-| `resources.yaml` | Every resource a node costs and the job that produces it |
+| `resources.yaml` | Every resource a node costs and the job that produces it (`workshop:` when a workshop's runs make it, like liquid oxygen) |
 | `energy.md` | Energy accounting rules, gate calibration, per-source watts |
 | `failure-modes.md` | Hidden flaws, test types that reveal them, traps |
 | `open-questions.md` | Unresolved history, physics, and realism-vs-fun conflicts |

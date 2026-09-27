@@ -24,6 +24,8 @@ export function jobFirstStage(tree: Tree, jobId: string): number | null {
 
 /** Can anything make `resource` by `stage` (a job with rates that exists by then)? */
 export function producibleBy(tree: Tree, resource: string, stage: number): boolean {
+  const ws = tree.resources[resource]?.workshop;
+  if (ws && tree.workshops[ws] && tree.workshops[ws]!.stage <= stage) return true;
   return producers(tree, resource).some((j) => {
     const s = jobFirstStage(tree, j);
     return s !== null && s <= stage;
@@ -79,6 +81,9 @@ export function reach(tree: Tree, stage: number, done: readonly string[], closed
   const refresh = (): void => {
     for (const id of nodes) for (const j of tree.nodes[id]?.unlocks.jobs ?? []) jobs.add(j);
     for (const j of jobs) for (const [r, v] of Object.entries(tree.jobs[j]?.rates?.outputs ?? {})) if (v > 0) makes.add(r);
+    // Resources a workshop makes, once one of its workshop nodes is reachable (the liquefier's oxygen).
+    for (const r of Object.values(tree.resources))
+      if (r.workshop && [...nodes].some((id) => tree.nodes[id]?.kind === "workshop" && tree.nodes[id]?.workshop === r.workshop)) makes.add(r.id);
   };
   const nameOk = (ref: string): boolean => (ref in tree.resources ? makes.has(ref) : ref in tree.stateVariables || supplied.has(ref));
   refresh();

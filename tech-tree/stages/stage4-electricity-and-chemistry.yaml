@@ -47,6 +47,19 @@ jobs:
     why: "Current through salt water splits it: caustic at one electrode, chlorine at the other."
     inputs: {salt_kg: 17}
     outputs: {caustic_kg: 11, rubber_substitute_kg: 0.2}
+  pump_crude:
+    name: Pump crude
+    what: "150 kg of crude oil a day from the wells"                 # a cable-tool well's small pump (estimate)
+    why: "Oil seeps mark a pool underground; a drilled well brings it up steadily."
+    outputs: {crude_kg: 150}
+    tool: true
+  refine_crude:
+    name: Refine crude
+    what: "Uses 100 kg crude and 5 kg coal. Makes 40 kg kerosene"   # the kerosene cut of a simple still (estimate)
+    why: "Heat crude in a still and its parts boil off in turn: light spirits, kerosene, oils, tar."
+    inputs: {crude_kg: 100, coal_kg: 5}
+    outputs: {kerosene_kg: 40}
+    burns: {coal_kg: 5}
 
 # Either/or decisions (G4). Starting one option closes the other for good.
 choices:
@@ -121,6 +134,7 @@ workshops:
       compressor_kw: 100             # the plant's compressor: a Linde plant this size makes ~1 t/day (estimate)
       trial_days: 30                 # a run that never liquefies is given up after this long (estimate)
       brownout_factor: 0.5           # output while the power bar is red (G4; estimate)
+      scaleup_factor: 2              # lox_plant_scaleup (Stage 5): "x2 per build"
 
 nodes:
 
@@ -163,7 +177,6 @@ nodes:
     tradeoff: "Twice the electricity from the same coal; needs good steel and bearings, and two years of builders."
     requires:
       nodes: [distribution_grid, open_hearth]
-      state: ["power_balance_kw < 0"]
       resources: {steel_kg: 20000, copper_kg: 3000}
       labor_person_days: 350000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
     unlocks:

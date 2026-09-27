@@ -6,10 +6,10 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { SaveGame } from "../../src/engine";
 import { playRun, summarize, type StagePlan, type StageReport } from "./bot";
-import { STAGE1, STAGE2, STAGE3, STAGE4 } from "./plans";
+import { STAGE1, STAGE2, STAGE3, STAGE4, STAGE5 } from "./plans";
 
 const YEAR = 365;
-const PLANS: Record<number, StagePlan> = { 1: STAGE1, 2: STAGE2, 3: STAGE3, 4: STAGE4 };
+const PLANS: Record<number, StagePlan> = { 1: STAGE1, 2: STAGE2, 3: STAGE3, 4: STAGE4, 5: STAGE5 };
 
 /**
  * Options to try at each stage, one variant per list. The first is the stage's main variant: it must
@@ -25,12 +25,21 @@ const VARIANTS: Record<number, string[][]> = {
     ["linde_liquefier", "tool_steel"],
     ["claude_expander", "heat_resistant_steel"],
   ],
+  5: [
+    ["gas_generator_turbopump", "hypergolic_propellants", "differential_analyzer"],
+    ["hydrogen_peroxide", "solid_motors", "human_computers"],
+  ],
 };
 
 /** What each stage's gate proves, beyond reaching it. */
 const PROOF: Record<number, (r: ReturnType<typeof playRun>) => void> = {
   3: (r) => expect(r.game.engine.state.getNumber("dynamo_output_kw")).toBeGreaterThanOrEqual(50),
   4: (r) => expect(r.game.engine.state.getNumber("lox_kg_per_day")).toBeGreaterThanOrEqual(500),
+  5: (r) => {
+    expect(r.game.engine.get("engine_static_fire_s")).toBeGreaterThanOrEqual(60);
+    expect(r.game.engine.get("engine_thrust_kn")).toBeGreaterThanOrEqual(250);
+    expect(r.game.engine.get("has_launch_pad")).toBe(true);
+  },
 };
 
 function checkStage(s: StageReport | undefined, maxYears: number, main: boolean): void {
@@ -47,20 +56,21 @@ describe("the campaign, played by a middling bot", () => {
   beforeAll(() => {
     // One run through the main variants; each stage's start is saved for the variants.
     let from: SaveGame | undefined;
-    for (const stage of [2, 3, 4]) {
+    for (const stage of [2, 3, 4, 5]) {
       const r = playRun(PLANS, stage, 20 * YEAR, from);
       from = r.game.engine.save();
       starts[stage + 1] = from;
     }
   }, 600_000);
 
-  for (const stage of [3, 4])
+  for (const stage of [3, 4, 5])
     VARIANTS[stage]!.forEach((picks, i) =>
       it(`Stage ${stage} reaches its gate taking ${picks.join(", ")}`, () => {
         const r = playRun({ ...PLANS, [stage]: { ...PLANS[stage]!, picks } }, stage, 12 * YEAR, starts[stage]);
         const s = r.stages.find((x) => x.stage === stage);
         checkStage(s, 8, i === 0);
-        for (const p of picks) expect(r.game.projects.status(p), summarize(r)).toBe("complete");
+        // Each option taken was started (a long one may still be building at the gate); the others closed.
+        for (const p of picks) expect(["complete", "building"], summarize(r)).toContain(r.game.projects.status(p));
         PROOF[stage]!(r);
       }, 300_000),
     );

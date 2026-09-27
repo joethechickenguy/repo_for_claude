@@ -14,13 +14,40 @@ gate:
     state: ["engine_static_fire_s >= 60", "engine_thrust_kn >= 250", "has_launch_pad == true"]
   routes: [A_steam_turbopump, B_gas_generator, T_pressure_fed_booster]
 
+# Job rates per worker-day (G5; all estimates).
+jobs:
+  farm_fuel_crops:
+    name: Farm fuel crops
+    what: "60 kg of grain and potatoes a day for the stills"      # estimate
+    why: "Alcohol for rocket fuel is grown: every ton of it is fields and harvests."
+    outputs: {grain_kg: 60}
+    tool: true
+  ferment_and_distill:
+    name: Ferment and distill
+    what: "Uses 30 kg grain and 10 kg coal. Makes 10 kg of 75% alcohol"   # ~0.3 kg ethanol per kg of starch crop (estimate)
+    why: "Yeast turns sugar to alcohol; the still concentrates it to the 75% the V-2 burned."
+    inputs: {grain_kg: 30, coal_kg: 10}
+    outputs: {ethanol_kg: 10}
+    burns: {coal_kg: 10}
+
+# Either/or decisions (G5). Starting one option closes the other for good.
+choices:
+  - id: turbopump
+    prompt: "A booster needs pumps, not pressurized tanks. Drive the turbine with decomposed peroxide, or with a small fuel-rich burn of the propellants themselves?"
+    options: [hydrogen_peroxide, gas_generator_turbopump]
+  - id: computing
+    prompt: "Trajectories need arithmetic by the million. A room of people with desk calculators, or a machine of shafts and integrators?"
+    options: [human_computers, differential_analyzer]
+  - id: storable
+    prompt: "Some jobs need propulsion that waits for months and starts at once. Nitric-acid hypergolics, or solid motors?"
+    options: [hypergolic_propellants, solid_motors]
 pressures:
   - id: stand_time
     name: Test stand
     drives: stand_days_balance
     heartbeat: true
     rises_with: ["every static fire takes stand days and burns propellant; designs queue for the stand"]
-    red_when: "queue exceeds a year"
+    red_when: "stand_days_balance < 0"        # the rocket engine workshop (E5) writes it: a year minus the queued stand days
     effect_when_red: "Engine designs wait untested; the player chooses which fires first or builds a second stand"
     answers: [test_stand, instrumentation]
     introduced_in_beat: 4
@@ -28,7 +55,7 @@ pressures:
     name: Liquid oxygen
     drives: lox_balance
     rises_with: ["each static fire burns tons; production is the Stage 4 plant"]
-    red_when: "stock < next test's need"
+    red_when: "lox_balance < 0"                # E5: LOX in store minus the next firing's need
     effect_when_red: "Tests wait for oxygen"
     answers: [lox_plant_scaleup]
     introduced_in_beat: 4
@@ -36,7 +63,7 @@ pressures:
     name: Power
     drives: power_balance_kw
     rises_with: ["oxygen plant, arc furnaces, aluminum, machine shop"]
-    red_when: "load exceeds generation"
+    red_when: "power_balance_kw < 0"
     effect_when_red: "Brownout; oxygen output falls first"
     answers: [power_station_expansion]
     introduced_in_beat: 1
@@ -82,10 +109,11 @@ nodes:
     kind: project
     critical_path: false
     problem: "Twelve works and an oxygen plant, and you're still setting furnace targets by hand while the engine program waits."
+    tradeoff: "Department priorities instead of crews by hand; the works tier's targets stay one expander away."
     requires:
       nodes: [gate_liquid_oxygen]
       state: ["works_active >= 10"]
-      labor_person_days: 100000
+      labor_person_days: 50000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     unlocks:
       effects: ["Labor tier: departments. Five priority sliders (metals, power, chemistry, propulsion, testing) staff the works beneath them. Works and jobs stay one expander away"]
     writes_state: [labor_tier]
@@ -99,6 +127,34 @@ nodes:
       Huntsville ran as departments with budgets and priorities, and the director's job was deciding
       what got the people this year. From here, so is yours.
 
+  - id: rocket_society
+    name: Rocket society
+    stage: 5
+    beat: 1
+    kind: project
+    critical_path: false
+    problem: "Nobody here has built a rocket, and the engineers who will have to are learning from pages."
+    tradeoff: "A club of enthusiasts firing small rockets on a field: rocket engineers trained years early, for builders the grinding shop could use."
+    requires:
+      nodes: [gate_liquid_oxygen]
+      resources: {steel_kg: 2000, lox_kg: 500}
+      labor_person_days: 100000   # estimate
+    unlocks:
+      effects: ["rocket_engineers_trained +100: the first engine designs converge faster"]
+    reads_state: []
+    writes_state: [rocket_engineers_trained]
+    adjusts_state: {rocket_engineers_trained: 100}   # estimate
+    pages_bundle: rocketry
+    without_pages: "No penalty"
+    numbers_status: "The VfR (1927-1933) is sourced; the numbers are estimates"
+    sources: ["https://en.wikipedia.org/wiki/Verein_f%C3%BCr_Raumschiffahrt"]
+    tags: [substantive, skill_builder]
+    notebook: >
+      In 1930 a group of German amateurs, the Society for Space Travel, rented a disused ammunition
+      dump in Berlin and fired small liquid-fuel rockets from it. They learned what melted, what
+      exploded and what flew. Several of them, Wernher von Braun among them, became the engineers who
+      built the V-2 a decade later.
+
   - id: precision_grinding
     name: Precision grinding and ball bearings
     stage: 5
@@ -109,7 +165,7 @@ nodes:
     requires:
       nodes: [gate_liquid_oxygen, alloy_steels]
       resources: {alloy_steel_kg: 5000, steel_kg: 10000}
-      labor_person_days: 1800000
+      labor_person_days: 200000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     unlocks:
       jobs: [grind_bearings]
       effects: ["Machine shop: gauging to 0.01 mm; bearings dial: hardened_steel (ball bearings). Gyros, turbines and turbopumps read bearing_quality"]
@@ -136,7 +192,7 @@ nodes:
     requires:
       nodes: [vacuum_and_dewar]
       resources: {glass_kg: 500, copper_kg: 1000, tungsten_kg: 5}
-      labor_person_days: 1800000
+      labor_person_days: 200000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     milestones:
       - {at: 0.3, id: diode, effect: "A hot filament in a vacuum passes current one way"}
       - {at: 0.6, id: triode, effect: "A grid between filament and plate: amplification"}
@@ -166,10 +222,11 @@ nodes:
     requires:
       nodes: [electronics_lab, measurement]
       resources: {copper_kg: 500, glass_kg: 200}
-      labor_person_days: 800000
+      labor_person_days: 100000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     unlocks:
       effects: ["Pressure and strain gauges recorded fast, radioed from flight. Each test reveals flaws more often (instrumentation_level). Adds the nozzle dial"]
     writes_state: [instrumentation_level]
+    adjusts_state: {instrumentation_level: 1}
     pages_bundle: liquid_rocket_engines
     without_pages: "2x labor"
     numbers_status: "Game rule; see failure-modes.md"
@@ -191,13 +248,14 @@ nodes:
     requires:
       nodes: [precision_grinding]
       resources: {alloy_steel_kg: 300, copper_kg: 200, graphite_kg: 500}
-      labor_person_days: 1500000
+      labor_person_days: 200000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     milestones:
       - {at: 0.6, id: jet_vanes, effect: "Graphite vanes in the exhaust steer the rocket at liftoff, when fins do nothing"}
     unlocks:
       effects: ["Attitude reference and steering. guidance_quality from bearing_quality and tolerance_mm"]
     reads_state: [bearing_quality, tolerance_mm]
     writes_state: [has_gyros, has_tvc, guidance_quality]
+    adjusts_state: {guidance_quality: 1}
     pages_bundle: guidance
     without_pages: "3x labor; drift is large until balancing is learned"
     numbers_status: "V-2 LEV-3 and graphite jet vanes sourced"
@@ -219,7 +277,7 @@ nodes:
     requires:
       nodes: [portland_cement, welding]
       resources: {steel_kg: 30000, cement_kg: 200000}
-      labor_person_days: 2500000
+      labor_person_days: 150000   # trimmed (G5): a decision at least once a year; estimate
     unlocks:
       effects: ["Introduces the stand-time and oxygen bars. Repeatable: a second stand doubles throughput"]
     writes_state: [has_test_stand, stand_days_balance]
@@ -233,6 +291,32 @@ nodes:
       bunker and a long propellant line keep the crew safe from the failures that will come. Most
       rocket problems were found on stands, not in flight.
 
+  - id: second_test_stand
+    name: Second test stand
+    stage: 5
+    beat: 5
+    kind: upgrade
+    critical_path: false
+    problem: "Engine designs wait in line for the one stand while the builders stand around."
+    tradeoff: "Twice the firings a year; another bunker's worth of steel and cement the launch complex also wants."
+    requires:
+      nodes: [test_stand]
+      resources: {steel_kg: 20000, cement_kg: 150000}
+      labor_person_days: 250000   # estimate
+    unlocks:
+      effects: ["Two firings at a time: the stand queue moves twice as fast"]
+    reads_state: []
+    writes_state: []
+    pages_bundle: liquid_rocket_engines
+    without_pages: "No penalty"
+    numbers_status: "Estimate"
+    sources: []
+    tags: [substantive, accelerant]
+    notebook: >
+      Every rocket program that moved fast had more than one stand. Peenemuende's Test Stand VII was
+      only the largest of several; the Apollo engines were fired on stands in California,
+      Mississippi and Alabama at once. An engine design waits for a stand, not for an idea.
+
   - id: first_liquid_rocket
     name: First liquid-fueled engine
     stage: 5
@@ -245,11 +329,12 @@ nodes:
       nodes: [test_stand]
       any_of: [[oil], [fuel_alcohol]]
       resources: {steel_kg: 500, copper_kg: 100, lox_kg: 2000}
-      labor_person_days: 300000
+      labor_person_days: 50000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     unlocks:
       effects: ["Opens the rocket engine workshop with mixture ratio and chamber pressure. Pressure-fed, uncooled, showerhead: it runs for seconds and burns through. Trains rocket engineers"]
     reads_state: [draft_roster]
     writes_state: [rocket_engineers_trained]
+    adjusts_state: {rocket_engineers_trained: 50}   # "Trains rocket engineers" (estimate)
     pages_bundle: liquid_rocket_engines
     without_pages: "Different route: the mixture dial starts at stoichiometric and the first chambers melt; the notebook fills after the third burn-through"
     numbers_status: "Goddard 1926: 2.5 s, 12.5 m, LOX and gasoline (sourced)"
@@ -267,11 +352,12 @@ nodes:
     kind: project
     critical_path: false
     problem: "Engines need tons of fuel, and without oil the only liquid fuel you can make in bulk is alcohol."
+    tradeoff: "Alcohol from the fields: no oil needed, but farmers and stills forever, and 30 s less Isp than kerosene."
     requires:
       nodes: [glassworks]
       state: ["NOT has_kerosene"]
       resources: {steel_kg: 8000, copper_kg: 4000}
-      labor_person_days: 1500000
+      labor_person_days: 200000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     unlocks:
       jobs: [farm_fuel_crops, ferment_and_distill]
       effects: ["75% ethanol (V-2 style; workshop Isp 280). A standing farming labor sink; cropland reads forest_cover"]
@@ -299,7 +385,7 @@ nodes:
       nodes: [first_liquid_rocket]
       state: ["engine_static_fire_s > 0"]
       resources: {copper_kg: 2000, alloy_steel_kg: 1000}
-      labor_person_days: 1200000
+      labor_person_days: 100000   # trimmed (G5): a decision at least once a year; estimate
     unlocks:
       effects: ["Adds the cooling dial: film, then regenerative"]
     reads_state: [welders_trained]
@@ -324,7 +410,7 @@ nodes:
     requires:
       nodes: [regenerative_cooling, precision_grinding]
       resources: {alloy_steel_kg: 500, copper_kg: 500}
-      labor_person_days: 1000000
+      labor_person_days: 100000   # trimmed (G5): a decision at least once a year; estimate
     unlocks:
       effects: ["Adds the injector dial. Impinging jets: fine mixing, higher chamber pressure. Baffles remove combustion_instability once instrumentation has shown it"]
     reads_state: [instrumentation_level]
@@ -348,10 +434,11 @@ nodes:
     route: [T_pressure_fed_booster]
     critical_path: true
     problem: "Turbopumps look like years of machining; the pressure-fed engine already works on the stand."
+    tradeoff: "A booster with no pumps: simple, and the path to turbopumps; as a first stage it's heavy and 25 s short."
     requires:
       nodes: [injector_design]
       resources: {steel_kg: 20000}
-      labor_person_days: 1000000
+      labor_person_days: 150000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     unlocks:
       effects: ["Adds the feed dial (pressure_fed). Scales to a booster and passes the gate. In the rocket workshop a pressure-fed first stage adds ~0.08 structural fraction and costs ~25 s Isp"]
     writes_state: [feed_system]
@@ -374,16 +461,19 @@ nodes:
     route: [A_steam_turbopump]
     critical_path: false
     problem: "Pushing propellant with tank pressure means booster tanks as thick as boilers."
+    tradeoff: "A steam turbine on decomposed peroxide, as the V-2 did: proven, 25 bar at most, and a tank of something that explodes when dirty."
     requires:
       nodes: [pressure_fed_booster_engine, chlor_alkali, steam_turbine]
       resources: {alloy_steel_kg: 3000, glass_kg: 1000, steel_kg: 1000}
-      labor_person_days: 2500000
+      labor_person_days: 300000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     milestones:
       - {at: 0.5, id: peroxide_plant, effect: "~80% hydrogen peroxide by electrolysis; decomposed over permanganate it makes hot steam"}
     unlocks:
       effects: ["feed: peroxide_turbopump. Light tanks; chamber pressure to ~25 bar. A standing peroxide hazard"]
     reads_state: [bearing_quality, has_caustic]
     writes_state: [feed_system, turbopump_quality, has_peroxide]
+    writes_values: {feed_system: peroxide_turbopump}
+    adjusts_state: {turbopump_quality: 1}
     pages_bundle: propellants
     without_pages: "4x labor; concentrated peroxide decomposes explosively when contaminated"
     numbers_status: "V-2 peroxide-permanganate turbopump sourced"
@@ -402,15 +492,17 @@ nodes:
     route: [B_gas_generator]
     critical_path: false
     problem: "Carrying a third propellant just to drive the pump costs mass and a whole chemical plant."
+    tradeoff: "A turbine on the propellants themselves: 60 bar and the best booster, after the longest build and the hardest bearings."
     requires:
       nodes: [pressure_fed_booster_engine, steam_turbine]
       state: ["has_alloy_steel == true", "bearing_quality >= 3"]
       resources: {alloy_steel_kg: 4000}
-      labor_person_days: 3500000
+      labor_person_days: 400000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     unlocks:
       effects: ["feed: gas_generator_turbopump. Turbine driven by a fuel-rich burn of the main propellants; chamber pressure to 60 bar. Best booster in the workshop"]
     reads_state: [bearing_quality, has_alloy_steel]
     writes_state: [feed_system, turbopump_quality]
+    adjusts_state: {turbopump_quality: 2}
     pages_bundle: liquid_rocket_engines
     without_pages: "4x labor; turbine blades burn until the mixture is run fuel-rich"
     numbers_status: "Gas-generator cycle (F-1, H-1) sourced"
@@ -425,15 +517,16 @@ nodes:
   - id: hypergolic_propellants
     name: Storable propellants
     stage: 5
-    beat: 7
+    beat: 3   # moved up from 7 (G5): its prerequisites exist by then, and it spreads the decisions
     kind: project
     critical_path: false
     problem: "Liquid oxygen boils away within days, and a lander must restart its engine after coasting to the Moon."
+    tradeoff: "Nitric acid and amine light on contact: a lander engine that restarts every time. Corrosive and poisonous."
     requires:
       nodes: [sulfuric_acid, coal_mining]   # was coal_seam_choice, split into near_seam / far_seam (2026-09-27)
       any_of: [[niter_beds], [nitrogen_fixation]]
       resources: {steel_kg: 3000, glass_kg: 500}
-      labor_person_days: 1500000
+      labor_person_days: 200000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     unlocks:
       effects: ["Nitric acid with a coal-tar amine ignites on contact: no igniter, no boil-off. Lander engine option. Nitrate supply caps production"]
     reads_state: [nitrate_source]
@@ -451,19 +544,21 @@ nodes:
   - id: nitrogen_fixation
     name: Fixed nitrogen at scale
     stage: 5
-    beat: 7
+    beat: 4   # moved up from 7 (G5): its prerequisites exist by then, and it spreads the decisions
     kind: decision_option
     critical_path: false
     problem: "Niter beds make a trickle; nitric acid by the ton needs nitrogen pulled from the air."
+    tradeoff: "Nitric acid from air, so hypergolics aren't capped by the niter beds; a big chemical works."
     requires:
       nodes: [compressors, chlor_alkali]
       state: ["has_nitrate == true"]
       resources: {alloy_steel_kg: 10000, steel_kg: 5000}
-      labor_person_days: 3000000
+      labor_person_days: 350000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     unlocks:
       effects: ["Choose: arc process (Birkeland-Eyde, electricity-hungry, simple) or ammonia synthesis (Haber-Bosch, 200 atm, catalyst search; needs the industrial chemistry pages). Ostwald nitric acid follows; platinum if found, cobalt oxide otherwise"]
     reads_state: [hydro_kw, power_balance_kw, max_pressure_atm, bundles_taken, mineral_sites]
     writes_state: [nitrate_source, has_nitric_acid]
+    writes_values: {nitrate_source: haber}
     pages_bundle: nitrogen_fuels
     without_pages: "Different route: Haber-Bosch is unavailable (the catalyst search took years of systematic work); the arc process is the only option"
     numbers_status: "Birkeland-Eyde 1903, Haber 1909, Oppau 1913, Ostwald 1902 sourced"
@@ -477,15 +572,16 @@ nodes:
   - id: solid_motors
     name: Composite solid motors
     stage: 5
-    beat: 7
+    beat: 3   # moved up from 7 (G5): its prerequisites exist by then, and it spreads the decisions
     kind: project
     critical_path: false
     problem: "You need small, reliable thrusters for separating stages and settling propellant."
+    tradeoff: "Solid motors for separation, ullage and an escape tower; no restartable lander engine from them."
     requires:
       nodes: [chlor_alkali]
       any_of: [[aluminum], [niter_beds]]
       resources: {steel_kg: 500}
-      labor_person_days: 1200000
+      labor_person_days: 150000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     unlocks:
       effects: ["Separation, ullage and escape motors. Without aluminum and perchlorate: black-powder charges (adds separation_recontact risk)"]
     reads_state: [has_aluminum, has_caustic]
@@ -502,15 +598,16 @@ nodes:
   - id: launch_complex
     name: Launch complex and oxygen plant
     stage: 5
-    beat: 7
+    beat: 5   # moved from 7 (G5): "runs alongside engine development so the stage never idles"
     kind: project
     critical_path: true
     problem: "A fueled rocket weighs hundreds of tons, needs tons of liquid oxygen in its last hours, and would destroy the test stand when it lights."
+    tradeoff: "The biggest build in the game; start it early and let it run beside the engine work."
     requires:
       nodes: [test_stand, air_separation]
       state: ["engine_thrust_kn > 50"]
       resources: {steel_kg: 400000, cement_kg: 3000000}
-      labor_person_days: 10000000
+      labor_person_days: 1200000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     milestones:
       - {at: 0.3, id: lox_plant_scaleup, effect: "Oxygen plant x10 (repeatable later as its own project)"}
       - {at: 0.6, id: pad_and_trench, effect: "Pad and flame trench"}
@@ -536,11 +633,12 @@ nodes:
     kind: project
     critical_path: false
     problem: "Every static fire burns tons of liquid oxygen, and a launch will need hundreds."
+    tradeoff: "Twice the oxygen plant, and twice its load on the grid."
     requires:
       nodes: [launch_complex]
       state: ["lox_balance < 0"]
       resources: {steel_kg: 60000, copper_kg: 20000}
-      labor_person_days: 2500000
+      labor_person_days: 300000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     unlocks:
       effects: ["lox_kg_per_day x2 per build (repeatable). Power load rises with it"]
     reads_state: [cryo_process, power_balance_kw]
@@ -557,14 +655,14 @@ nodes:
   - id: tracking_network
     name: Tracking stations
     stage: 5
-    beat: 7
+    beat: 3   # moved up from 7 (G5): its prerequisites exist by then, and it spreads the decisions
     kind: project
     critical_path: true
     problem: "After the engines stop, nobody knows where the vehicle is or whether it's on course."
     requires:
       nodes: [electronics_lab]
       resources: {steel_kg: 30000, copper_kg: 5000}
-      labor_person_days: 2000000
+      labor_person_days: 250000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     unlocks:
       effects: ["Dish antennas and Doppler ranging; trajectory determination with the computing office. Required for guidance choices in Stage 6"]
     reads_state: [has_radio]
@@ -579,22 +677,52 @@ nodes:
       of that and a room of computers can fit an orbit. Without it a lunar mission flies blind after
       the last burn.
 
+  - id: differential_analyzer
+    name: Differential analyzer
+    stage: 5
+    beat: 2
+    kind: decision_option
+    critical_path: false
+    problem: "Trajectories and engine transients are differential equations, and a person with a desk calculator solves one in weeks."
+    tradeoff: "Shafts, gears and wheel-and-disc integrators solve trajectories in hours; months of precision machining, and every new problem is rewired by hand."
+    requires:
+      nodes: [precision_grinding]
+      resources: {steel_kg: 5000, copper_kg: 1000}
+      labor_person_days: 250000   # estimate
+    unlocks:
+      effects: ["calc_hours accumulate fast; design, tracking and trajectory work in Stage 6 spend them"]
+    reads_state: [tolerance_mm]
+    writes_state: [calc_hours]
+    adjusts_state: {calc_hours: 20000}   # estimate
+    pages_bundle: none
+    without_pages: "No penalty"
+    numbers_status: "Bush's differential analyzer (1931) is sourced; numbers are estimates"
+    sources: ["https://en.wikipedia.org/wiki/Differential_analyser"]
+    tags: [substantive]
+    notebook: >
+      Vannevar Bush's differential analyzer of 1931 solved differential equations mechanically: a
+      wheel pressed against a spinning disc turns at a rate set by its distance from the centre, which
+      is integration. Chains of these integrators, linked by shafts and gears, traced ballistic
+      trajectories. Its precision was only as good as its machining.
+
   - id: human_computers
     name: Computing office
     stage: 5
-    beat: 7
+    beat: 2   # moved from 7 (G5): the computing choice
     kind: project
     critical_path: false
     problem: "Every trajectory, nozzle and orbit needs thousands of hours of arithmetic, and the engineers are doing it themselves."
+    tradeoff: "A room of people computing trajectories by hand; the orbital tables in the pages do most of it."
     requires:
-      nodes: [instrumentation]
+      nodes: [gate_liquid_oxygen]
       resources: {paper_kg: 2000}
-      labor_person_days: 300000
+      labor_person_days: 50000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     unlocks:
       jobs: [compute]
       effects: ["calc_hours accumulate; Stage 6 design, tracking and trajectory work spend them. Orbital mechanics pages replace most of it"]
     reads_state: [bundles_taken]
     writes_state: [calc_hours]
+    adjusts_state: {calc_hours: 10000}   # estimate
     pages_bundle: orbital_mechanics
     without_pages: "Tables computed from scratch: 3x calc_hours"
     numbers_status: "Estimate"

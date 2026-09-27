@@ -69,8 +69,13 @@ export function liquefierDesign(game: Game, values: Record<string, JsonValue>): 
   };
 }
 
+/** The plant's compressor, kW: doubled by the LOX plant scale-up (Stage 5). */
+export function compressorKw(game: Game): number {
+  return playNum(game, LIQUEFIER, "compressor_kw") * (isDone(game, "lox_plant_scaleup") ? playNum(game, LIQUEFIER, "scaleup_factor") : 1);
+}
+
 export function liquefierResult(game: Game, design: LiquefierDials): LiquefierResult {
-  return liquefier(design, { compressor_kw: playNum(game, LIQUEFIER, "compressor_kw") });
+  return liquefier(design, { compressor_kw: compressorKw(game) });
 }
 
 /** Oxygen the plant puts in the stores a day: only with a column and air separation built. */
@@ -80,7 +85,7 @@ export function loxPerDay(game: Game, design: LiquefierDials, r: LiquefierResult
 
 export function liquefierRows(game: Game, r: LiquefierResult): OutputRow[] {
   return [
-    { label: S.compressor, value: n(playNum(game, LIQUEFIER, "compressor_kw"), "kW") },
+    { label: S.compressor, value: n(compressorKw(game), "kW") },
     { label: S.liters, value: n(r.liters_per_day, "L") },
     { label: S.oxygen, value: n(r.oxygen_kg_per_day, "kg") },
     { label: S.kwh, value: r.kwh_per_kg === null ? "—" : n(r.kwh_per_kg, "kWh"), tone: r.kwh_per_kg === null ? "bad" : "normal" },
@@ -141,7 +146,7 @@ export function powerFactor(game: Game): number {
 function tickLiquefier(game: Game, ctx: TickContext, sys: WorkshopSystem<LiquefierData & JsonValue>): void {
   const run = sys.data.run;
   // The compressor is a load on the grid while the plant runs.
-  setState(game, "liquefier_kw", run ? playNum(game, LIQUEFIER, "compressor_kw") : 0);
+  setState(game, "liquefier_kw", run ? compressorKw(game) : 0);
   if (!run) return;
   const today = ctx.day + 1;
   const t = today - run.start;

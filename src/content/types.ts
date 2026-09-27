@@ -60,6 +60,8 @@ export interface Resource {
   fuel?: string;
   /** Each unit produced is 1 kWh of delivered shaft work (engines), counted x2.5 (energy.md rule 5). */
   work?: boolean;
+  /** Made by this workshop's runs (liquid oxygen from the liquefier) rather than, or as well as, a job. */
+  workshop?: string;
 }
 
 /**

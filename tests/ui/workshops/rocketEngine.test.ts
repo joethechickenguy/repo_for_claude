@@ -7,7 +7,7 @@ import type { JsonValue } from "../../../src/engine";
 import { mountShell } from "../../../src/ui/shell";
 import { Game } from "../../../src/ui/shellGame";
 import { workshopSystem } from "../../../src/ui/workshops/kit";
-import { loxNeed, queueFiring, ROCKET_ENGINE, rocketEngineDesign, rocketEngineDials, rocketEngineResult, rocketEngineRows } from "../../../src/ui/workshops/rocketEngine";
+import { fuelNeed, fuelResource, loxNeed, queueFiring, ROCKET_ENGINE, rocketEngineDesign, rocketEngineDials, rocketEngineResult, rocketEngineRows } from "../../../src/ui/workshops/rocketEngine";
 import { WS } from "../../../src/ui/workshops/strings";
 
 const frame = () => new Promise((r) => setTimeout(r, 30));
@@ -52,11 +52,15 @@ describe("E5 rocket engine workshop", () => {
     expect(r.burn_time_s).toBeLessThan(10);
   });
 
-  it("a firing waits for LOX, takes its stand days, and the best one sets engine_static_fire_s and engine_thrust_kn", () => {
+  it("a firing waits for LOX and fuel, takes its stand days, and the best one sets engine_static_fire_s and engine_thrust_kn", () => {
     const g = new Game(tree);
     setBook(g, ALL);
     sys(g).data.dials = V2;
-    const need = loxNeed(g, rocketEngineResult(g, rocketEngineDesign(g, V2)));
+    const r0 = rocketEngineResult(g, rocketEngineDesign(g, V2));
+    const need = loxNeed(g, r0);
+    expect(fuelResource(g)).toBe("ethanol_kg"); // alcohol route: no kerosene
+    expect(fuelNeed(g, r0) * 1.3).toBeCloseTo(need, 6); // 1.3 : 1 oxidizer to fuel
+    g.engine.addStock("ethanol_kg", 1e6);
     queueFiring(g);
     days(g, 3);
     expect(g.engine.get("lox_balance")).toBeCloseTo(-need, 6);

@@ -20,6 +20,7 @@ import {
   doneReason,
   esc,
   flag,
+  isDone,
   lineChartSVG,
   lockUntil,
   mountScreen,
@@ -94,6 +95,26 @@ export function loxNeed(game: Game, r: RocketEngineResult): number {
   return r.oxidizer_flow_kg_s * playNum(game, ROCKET_ENGINE, "planned_burn_s");
 }
 
+/** The store the engine's fuel comes from (kerosene from the refinery, or alcohol from the stills). */
+export function fuelResource(game: Game): string {
+  return enginePropellants(game) === "kerosene_lox" ? "kerosene_kg" : "ethanol_kg";
+}
+
+/** Fuel a planned burn needs, kg. */
+export function fuelNeed(game: Game, r: RocketEngineResult): number {
+  return r.fuel_flow_kg_s * playNum(game, ROCKET_ENGINE, "planned_burn_s");
+}
+
+/** What a firing takes from the stores. */
+export function firingCost(game: Game, r: RocketEngineResult): Record<string, number> {
+  return { lox_kg: loxNeed(game, r), [fuelResource(game)]: fuelNeed(game, r) };
+}
+
+/** injector_quality after a firing: the injector's, +1 on heat-resistant steel (Stage 4 choice), at most 2. */
+export function injectorQuality(game: Game, r: RocketEngineResult): number {
+  return Math.min(2, r.injector_quality + (isDone(game, "heat_resistant_steel") && r.injector_quality > 0 ? 1 : 0));
+}
+
 /** Seconds the chamber lasts on a planned burn. */
 export function burnAchieved(game: Game, r: RocketEngineResult): number {
   return Math.min(playNum(game, ROCKET_ENGINE, "planned_burn_s"), r.burn_time_s);
@@ -113,6 +134,7 @@ export function rocketEngineRows(game: Game, r: RocketEngineResult): OutputRow[]
     { label: S.burn, value: Number.isFinite(r.burn_time_s) ? n(r.burn_time_s, "s") : S.holds, tone: r.burn_time_s < planned ? "bad" : "good" },
     { label: S.pc, value: n(r.chamber_pressure_bar, "bar"), tone: r.feed_limited ? "bad" : "normal" },
     { label: S.lox, value: n(loxNeed(game, r), "kg") },
+    { label: S.fuel, value: n(fuelNeed(game, r), "kg") },
     { label: S.flaws, value: WS.frame.pendingH },
   ];
 }
@@ -148,6 +170,16 @@ export function traceSVG(game: Game, r: RocketEngineResult): string {
   return lineChartSVG(pts, { title: S.trace, xMax: planned, yMin: 0, yMax: Math.max(1, pc * 1.4), bad: end < planned || rough > 0 });
 }
 
+/** Stands the colony has: a second test stand doubles the stand's throughput. */
+export function standCount(game: Game): number {
+  return isDone(game, "second_test_stand") ? 2 : 1;
+}
+
+/** Stand days one firing takes from the queue. */
+export function firingDays(game: Game): number {
+  return playNum(game, ROCKET_ENGINE, "firing_days") / standCount(game);
+}
+
 export function queueFiring(game: Game): boolean {
   const sys = workshopSystem<RocketEngineData & JsonValue>(game, ROCKET_ENGINE);
   if (!sys) return false;
@@ -157,7 +189,7 @@ export function queueFiring(game: Game): boolean {
 }
 
 function standDays(game: Game, d: RocketEngineData, today: number): number {
-  const per = playNum(game, ROCKET_ENGINE, "firing_days");
+  const per = firingDays(game);
   return d.queue.length * per + (d.firing ? Math.max(0, d.firing.end - today) : 0);
 }
 
@@ -171,7 +203,7 @@ function tickRocketEngine(game: Game, ctx: TickContext, sys: WorkshopSystem<Rock
     const planned = playNum(game, ROCKET_ENGINE, "planned_burn_s");
     const better = !d.best || burn > d.best.burn_s || (burn === d.best.burn_s && r.thrust_kn > d.best.thrust_kn);
     if (better) d.best = { burn_s: burn, thrust_kn: r.thrust_kn };
-    setState(game, "injector_quality", r.injector_quality);
+    setState(game, "injector_quality", injectorQuality(game, r));
     if (f.design.feed) setState(game, "feed_system", f.design.feed);
     const ok = burn >= planned;
     pushHistory(d.history, {
@@ -188,10 +220,9 @@ function tickRocketEngine(game: Game, ctx: TickContext, sys: WorkshopSystem<Rock
   }
   if (!d.firing && d.queue.length) {
     const next = d.queue[0]!;
-    const need = loxNeed(game, rocketEngineResult(game, next.design));
-    if (ctx.engine.spend({ lox_kg: need })) {
+    if (ctx.engine.spend(firingCost(game, rocketEngineResult(game, next.design)))) {
       d.queue.shift();
-      d.firing = { ...next, start: today, end: today + playNum(game, ROCKET_ENGINE, "firing_days") };
+      d.firing = { ...next, start: today, end: today + Math.ceil(firingDays(game)) };
     }
   }
   if (d.best) {
@@ -213,8 +244,9 @@ function queueHTML(game: Game, d: RocketEngineData): string {
   if (d.firing) h += progressHTML(`${S.firing}: ${d.firing.title}`, game.engine.day - d.firing.start, d.firing.end - d.firing.start);
   if (!d.queue.length) return h + noteHTML(S.queueEmpty);
   const next = d.queue[0]!;
-  const need = loxNeed(game, rocketEngineResult(game, next.design));
-  if (!d.firing && game.engine.stock("lox_kg") < need) h += noteHTML(fill(S.waitingLox, { have: n(game.engine.stock("lox_kg")), need: n(need) }), true);
+  if (!d.firing)
+    for (const [res, need] of Object.entries(firingCost(game, rocketEngineResult(game, next.design))))
+      if (game.engine.stock(res) < need) h += noteHTML(fill(S.waiting, { name: game.resourceName(res), have: n(game.engine.stock(res)), need: n(need) }), true);
   h += `<ol class="wk-queue">`;
   d.queue.forEach((q, i) => {
     h += `<li><span class="grow"><b>${esc(q.title)}</b></span>`;

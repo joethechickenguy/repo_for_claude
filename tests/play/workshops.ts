@@ -7,7 +7,8 @@ import { workshopSystem } from "../../src/ui/workshops/kit";
 import { SHOP, shopDials, shopSetup, startRetool } from "../../src/ui/workshops/machineShop";
 import "../../src/ui/workshops/furnace";
 import { liquefierDesign, liquefierDials, startLiquefier } from "../../src/ui/workshops/liquefier";
-import "../../src/ui/workshops/rocketEngine";
+import { PROPELLANTS } from "../../src/models";
+import { enginePropellants, queueFiring, ROCKET_ENGINE, rocketEngineDesign, rocketEngineDials, rocketEngineResult } from "../../src/ui/workshops/rocketEngine";
 import "../../src/ui/workshops/rocket";
 
 type Data = { dials: Record<string, JsonValue>; [k: string]: JsonValue };
@@ -89,4 +90,43 @@ export function liquefierHabit(g: Game): void {
   if (d.run && JSON.stringify(d.run.design) === want) return;
   d.dials = values;
   startLiquefier(g);
+}
+
+/** Rocket engine: whenever nothing is on the stand, fire the best design the dials allow if it beats the record. */
+export function rocketEngineHabit(g: Game): void {
+  const dials = rocketEngineDials(g);
+  const d = data(g, ROCKET_ENGINE) as (Data & { queue: JsonValue[]; firing: JsonValue; best: { burn_s: number; thrust_kn: number } | null }) | null;
+  if (!d || !dials.length || d.queue.length || d.firing) return;
+  // The best open option of a dial, or undefined (one pass) when the dial hasn't arrived.
+  const open = (id: string, pref: string[]): (string | undefined)[] => {
+    const x = dials.find((y) => y.id === id);
+    return x ? pref.filter((o) => x.options?.includes(o) && !x.locked?.[o]).slice(0, 1) : [undefined];
+  };
+  const range = (id: string) => dials.find((y) => y.id === id)?.range;
+  const pcMax = range("chamber_pressure")?.[1] ?? 60;
+  const mr = PROPELLANTS[enginePropellants(g)].best_mixture_ratio;
+  let best: { v: Record<string, JsonValue>; score: number; burn: number; thrust: number } | null = null;
+  for (const pc of [15, 20, 25, 30, 40, 50, 60].filter((x) => x <= pcMax))
+    for (const cooling of open("cooling", ["regenerative", "film", "none"]))
+      for (const injector of open("injector", ["impinging_baffled", "impinging", "showerhead"]))
+        for (const feed of open("feed", ["gas_generator_turbopump", "peroxide_turbopump", "pressure_fed"]))
+          for (const nozzle of range("nozzle") ? [4, 6, 8] : [undefined]) {
+            const v: Record<string, JsonValue> = { mixture_ratio: mr, chamber_pressure: pc };
+            if (cooling) v.cooling = cooling;
+            if (injector) v.injector = injector;
+            if (feed) v.feed = feed;
+            if (nozzle !== undefined) v.nozzle = nozzle;
+            const r = rocketEngineResult(g, rocketEngineDesign(g, v));
+            if (r.flow_separation_sl || r.feed_limited) continue;
+            if (!Number.isFinite(r.thrust_kn)) continue;
+            const burn = Math.min(60, r.burn_time_s);
+            const score = burn * 1e4 + r.thrust_kn;
+            if (!best || score > best.score) best = { v, score, burn, thrust: r.thrust_kn };
+          }
+  // The dials before cooling exists: still fire once (regenerative cooling waits on a first firing).
+  if (!best) return;
+  const rec = d.best;
+  if (rec && !(best.burn > rec.burn_s + 1e-9 || (best.burn >= rec.burn_s - 1e-9 && best.thrust > rec.thrust_kn + 1))) return;
+  d.dials = best.v;
+  queueFiring(g);
 }

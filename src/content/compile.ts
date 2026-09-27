@@ -112,6 +112,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     if (meta.name !== undefined) r.name = String(meta.name);
     if (meta.fuel !== undefined) r.fuel = String(meta.fuel);
     if (meta.work === true) r.work = true;
+    if (meta.workshop !== undefined) r.workshop = String(meta.workshop);
     resources[id] = r;
   }
 

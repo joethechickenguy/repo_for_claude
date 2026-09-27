@@ -22,7 +22,7 @@ export const STAGE2: StagePlan = {
   skip: ["savery_pump"],
 };
 
-import { dynamoHabit, liquefierHabit, shopHabit } from "./workshops";
+import { dynamoHabit, liquefierHabit, rocketEngineHabit, shopHabit } from "./workshops";
 
 /** Stage 3: iron tools and coal free people from wood, flint and clay; the new works get crews. */
 const STAGE3_PEOPLE: [string, number][] = [
@@ -58,5 +58,27 @@ export const STAGE4: StagePlan = {
     shopHabit(g);
     dynamoHabit(g);
     liquefierHabit(g);
+  },
+};
+
+/** Stage 5: the power station carries the energy number now, so the wood, charcoal and bloomery crews go to building. */
+export const STAGE5: StagePlan = {
+  people: [
+    ["gather_wood", 800], ["dig_clay", 150], ["burn_charcoal", 300], ["mine_malachite", 150], ["smelt_copper", 150],
+    ["mine_iron_ore", 900], ["forge_iron_tools", 60], ["quarry_stone", 250], ["burn_lime", 50], ["run_blast_furnace", 50],
+    ["mine_coal", 1000], ["coke_coal", 150], ["run_coke_furnace", 300], ["bail_mine", 50], ["tend_engine", 20],
+    ["turn_parts", 150], ["blow_steel", 60], ["mine_mineral", 100], ["make_glass", 30], ["make_sulfuric_acid", 20],
+    ["make_cement", 250], ["run_power_station", 150], ["run_arc_furnace", 20], ["make_alloy_steel", 30],
+    ["make_soda_ash", 20], ["electrolyze_brine", 30], ["pump_crude", 60], ["refine_crude", 60],
+    ["farm_fuel_crops", 150], ["ferment_and_distill", 60],
+  ],
+  train: { trade: "rocket_engineers_trained", people: 50 },
+  picks: ["gas_generator_turbopump", "hypergolic_propellants"],
+  energyJob: "run_power_station",
+  daily(g) {
+    shopHabit(g);
+    dynamoHabit(g);
+    liquefierHabit(g);
+    rocketEngineHabit(g);
   },
 };
