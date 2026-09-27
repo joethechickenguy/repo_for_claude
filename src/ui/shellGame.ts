@@ -198,15 +198,18 @@ export class Game {
    * ± on a people-panel row. People tier: [job]. Works tier: [works] moves the target, [works, job]
    * pins that row. Departments tier: [department] moves its priority, deeper rows as the works tier.
    */
-  adjust(path: readonly string[], delta: number): void {
+  adjust(fullPath: readonly string[], delta: number): void {
     const e = this.engine;
-    const tier = e.laborTier();
-    if (tier === "departments" && path.length >= 2) return this.adjust(path.slice(1), delta);
-    if (tier === "departments" && path.length === 1) {
-      const d = path[0]!;
-      const step = Math.sign(delta) * DEPARTMENT_PRIORITY_STEP;
-      e.setDepartmentPriority(d, (e.departmentPriority(d) ?? 0) + step);
-      return;
+    let path = fullPath;
+    if (e.laborTier() === "departments") {
+      const inDept = e.works().some((w) => (w.def.department ?? "") === path[0]);
+      if (inDept && path.length === 1) {
+        const d = path[0]!;
+        const step = Math.sign(delta) * DEPARTMENT_PRIORITY_STEP;
+        e.setDepartmentPriority(d, (e.departmentPriority(d) ?? 0) + step);
+        return;
+      }
+      if (inDept) path = path.slice(1); // [department, works, job] -> [works, job]
     }
     const works = e.works().find((w) => w.def.id === path[0]);
     if (works && path.length === 1) {

@@ -211,9 +211,32 @@ Tick when done; add 3-5 lines of what shipped and what was left open.
     workshop), steel vs aluminum "nearly twice" (2.5x), coke "1.5-2 t/t" (Neilson ~5).
   - Open: `flaws_expected`/`flaws_found` are H's; play Isp (280/310 s) sits above the engine model,
     so E6 can pass `isp_s` per stage; engine size, boiler radius and plant size have no dial (38).
-- [ ] D shell UI
+- [x] D shell UI
+  - `src/ui/shell.ts` + `shell.css` (the prototype's variables, type, square buttons, three columns
+    collapsing at 900 px; light, dark and 390 px checked in Chromium) draw `src/ui/shellGame.ts`, a
+    DOM-free controller over A + B + C + F: header, slide rule with every energy gate, pressure strip,
+    stores (stock, rate, demand, claims), people, projects, workshops (`registerWorkshop` hook for E),
+    log, notebook, auto-pause banner with a one-line reason; autosave to localStorage.
+  - `src/ui/controls/`: the recursive people control (`PeopleTree`) and pure pin-and-spread
+    (`spread.ts`), used at the people, works and departments tiers and by I's draft.
+  - Rates, tools, resource names and fuels now live in the YAML (open questions 25, 26); the game
+    builds its engine content from the tree only (`shellContent.ts`). `main.ts` shows the draft
+    first (hook finds I's `mountDraft`; until then a Depart line) and carries its result into state.
+  - Proven by `tests/ui/stage1-play.test.ts`: from an empty run, using only the panel's rows and
+    cards, Stage 1 reaches its gate (~day 1,070) and opens Stage 2. Open: 43-46 (campaigns stand-in
+    until E1, prose node effects not applied, trade names); stages 2+ have no job rates yet.
 - [ ] E1 furnace · [ ] E2 engine · [ ] E3 machine shop · [ ] E4 liquefier · [ ] E5 rocket engine · [ ] E6 rocket
-- [ ] F pressures and beats
+- [x] F pressures and beats
+  - `src/ui/pressures/`: `PressureSystem` moves each bar's `drives` per tick from the day's
+    production (new optional pressure `model:`), goes red from `red_when`, applies `red_modifiers`
+    via `setModifier` while a shown bar is red, pauses once on the way in; red bars' `answers` are
+    marked on their project cards and under the bar.
+  - Beat gating at reveal (`ProjectsSystem` option `gate`, additive to A): no card or pause until a
+    node of the previous beat is complete. `IntroSystem` introduces job rows, bars and workshops with
+    one line of what and one of why from content, at most two per auto-pause (the rest wait a tick).
+  - Stage 1 has models for forest and outcrop (estimates) and tool_wear's `red_when` is an expression.
+  - Open: the done-criterion's scripted Stage 2 run needs G2 (Stage 2 bars' `red_when` is prose and
+    no Stage 2 job has rates); open questions 41, 42, 45.
 - [ ] G1 · [ ] G2 · [ ] G3 · [ ] G4 · [ ] G5 · [ ] G6
 - [ ] H test campaign
 - [ ] I draft
