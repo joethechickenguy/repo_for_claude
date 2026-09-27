@@ -9,6 +9,10 @@
 .ptree-name{overflow-wrap:anywhere}
 .ptree-note{font-size:13px; color:var(--pencil)}
 .ptree-value{min-width:52px; text-align:right}
+.ptree-value.editable{cursor:text; border-bottom:1px dotted var(--rule)}
+.ptree-value.editable:hover{border-bottom-color:var(--ink)}
+.ptree-value:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+.ptree-input{font:inherit; width:6.5em; text-align:right; color:var(--ink); background:var(--paper); border:1px solid var(--ink); border-radius:0; padding:0 4px}
 .ptree-detail{font-size:13px; color:var(--pencil); min-width:0}
 .ptree-toggle{border:0; background:transparent; padding:0 2px; width:18px; color:var(--pencil)}
 .ptree-toggle:hover:not(:disabled){background:transparent; color:var(--ink)}

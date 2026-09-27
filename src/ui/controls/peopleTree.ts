@@ -8,6 +8,10 @@
 // re-render every tick keeps what the player opened. Rows are reused by key, so a ± clicked while the
 // game runs is never lost to a rebuild. The pin-and-spread arithmetic is in ./spread.ts (pure).
 //
+// Besides ±, a double-click on the number (or Enter on it) turns it into a field: the player types
+// any whole number, it is clamped to the row's [min, max] and sent to `onSet`. Enter or leaving the
+// field commits; Escape cancels.
+//
 // API is shared with package I; extend it additively.
 import { STRINGS } from "../strings";
 
@@ -35,6 +39,13 @@ export interface TreeRow {
   /** Show a pin toggle. `pinned` is its state. */
   canPin?: boolean;
   pinned?: boolean;
+  /**
+   * Typed entry: the range a typed number is clamped to. Rows with ± are editable when the caller
+   * passes `onSet`; `editable: false` turns it off for one row (e.g. a priority, not a count).
+   */
+  min?: number;
+  max?: number;
+  editable?: boolean;
   /** Children; the row gets an expander when there is at least one. */
   children?: TreeRow[];
   /** Start expanded the first time this row is seen (later the player's choice wins). */
@@ -50,6 +61,8 @@ export interface TreeHandlers {
   onPin?(path: readonly string[], pinned: boolean): void;
   /** Expander toggled (the control already remembers it). */
   onToggle?(path: readonly string[], expanded: boolean): void;
+  /** A typed value, already whole and clamped to the row's [min, max]. Enables typed entry. */
+  onSet?(path: readonly string[], value: number): void;
 }
 
 /** Button labels and aria text; defaults from the UI strings file. */
@@ -60,6 +73,8 @@ export interface TreeLabels {
   collapse: string;
   pin: string;
   unpin: string;
+  /** Tooltip on an editable number, and the field's aria label ("{name}" is the row name). */
+  edit: string;
 }
 
 export interface TreeOptions {
@@ -91,6 +106,8 @@ interface RowEls {
   kids: HTMLElement;
   row: TreeRow;
   path: string[];
+  /** The open text field while the player types, else null. */
+  input: HTMLInputElement | null;
 }
 
 const KEY_SEP = "\u0000";
@@ -128,6 +145,16 @@ export class PeopleTree {
     this.root.setAttribute("role", "tree");
     container.appendChild(this.root);
     this.root.addEventListener("click", (ev) => this.onClick(ev as MouseEvent));
+    this.root.addEventListener("dblclick", (ev) => this.onValueOpen(ev));
+    this.root.addEventListener("keydown", (ev) => {
+      if ((ev as KeyboardEvent).key === "Enter") this.onValueOpen(ev);
+    });
+  }
+
+  /** Is the player typing into a row right now? */
+  get editing(): boolean {
+    for (const r of this.rows.values()) if (r.input) return true;
+    return false;
   }
 
   /** Is a row (by path) expanded now? */
@@ -209,7 +236,7 @@ export class PeopleTree {
     const kids = el(doc, "div", "ptree-kids");
     kids.setAttribute("role", "group");
     root.append(line, kids);
-    return { root, line, toggle, name, note, value, detail, dec, inc, pin, kids, row: { id: "", name: "", value: 0 }, path };
+    return { root, line, toggle, name, note, value, detail, dec, inc, pin, kids, row: { id: "", name: "", value: 0 }, path, input: null };
   }
 
   private paint(r: RowEls): void {
@@ -220,7 +247,16 @@ export class PeopleTree {
     setText(r.name, row.name);
     setText(r.note, row.note ?? "");
     r.note.hidden = !row.note;
-    setText(r.value, this.format(row.value));
+    if (!r.input) setText(r.value, this.format(row.value));
+    const editable = this.isEditable(row);
+    r.value.classList.toggle("editable", editable);
+    if (editable) {
+      r.value.tabIndex = 0;
+      r.value.title = fillName(this.labels.edit, row.name);
+    } else {
+      r.value.removeAttribute("tabindex");
+      r.value.removeAttribute("title");
+    }
     setText(r.detail, row.detail ?? "");
     r.detail.hidden = !row.detail;
     if (row.hint) r.line.title = row.hint;
@@ -258,6 +294,49 @@ export class PeopleTree {
     r.kids.hidden = !(hasKids && open);
   }
 
+  private isEditable(row: TreeRow): boolean {
+    if (!this.handlers.onSet || row.editable === false) return false;
+    return row.editable === true || (row.step ?? this.step) > 0;
+  }
+
+  /** Double-click or Enter on a number: swap it for a text field. */
+  private onValueOpen(ev: Event): void {
+    const target = ev.target as HTMLElement | null;
+    if (!target?.classList.contains("ptree-value")) return;
+    const item = target.closest(".ptree-item") as HTMLElement | null;
+    const r = item?.dataset.key !== undefined ? this.rows.get(item.dataset.key) : undefined;
+    if (!r || r.input || !this.isEditable(r.row)) return;
+    ev.preventDefault();
+    const input = r.value.ownerDocument.createElement("input");
+    input.className = "ptree-input num";
+    input.type = "text";
+    input.inputMode = "numeric";
+    input.value = String(Math.round(r.row.value));
+    input.setAttribute("aria-label", fillName(this.labels.edit, r.row.name));
+    r.input = input;
+    r.value.replaceChildren(input);
+    input.focus();
+    input.select();
+    let done = false;
+    const close = (commit: boolean): void => {
+      if (done) return;
+      done = true;
+      const typed = commit ? parseTyped(input.value) : null;
+      r.input = null;
+      r.value.replaceChildren();
+      r.value.textContent = this.format(r.row.value);
+      if (typed !== null) this.handlers.onSet?.(r.path, clampTyped(typed, r.row.min, r.row.max));
+      r.value.focus();
+    };
+    input.addEventListener("keydown", (k) => {
+      k.stopPropagation();
+      if (k.key === "Enter") close(true);
+      else if (k.key === "Escape") close(false);
+    });
+    input.addEventListener("blur", () => close(true));
+    input.addEventListener("dblclick", (d) => d.stopPropagation());
+  }
+
   private onClick(ev: MouseEvent): void {
     const target = ev.target as HTMLElement | null;
     const btn = target?.closest("button[data-act]") as HTMLButtonElement | null;
@@ -279,6 +358,24 @@ export class PeopleTree {
       this.handlers.onToggle?.(r.path, open);
     }
   }
+}
+
+function fillName(template: string, name: string): string {
+  return template.replace("{name}", name);
+}
+
+/** "1,250", " 98 ", "1 250" -> 1250; anything else -> null. */
+export function parseTyped(text: string): number | null {
+  const t = text.replace(/[\s,_]/g, "");
+  if (!/^-?\d+(\.\d+)?$/.test(t)) return null;
+  return Math.round(Number(t));
+}
+
+/** Clamp a typed number into a row's range (min defaults to 0). */
+export function clampTyped(value: number, min: number | undefined, max: number | undefined): number {
+  const lo = min ?? 0;
+  const hi = max ?? Number.POSITIVE_INFINITY;
+  return Math.max(lo, Math.min(Math.max(lo, hi), value));
 }
 
 /** Only touch the DOM when the text changed (cheap per-tick re-renders). */

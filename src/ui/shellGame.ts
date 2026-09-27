@@ -254,6 +254,34 @@ export class Game {
     e.assign(job, e.manual(job) + delta);
   }
 
+  /**
+   * A typed number on a people-panel row: the row is set to it (as many ± as it takes, in one go).
+   * Jobs clamp to the idle people available, as ± does. Department priorities aren't counts and
+   * aren't typed (their rows say `editable: false`).
+   */
+  setValue(fullPath: readonly string[], value: number): void {
+    const e = this.engine;
+    let path = fullPath;
+    if (e.laborTier() === "departments") {
+      const inDept = e.works().some((w) => (w.def.department ?? "") === path[0]);
+      if (inDept && path.length === 1) return;
+      if (inDept) path = path.slice(1);
+    }
+    const v = Math.max(0, Math.round(value));
+    const works = e.works().find((w) => w.def.id === path[0]);
+    if (works && path.length === 1) {
+      e.setWorksTarget(works.def.id, v);
+      return;
+    }
+    if (works && path.length === 2) {
+      e.pin(works.def.id, path[1]!, v);
+      return;
+    }
+    const job = path[path.length - 1]!;
+    if (!e.isJobUnlocked(job)) return;
+    e.assign(job, v);
+  }
+
   /** Pin toggle (works rows). */
   setPinned(path: readonly string[], pinned: boolean): void {
     const e = this.engine;
@@ -422,6 +450,9 @@ export class Game {
             detail: short > 0 ? `${target} · ${fill(STRINGS.people.shortfall, { n: fmt(short) })}` : target,
             tone: short > 0 ? "short" : "normal",
             step: WORKS_TARGET_STEP,
+            // The number is people at work; ± moves the output target. Typing a target here would
+            // be confusing, so works rows take ± only (their job rows are typed).
+            editable: false,
             children: recs.map((r) =>
               jobRow(r.jobId, r.people, {
                 canPin: true,
@@ -449,6 +480,7 @@ export class Game {
           value: kids.reduce((s, k) => s + k.value, 0),
           detail: fill(STRINGS.people.priority, { n: e.departmentPriority(d) ?? 0 }),
           step: DEPARTMENT_PRIORITY_STEP,
+          editable: false,
           children: kids,
         } satisfies TreeRow;
       }),

@@ -20,6 +20,9 @@ import {
   type DraftState,
 } from "./model";
 
+/** 10000 -> "10,000". */
+const num = (n: number): string => Math.round(n).toLocaleString("en-US");
+
 /** Whether a dry-run ± of `blocks` actually moves the value (drives a row's canInc/canDec). */
 function moves(before: number, after: number, blocks: number): boolean {
   return blocks > 0 ? after > before : after < before;
@@ -41,7 +44,7 @@ export function rosterRows(tree: Tree, state: DraftState): TreeRow[] {
       id: pool.id,
       name: pool.name,
       value,
-      detail: fill(STRINGS.draft.ofFull, { full: pool.full }),
+      detail: fill(STRINGS.draft.ofFull, { full: num(pool.full) }),
       note: pool.absent || undefined,
       step: isBuilders ? 0 : BLOCK,
       canInc,
@@ -54,7 +57,7 @@ export function rosterRows(tree: Tree, state: DraftState): TreeRow[] {
           id: spec.id,
           name: spec.name,
           value: sv,
-          detail: fill(STRINGS.draft.ofFull, { full: spec.full }),
+          detail: fill(STRINGS.draft.ofFull, { full: num(spec.full) }),
           note: spec.speeds || undefined,
           step: BLOCK,
           canInc: moves(sv, specialtyValue(inc, pool.id, spec.id), 1),
@@ -76,7 +79,7 @@ export function pagesRows(tree: Tree, state: DraftState): TreeRow[] {
       id: cat.id,
       name: cat.name,
       value,
-      detail: fill(STRINGS.draft.ofFull, { full: categoryFull(cat) }),
+      detail: fill(STRINGS.draft.ofFull, { full: num(categoryFull(cat)) }),
       hint: bundleHint(tree, cat.id),
       step: BLOCK,
       canInc: moves(value, inc.pages[cat.id] ?? 0, 1),
@@ -89,7 +92,7 @@ export function pagesRows(tree: Tree, state: DraftState): TreeRow[] {
           id: topic.id,
           name: topic.name,
           value: tv,
-          detail: fill(STRINGS.draft.ofFull, { full: topic.full }),
+          detail: fill(STRINGS.draft.ofFull, { full: num(topic.full) }),
           note: topic.skips || undefined,
           hint: bundleHint(tree, topic.id),
           step: BLOCK,
@@ -109,10 +112,10 @@ export function weakestAreaLine(tree: Tree, state: DraftState): string {
 
 export function peopleLine(tree: Tree, state: DraftState): string {
   const used = tree.draft.roster.reduce((s, r) => s + poolValue(state, r.id), 0);
-  return fill(STRINGS.draft.peopleLine, { used, total: tree.draft.peopleTotal });
+  return fill(STRINGS.draft.peopleLine, { used: num(used), total: num(tree.draft.peopleTotal) });
 }
 
 export function pagesLine(tree: Tree, state: DraftState): string {
   const used = Object.values(state.pages).reduce((a, b) => a + b, 0);
-  return fill(STRINGS.draft.pagesLine, { used, budget: tree.draft.pageBudget });
+  return fill(STRINGS.draft.pagesLine, { used: num(used), budget: num(tree.draft.pageBudget) });
 }

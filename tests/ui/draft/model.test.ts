@@ -10,6 +10,10 @@ import {
   isSpecialtyPinned,
   isTopicPinned,
   poolValue,
+  setCategory,
+  setPool,
+  setSpecialty,
+  setTopic,
   specialtyValue,
   stepCategory,
   stepPool,
@@ -148,6 +152,64 @@ describe("random click sequences (seeded, no Math.random)", () => {
       const topic = pick(cat.topics);
       state = rnd() < 0.5 ? toggleTopicPin(state, cat.id, topic.id) : stepTopic(tree, state, cat.id, topic.id, rnd() < 0.5 ? -1 : 1);
       checkInvariants(state, `pin step ${i}`);
+    }
+  });
+});
+
+// ---- typed values (owner feedback 2026-09-27: double-click a number and type it) ---------------------------------
+
+describe("typed values", () => {
+  it("any whole number in range is taken exactly: with 100 spare pages, 98, 99 and 100 all work", () => {
+    let state = defaultDraftState(tree);
+    // Free up exactly 100 pages of budget, then type into another category.
+    const [a, b] = tree.draft.pages;
+    state = setCategory(tree, state, a!.id, (state.pages[a!.id] ?? 0) - 100);
+    const spare = tree.draft.pageBudget - pagesTotal(state);
+    expect(spare).toBe(100);
+    const base = state.pages[b!.id] ?? 0;
+    for (const extra of [98, 99, 100]) {
+      const next = setCategory(tree, state, b!.id, base + extra);
+      expect(next.pages[b!.id]).toBe(base + extra);
+      checkInvariants(next, `typed +${extra}`);
+    }
+    // Beyond the budget clamps to what is spare.
+    expect(setCategory(tree, state, b!.id, base + 101).pages[b!.id]).toBe(base + 100);
+  });
+
+  it("a typed pool value moves builders by exactly that much; out of range clamps", () => {
+    const state = defaultDraftState(tree);
+    const pool = tree.draft.roster.find((r) => r.id !== BUILDERS_POOL_ID)!;
+    const before = poolValue(state, pool.id);
+    const builders = poolValue(state, BUILDERS_POOL_ID);
+    const typed = setPool(tree, state, pool.id, before + 37);
+    expect(poolValue(typed, pool.id)).toBe(before + 37);
+    expect(poolValue(typed, BUILDERS_POOL_ID)).toBe(builders - 37);
+    checkInvariants(typed, "typed pool");
+    expect(poolValue(setPool(tree, state, pool.id, -5), pool.id)).toBe(0);
+    expect(poolValue(setPool(tree, state, pool.id, 1e9), pool.id)).toBe(pool.full);
+  });
+
+  it("random typed values mixed with ± and pins keep every total exact (seeded)", () => {
+    const rnd = mulberry32(99);
+    const pick = <T,>(xs: readonly T[]): T => xs[Math.floor(rnd() * xs.length)]!;
+    const pools = tree.draft.roster.filter((r) => r.id !== BUILDERS_POOL_ID);
+    const anyValue = () => Math.floor(rnd() * 4000) - 200; // includes negatives and too-large values
+    let state = defaultDraftState(tree);
+    for (let i = 0; i < 400; i++) {
+      const action = Math.floor(rnd() * 6);
+      if (action === 0) state = setPool(tree, state, pick(pools).id, anyValue());
+      else if (action === 1) {
+        const pool = pick(tree.draft.roster);
+        state = setSpecialty(tree, state, pool.id, pick(pool.specialties).id, anyValue());
+      } else if (action === 2) state = setCategory(tree, state, pick(tree.draft.pages).id, anyValue());
+      else if (action === 3) {
+        const cat = pick(tree.draft.pages);
+        state = setTopic(tree, state, cat.id, pick(cat.topics).id, anyValue());
+      } else if (action === 4) {
+        const cat = pick(tree.draft.pages);
+        state = toggleTopicPin(state, cat.id, pick(cat.topics).id);
+      } else state = stepPool(tree, state, pick(pools).id, rnd() < 0.5 ? -1 : 1);
+      checkInvariants(state, `typed step ${i}`);
     }
   });
 });

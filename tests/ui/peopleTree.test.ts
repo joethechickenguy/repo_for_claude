@@ -103,4 +103,55 @@ describe("PeopleTree", () => {
     expect((x!.querySelector(".ptree-dec") as HTMLButtonElement).disabled).toBe(true);
     expect((y!.querySelector(".ptree-inc") as HTMLButtonElement).hidden).toBe(true);
   });
+
+  it("typed entry: double-click a number, type, Enter sends the whole clamped value to onSet", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const sets: [string[], number][] = [];
+    const t = new PeopleTree(host, { onAdjust: () => {}, onSet: (p, v) => sets.push([[...p], v]) }, { step: 100 });
+    t.update([
+      { id: "gather", name: "Gather wood", value: 1200, max: 1300 },
+      { id: "dept", name: "Metals", value: 5, editable: false },
+    ]);
+    const value = host.querySelector(".ptree-value") as HTMLElement;
+    expect(value.classList.contains("editable")).toBe(true);
+    value.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    const input = host.querySelector("input.ptree-input") as HTMLInputElement;
+    expect(input.value).toBe("1200");
+    expect(t.editing).toBe(true);
+    // A re-render while typing doesn't clobber the field.
+    t.update([
+      { id: "gather", name: "Gather wood", value: 1300, max: 1300 },
+      { id: "dept", name: "Metals", value: 5, editable: false },
+    ]);
+    expect(host.querySelector("input.ptree-input")).toBe(input);
+    input.value = "1,298";
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(sets).toEqual([[["gather"], 1298]]);
+    expect(host.querySelector("input.ptree-input")).toBeNull();
+    // Above max clamps; Escape cancels; rubbish is ignored; editable:false rows don't open.
+    value.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    let i2 = host.querySelector("input.ptree-input") as HTMLInputElement;
+    i2.value = "99999";
+    i2.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(sets[1]).toEqual([["gather"], 1300]);
+    value.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    i2 = host.querySelector("input.ptree-input") as HTMLInputElement;
+    i2.value = "50";
+    i2.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    value.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    i2 = host.querySelector("input.ptree-input") as HTMLInputElement;
+    i2.value = "lots";
+    i2.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(sets).toHaveLength(2);
+    const dept = host.querySelectorAll(".ptree-value")[1] as HTMLElement;
+    expect(dept.classList.contains("editable")).toBe(false);
+    dept.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    expect(host.querySelector("input.ptree-input")).toBeNull();
+  });
+
+  it("without onSet, numbers are not editable", () => {
+    const { host } = setup(rows);
+    expect(host.querySelector(".ptree-value.editable")).toBeNull();
+  });
 });

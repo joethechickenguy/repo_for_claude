@@ -12,6 +12,10 @@ import "./draft.css";
 import {
   buildResult,
   defaultDraftState,
+  setCategory,
+  setPool,
+  setSpecialty,
+  setTopic,
   stepCategory,
   stepPool,
   stepSpecialty,
@@ -92,6 +96,10 @@ export function mountDraft(el: HTMLElement, onDepart: (result: DraftResult) => v
       state = path.length === 1 ? stepPool(tree, state, path[0]!, blocks) : stepSpecialty(tree, state, path[0]!, path[1]!, blocks);
       render();
     },
+    onSet: (path, value) => {
+      state = path.length === 1 ? setPool(tree, state, path[0]!, value) : setSpecialty(tree, state, path[0]!, path[1]!, value);
+      render();
+    },
     onPin: (path) => {
       if (path.length === 2) state = toggleSpecialtyPin(state, path[0]!, path[1]!);
       render();
@@ -102,6 +110,10 @@ export function mountDraft(el: HTMLElement, onDepart: (result: DraftResult) => v
     onAdjust: (path, delta) => {
       const blocks = Math.round(delta / BLOCK);
       state = path.length === 1 ? stepCategory(tree, state, path[0]!, blocks) : stepTopic(tree, state, path[0]!, path[1]!, blocks);
+      render();
+    },
+    onSet: (path, value) => {
+      state = path.length === 1 ? setCategory(tree, state, path[0]!, value) : setTopic(tree, state, path[0]!, path[1]!, value);
       render();
     },
     onPin: (path) => {

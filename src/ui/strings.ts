@@ -14,6 +14,7 @@ export const STRINGS = {
     collapse: "▾",
     pin: "pin",
     unpin: "pinned",
+    edit: "Double-click to type a number for {name}",
   },
   header: {
     stage: "Stage {n}, {name}",

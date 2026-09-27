@@ -83,4 +83,21 @@ describe("shell", () => {
     expect(game.clock.speed).toBe(2);
     expect(root.querySelector(".banner")).toBeNull();
   });
+
+  it("typing a number on a job row assigns exactly that many, never more than are idle", async () => {
+    const { root, game } = mount();
+    const value = root.querySelector(".ptree-value") as HTMLElement;
+    value.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    const input = root.querySelector("input.ptree-input") as HTMLInputElement;
+    input.value = "1,234";
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(game.engine.manual("gather_wood")).toBe(1234);
+    const knap = root.querySelectorAll(".ptree-value")[1] as HTMLElement;
+    knap.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    const i2 = root.querySelector("input.ptree-input") as HTMLInputElement;
+    i2.value = "20000";
+    i2.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(game.engine.manual("knap_flint")).toBe(10000 - 1234);
+  });
 });
+

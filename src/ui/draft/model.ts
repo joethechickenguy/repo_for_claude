@@ -42,6 +42,20 @@ const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.m
 const pinnedSum = (children: readonly SpreadChild[], excludeId?: string): number =>
   children.reduce((s, c) => (c.id !== excludeId && c.pinned != null ? s + c.pinned : s), 0);
 
+/** What the unpinned children (other than `excludeId`) can hold at most: the sum of their `full`. */
+const freeRoom = (children: readonly SpreadChild[], excludeId?: string): number =>
+  children.reduce((s, c) => (c.id !== excludeId && c.pinned == null ? s + c.weight : s), 0);
+
+/**
+ * The most a parent (pool, category) can hold without pushing an unpinned child past its own `full`:
+ * the pins plus the free children's `full`. When every child is pinned the total re-spreads by `full`
+ * (rebalanceIfAllPinned), so then it's the sum of every `full`.
+ */
+const capacity = (children: readonly SpreadChild[]): number =>
+  children.every((c) => c.pinned != null)
+    ? children.reduce((s, c) => s + c.weight, 0)
+    : pinnedSum(children) + freeRoom(children);
+
 /**
  * When every child of a spread is pinned (a pool with one specialty, `primitive`/`cryogenics`' one
  * topic, or every specialty pinned by hand), nothing is left free to take up a new total, so `spread`
@@ -149,14 +163,23 @@ function withPoolValue(tree: Tree, state: DraftState, poolId: string, value: num
  */
 export function stepPool(tree: Tree, state: DraftState, poolId: string, blocks: number): DraftState {
   if (poolId === BUILDERS_POOL_ID) return state; // builders has no ± of its own: it is the remainder
+  return setPool(tree, state, poolId, stepByBlock(poolValue(state, poolId), blocks, BLOCK));
+}
+
+/** A typed value on a pool row: any whole number, clamped exactly as ± is. */
+export function setPool(tree: Tree, state: DraftState, poolId: string, value: number): DraftState {
+  if (poolId === BUILDERS_POOL_ID) return state;
   const def = poolDef(tree, poolId);
   const cur = poolValue(state, poolId);
-  const lo = pinnedSum(state.specialties[poolId]!.children);
+  const builders = state.specialties[BUILDERS_POOL_ID]!.children;
+  // Builders take the remainder, so shrinking this pool grows builders: never past what builders'
+  // own specialties can hold.
+  const buildersRoom = capacity(builders) - poolValue(state, BUILDERS_POOL_ID);
+  const lo = Math.max(pinnedSum(state.specialties[poolId]!.children), cur - buildersRoom);
   const otherPoolsPinned = pinnedSum(state.roster.children, poolId);
-  const buildersFloor = pinnedSum(state.specialties[BUILDERS_POOL_ID]!.children);
-  const hi = Math.min(def.full, state.roster.total - otherPoolsPinned - buildersFloor);
-  const next = clamp(stepByBlock(cur, blocks, BLOCK), lo, hi);
-  return withPoolValue(tree, state, poolId, next);
+  const buildersFloor = pinnedSum(builders);
+  const hi = Math.min(def.full, state.roster.total - otherPoolsPinned - buildersFloor, capacity(state.specialties[poolId]!.children));
+  return withPoolValue(tree, state, poolId, clamp(Math.round(value), lo, hi));
 }
 
 /**
@@ -169,18 +192,36 @@ export function stepPool(tree: Tree, state: DraftState, poolId: string, blocks: 
 export function stepSpecialty(tree: Tree, state: DraftState, poolId: string, specialtyId: string, blocks: number): DraftState {
   const pool = state.specialties[poolId];
   if (!pool) return state;
+  return setSpecialty(tree, state, poolId, specialtyId, stepByBlock(specialtyValue(state, poolId, specialtyId), blocks, BLOCK));
+}
+
+/** A typed value on a specialty row: the same rules as ±, for any whole number. */
+export function setSpecialty(tree: Tree, state: DraftState, poolId: string, specialtyId: string, value: number): DraftState {
+  const pool = state.specialties[poolId];
+  if (!pool) return state;
   const def = poolDef(tree, poolId).specialties.find((s) => s.id === specialtyId);
   if (!def) return state;
   const otherHasFree = pool.children.some((c) => c.id !== specialtyId && c.pinned == null);
+  const cur = specialtyValue(state, poolId, specialtyId);
   if (otherHasFree) {
-    const cur = specialtyValue(state, poolId, specialtyId);
     const otherPinned = pinnedSum(pool.children, specialtyId);
     const hi = Math.min(def.full, pool.total - otherPinned);
-    const next = clamp(stepByBlock(cur, blocks, BLOCK), 0, hi);
+    // The free siblings absorb the rest; not past their own `full`.
+    const lo = Math.max(0, pool.total - otherPinned - freeRoom(pool.children, specialtyId));
+    const next = clamp(Math.round(value), lo, hi);
     const children = pool.children.map((c) => (c.id === specialtyId ? { ...c, pinned: next } : c));
     return { ...state, specialties: { ...state.specialties, [poolId]: { total: pool.total, children } } };
   }
-  const moved = stepPool(tree, state, poolId, blocks);
+  // Clamp to the specialty's own range first, so the pool never moves more than the specialty can take.
+  const want = clamp(Math.round(value), 0, def.full);
+  return cascadeSpecialty(tree, state, poolId, specialtyId, setPool(tree, state, poolId, pool.total + want - cur));
+}
+
+/** No free sibling: the pool total moved (to `moved`); the edited specialty takes the difference. */
+function cascadeSpecialty(tree: Tree, state: DraftState, poolId: string, specialtyId: string, moved: DraftState): DraftState {
+  const pool = state.specialties[poolId]!;
+  const def = poolDef(tree, poolId).specialties.find((s) => s.id === specialtyId);
+  if (!def) return state;
   const newTotal = poolValue(moved, poolId);
   const delta = newTotal - pool.total;
   const cur = specialtyValue(state, poolId, specialtyId);
@@ -204,14 +245,18 @@ export function toggleSpecialtyPin(state: DraftState, poolId: string, specialtyI
  * category's own capacity, what its pinned topics already hold, and the budget left after the other
  * categories. */
 export function stepCategory(tree: Tree, state: DraftState, categoryId: string, blocks: number): DraftState {
+  return setCategory(tree, state, categoryId, stepByBlock(state.pages[categoryId] ?? 0, blocks, BLOCK));
+}
+
+/** A typed value on a category row: any whole number, clamped exactly as ± is. */
+export function setCategory(tree: Tree, state: DraftState, categoryId: string, value: number): DraftState {
   const def = catDef(tree, categoryId);
   const cat = state.topics[categoryId];
   if (!cat) return state;
-  const cur = state.pages[categoryId] ?? 0;
   const lo = pinnedSum(cat.children);
   const othersSum = Object.entries(state.pages).reduce((s, [id, v]) => (id === categoryId ? s : s + v), 0);
-  const hi = Math.min(categoryFull(def), tree.draft.pageBudget - othersSum);
-  const next = clamp(stepByBlock(cur, blocks, BLOCK), lo, hi);
+  const hi = Math.min(categoryFull(def), tree.draft.pageBudget - othersSum, capacity(cat.children));
+  const next = clamp(Math.round(value), lo, hi);
   return {
     ...state,
     pages: { ...state.pages, [categoryId]: next },
@@ -229,18 +274,35 @@ export function stepCategory(tree: Tree, state: DraftState, categoryId: string, 
 export function stepTopic(tree: Tree, state: DraftState, categoryId: string, topicId: string, blocks: number): DraftState {
   const cat = state.topics[categoryId];
   if (!cat) return state;
+  return setTopic(tree, state, categoryId, topicId, stepByBlock(topicValue(state, categoryId, topicId), blocks, BLOCK));
+}
+
+/** A typed value on a topic row: the same rules as ±, for any whole number. */
+export function setTopic(tree: Tree, state: DraftState, categoryId: string, topicId: string, value: number): DraftState {
+  const cat = state.topics[categoryId];
+  if (!cat) return state;
   const def = catDef(tree, categoryId).topics.find((t) => t.id === topicId);
   if (!def) return state;
   const otherHasFree = cat.children.some((c) => c.id !== topicId && c.pinned == null);
+  const cur = topicValue(state, categoryId, topicId);
   if (otherHasFree) {
-    const cur = topicValue(state, categoryId, topicId);
     const otherPinned = pinnedSum(cat.children, topicId);
     const hi = Math.min(def.full, cat.total - otherPinned);
-    const next = clamp(stepByBlock(cur, blocks, BLOCK), 0, hi);
+    const lo = Math.max(0, cat.total - otherPinned - freeRoom(cat.children, topicId));
+    const next = clamp(Math.round(value), lo, hi);
     const children = cat.children.map((c) => (c.id === topicId ? { ...c, pinned: next } : c));
     return { ...state, topics: { ...state.topics, [categoryId]: { total: cat.total, children } } };
   }
-  const moved = stepCategory(tree, state, categoryId, blocks);
+  // Clamp to the topic's own range first, so the category never moves more than the topic can take.
+  const want = clamp(Math.round(value), 0, def.full);
+  return cascadeTopic(tree, state, categoryId, topicId, setCategory(tree, state, categoryId, cat.total + want - cur));
+}
+
+/** No free sibling: the category total moved (to `moved`); the edited topic takes the difference. */
+function cascadeTopic(tree: Tree, state: DraftState, categoryId: string, topicId: string, moved: DraftState): DraftState {
+  const cat = state.topics[categoryId]!;
+  const def = catDef(tree, categoryId).topics.find((t) => t.id === topicId);
+  if (!def) return state;
   const newTotal = moved.pages[categoryId] ?? cat.total;
   const delta = newTotal - cat.total;
   const cur = topicValue(state, categoryId, topicId);

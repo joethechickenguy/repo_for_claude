@@ -117,6 +117,10 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
         game.setPinned(path, p);
         dirty();
       },
+      onSet: (path, v) => {
+        game.setValue(path, v);
+        dirty();
+      },
     },
     { format: fmt },
   );
