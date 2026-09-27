@@ -341,6 +341,14 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
       }
       node.pressurePerDay = ppd;
     }
+    if (n.pressure_scale !== undefined) {
+      const ps: Record<string, number> = {};
+      for (const [pid, v] of Object.entries(obj(n.pressure_scale))) {
+        if (typeof v !== "number" || v < 0) errors.push(`${nid}: pressure_scale.${pid} must be a number >= 0`);
+        ps[pid] = Number(v);
+      }
+      node.pressureScale = ps;
+    }
     if (n.adjusts_state !== undefined) {
       const adj: Record<string, number> = {};
       for (const [v, d] of Object.entries(obj(n.adjusts_state))) {
@@ -527,7 +535,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     }
   }
 
-  // Exclusive choices (stage `choices:`), and the references in node modifiers / pressure_per_day.
+  // Exclusive choices (stage `choices:`), and the references in node modifiers / pressure_per_day / pressure_scale.
   const choices: Record<string, Choice> = {};
   for (const { file, data } of raw.stages) {
     const d = obj(data);
@@ -590,6 +598,8 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     }
     for (const pid of Object.keys(n.pressurePerDay ?? {}))
       if (!pressureIds.has(pid)) errors.push(`${nid}: pressure_per_day names unknown pressure ${JSON.stringify(pid)}`);
+    for (const pid of Object.keys(n.pressureScale ?? {}))
+      if (!pressureIds.has(pid)) errors.push(`${nid}: pressure_scale names unknown pressure ${JSON.stringify(pid)}`);
   }
 
   const tree: Tree = {

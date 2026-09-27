@@ -133,7 +133,8 @@ describe("headless Stage 1 on package A's engine", () => {
     const { engine, projects } = runStage1();
     expect(projects.book.completed).toEqual(PLAN);
     expect(stageOpen(tree, 2, projects.book)).toBe(true);
-    expect(projects.milestones).toEqual(["native_copper_find", "sledges"]);
+    // Every milestone of the plan's nodes fires, in order (J pass 1 added first_bead and first_bellows).
+    expect(projects.milestones).toEqual(["native_copper_find", "sledges", "first_bead", "first_bellows"]);
     expect(engine.get("has_copper")).toBe(true);
     expect(engine.get("has_bellows")).toBe(true);
     expect(engine.state.getNumber("metal_tools")).toBeGreaterThanOrEqual(5000);

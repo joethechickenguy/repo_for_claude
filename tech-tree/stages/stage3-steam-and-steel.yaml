@@ -404,7 +404,7 @@ nodes:
     reads_state: [haul_distance_days]
     writes_state: [rail_km]
     writes_values: {rail_km: 20}   # the first lines, mine to furnace to works (estimate)
-    pressure_per_day: {haul_labor: -1500}   # -80% of a busy colony's hauling (estimate)
+    pressure_scale: {haul_labor: 0.2}   # -80% of the hauling at any tonnage, as the card says (J pass 1; estimate)
     pages_bundle: steam_engines
     without_pages: "No penalty"
     numbers_status: "Estimate; ~30-60 kg iron per meter of light track"
@@ -434,7 +434,7 @@ nodes:
       effects: ["Haul labor between the valley sites -50%. No rail_km: the oil node (Stage 4) needs rails"]
     reads_state: [haul_distance_days]
     writes_state: []
-    pressure_per_day: {haul_labor: -1000}   # estimate
+    pressure_scale: {haul_labor: 0.5}   # -50%, as the card says (J pass 1; estimate)
     pages_bundle: none
     without_pages: "No penalty"
     numbers_status: "A canal horse tows ~30-50 t (sourced); the rest are estimates"

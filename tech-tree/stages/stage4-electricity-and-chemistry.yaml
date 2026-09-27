@@ -189,6 +189,8 @@ nodes:
       nodes: [distribution_grid, open_hearth]
       resources: {steel_kg: 20000, copper_kg: 3000}
       labor_person_days: 350000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
+    milestones:
+      - {at: 0.5, id: first_rotor, effect: "The first rotor is balanced and spins up on the test bed"}
     unlocks:
       effects: ["Power station efficiency about doubles; large smooth output. Reads bearing_quality"]
     reads_state: [steel_quality, bearing_quality]
@@ -351,6 +353,8 @@ nodes:
       nodes: [arc_furnace]
       resources: {steel_kg: 3000, copper_kg: 1000}
       labor_person_days: 150000   # x0.175 for a ~4-5-year stage (G4, open question 59); estimate
+    milestones:
+      - {at: 0.5, id: first_arc, effect: "An arc strikes between rod and plate and draws the first bead"}
     unlocks:
       jobs: [weld]
       effects: ["Arc welding now; oxy-acetylene once oxygen is available. Thin-wall tanks and pressure pipework. Trains welders; weld flaws in Stage 5-6 read welders_trained"]

@@ -2,7 +2,7 @@
 // its main options, then each stage again from the same start with its other options, and writes one
 // note per stage to docs/playtests/ in the format docs/playtests/README.md asks for.
 //
-//   npx vite-node scripts/playtest.ts [YYYY-MM-DD]
+//   npx vite-node scripts/playtest.ts [YYYY-MM-DD] [label]
 //
 // Minutes are at 1x (one in-game day per second) and don't count the time slowdowns spend at 0.5x.
 import { writeFileSync } from "node:fs";
@@ -22,6 +22,8 @@ const VARIANTS: Record<number, string[][]> = {
 };
 const YEAR = 365;
 const date = process.argv[2] ?? new Date().toISOString().slice(0, 10);
+/** Optional suffix for the file names, e.g. a tuning pass ("j1"). */
+const label = process.argv[3] ? `-${process.argv[3]}` : "";
 
 const min = (d: number | null): string => (d === null ? "not reached" : `${Math.round(d / 60)} min`);
 const yrs = (d: number | null): string => (d === null ? "-" : (d / YEAR).toFixed(1));
@@ -33,7 +35,7 @@ function row(label: string, s: StageReport): string {
 function note(stage: number, main: StageReport, variants: { picks: string[]; s: StageReport }[]): string {
   const st = tree.stages.find((x) => x.stage === stage)!;
   const picks = PLANS[stage]!.picks;
-  let md = `# ${date}, Stage ${stage} (${st.name}), headless bot\n\n`;
+  let md = `# ${date}, Stage ${stage} (${st.name}), headless bot${label ? ` (${label.slice(1)})` : ""}\n\n`;
   md += `Played by the middling bot in \`tests/play/bot.ts\` through the shell's own controller (\`scripts/playtest.ts\`): people per job in blocks, the rest building, every affordable project started (optional ones only while fewer than two builds are underway), producers staffed when a project waits on a resource, and the workshops run by simple habits (\`tests/play/workshops.ts\`). Default draft. Minutes are at 1x without the 0.5x slowdowns. A bot is not a person: it never misreads a card, and it never plays well.\n\n`;
   md += `| Run | Years to gate | Minutes at 1x | Decisions | Longest gap without one (days) | Longest lull without a slowdown (days) | Slowdowns | Most new controls in one slowdown | Energy at gate (W) |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n`;
   md += row(`Main: ${picks.join(", ") || "no choices"}`, main) + "\n";
@@ -70,7 +72,7 @@ for (let stage = 1; stage <= 6; stage++) {
     const r = playRun({ ...PLANS, [stage]: { ...PLANS[stage]!, picks } }, stage, 20 * YEAR, starts[stage]);
     return { picks, s: r.stages.find((x) => x.stage === stage)! };
   });
-  const file = `docs/playtests/${date}-stage${stage}-bot.md`;
+  const file = `docs/playtests/${date}-stage${stage}-bot${label}.md`;
   writeFileSync(file, note(stage, mains[stage]!, variants));
   process.stdout.write(`wrote ${file}\n`);
 }

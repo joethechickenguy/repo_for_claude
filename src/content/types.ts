@@ -189,6 +189,11 @@ export interface TreeNode {
   modifiers?: PressureModifier[];
   /** Added to a pressure's per-day drift once the node is complete (node `pressure_per_day:`). */
   pressurePerDay?: Record<string, number>;
+  /**
+   * Multiplies what a pressure's model adds each day once the node is complete (node `pressure_scale:`,
+   * e.g. rails cut hauling by 80% at any tonnage). Several completed nodes multiply together.
+   */
+  pressureScale?: Record<string, number>;
   /** Numeric state shifted once on completion (node `adjusts_state:`, e.g. `{iron_quality: -1}`). */
   adjustsState?: Record<string, number>;
 }

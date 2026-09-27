@@ -409,6 +409,8 @@ nodes:
       state: ["ore_kg > 150"]
       resources: {pots: 400, charcoal_kg: 2000}
       labor_person_days: 800000
+    milestones:
+      - {at: 0.5, id: first_bead, effect: "A test crucible gives up its first bead of copper: the fire can do it"}
     unlocks:
       jobs: [smelt_copper]        # per campaign: ore + charcoal -> copper, 20% yield baseline
       effects: ["Opens the furnace workshop with two dials: air supply, charcoal per kg ore"]
@@ -551,6 +553,8 @@ nodes:
       state: ["campaigns_run > 1"]
       resources: {pots: 300, wood_kg: 5000}
       labor_person_days: 900000
+    milestones:
+      - {at: 0.5, id: first_bellows, effect: "The first pair of leather bellows breathes into a furnace"}
     unlocks:
       jobs: [hunt_for_hides]      # 0.2 hides per worker-day (estimate); leather diaphragms wear out
       effects: ["air_supply: bellows_crews. 2x output anywhere; portable to the iron site in Stage 2"]
@@ -582,6 +586,8 @@ nodes:
       state: ["copper_kg > 100"]   # was tool_wear < 0.9, which late Stage 1 rarely meets; owner playtest 2026-09-27
       resources: {copper_kg: 300}
       labor_person_days: 600000
+    milestones:
+      - {at: 0.5, id: first_arsenical_melt, effect: "The first melt with the grey ore: the copper rings harder under the hammer"}
     unlocks:
       jobs: [mine_arsenical_ore]
       effects: ["Tools last 1.6x copper. Scar: arsenic_exposure rises per campaign; at fixed thresholds smelters die"]

@@ -345,3 +345,9 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     (tests/ui/worksTier.test.ts). ± on a target moves by the power of ten below it. Jobs outside any
     works (wood, flint, Build, the machine shop's lathes) stay rows of people. Foremen and departments
     are optional: the playtest bot stays on the people tier.
+64. **J pass 1 (docs/playtests/2026-09-27-j1.md).** The lull target holds in the bot's runs
+    (longest 220 days, Stage 5, just over 3 minutes); the decision target doesn't: Stages 1-5 give
+    9-15 substantive decisions against 20-25, with 290-380 days between some of them. More labor
+    or slower rates would stretch the gaps, not add decisions; closing it needs content (more
+    either/or choices per stage, or recurring decisions like the machine shop's queue). Rails and
+    canals now scale hauling (`pressure_scale:`), so the bar stays green at any tonnage after them.

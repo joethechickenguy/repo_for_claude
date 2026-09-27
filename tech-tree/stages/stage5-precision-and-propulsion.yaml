@@ -628,9 +628,10 @@ nodes:
       resources: {steel_kg: 400000, cement_kg: 3000000}
       labor_person_days: 1200000   # x0.12 for a ~5-year stage (G5, open question 59); estimate
     milestones:
-      - {at: 0.3, id: lox_plant_scaleup, effect: "Oxygen plant x10 (repeatable later as its own project)"}
-      - {at: 0.6, id: pad_and_trench, effect: "Pad and flame trench"}
-      - {at: 1.0, id: assembly_and_blockhouse, effect: "Assembly building, loading lines, blockhouse"}
+      - {at: 0.25, id: lox_plant_scaleup, effect: "Oxygen plant x10 (repeatable later as its own project)"}
+      - {at: 0.5, id: pad_and_trench, effect: "Pad and flame trench"}
+      - {at: 0.75, id: loading_lines, effect: "Propellant farms and loading lines"}
+      - {at: 1.0, id: assembly_and_blockhouse, effect: "Assembly building and blockhouse"}
     unlocks:
       effects: ["The biggest project in the game; runs alongside engine development so the stage never idles"]
     reads_state: [rail_km, lox_kg_per_day, has_cement]

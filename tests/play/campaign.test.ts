@@ -3,7 +3,7 @@
 // opposite options at every exclusive choice. Each variant must reach the gate with no dead end,
 // meet a new decision (a node with a trade-off line) at least once a year, and never bring more than
 // two new controls in one slowdown. Stage lengths are checked loosely (J tunes them).
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { SaveGame } from "../../src/engine";
 import { playRun, summarize, type StagePlan, type StageReport } from "./bot";
 import { STAGE1, STAGE2, STAGE3, STAGE4, STAGE5, STAGE6 } from "./plans";
@@ -56,17 +56,26 @@ function checkStage(s: StageReport | undefined, maxYears: number, main: boolean)
   expect(s!.gateDay!).toBeLessThan(maxYears * YEAR);
 }
 
+/**
+ * Let the worker answer vitest's RPC. Each run here is synchronous and 15-30 s long, and vitest moves
+ * from one test to the next without a turn of the event loop, so back-to-back runs past 60 s fail
+ * the suite with "Timeout calling onTaskUpdate" though every test passes (vitest-dev/vitest#6479).
+ */
+const yieldToWorker = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+
 describe("the campaign, played by a middling bot", () => {
   const starts: Record<number, SaveGame> = {};
-  beforeAll(() => {
+  beforeAll(async () => {
     // One run through the main variants; each stage's start is saved for the variants.
     let from: SaveGame | undefined;
     for (const stage of [2, 3, 4, 5, 6]) {
       const r = playRun(PLANS, stage, 20 * YEAR, from);
       from = r.game.engine.save();
       starts[stage + 1] = from;
+      await yieldToWorker();
     }
   }, 600_000);
+  afterEach(yieldToWorker);
 
   for (const stage of [3, 4, 5, 6])
     VARIANTS[stage]!.forEach((picks, i) =>

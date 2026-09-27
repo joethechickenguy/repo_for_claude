@@ -455,7 +455,7 @@ nodes:
     kind: project
     critical_path: false
     problem: "Charcoal crews walk a day or more to standing forest, and the woods are retreating."
-    tradeoff: "The forest regrows fast enough to feed the furnaces for good. A long, labor-hungry project that pays back slowly."
+    tradeoff: "Woods cut in rotation regrow every few years: charcoal that lasts, for land set aside and patience."
     requires:
       nodes: [bloomery]
       state: ["forest_cover < 75"]   # was < 60, which a Stage 1 coppice could make unreachable; estimate
@@ -542,7 +542,9 @@ nodes:
     requires:
       nodes: [coal_mining]
       resources: {blades: 1500}
-      labor_person_days: 600000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
+      labor_person_days: 450000   # J pass 1: still 4.5x the near seam; estimate
+    milestones:
+      - {at: 0.5, id: shaft_at_the_seam, effect: "The shaft reaches the seam; coal comes up by the basket before the headframe is finished"}
     unlocks:
       jobs: [mine_coal, coke_coal]
       effects: ["Clean coal; the mine water rises faster"]
@@ -567,6 +569,7 @@ nodes:
     kind: project
     critical_path: false
     problem: "Slag carries away too much iron, and furnace walls crumble after a few campaigns."
+    tradeoff: "Lime flux: the blast furnace keeps a quarter more of the iron, for quarrymen and kilns that burn wood."
     requires:
       nodes: [bloomery]
       state: ["campaigns_run > 10"]
@@ -628,7 +631,7 @@ nodes:
     requires:
       nodes: [bloom_smithing, lime_burning]
       resources: {stone_kg: 100000, clay_kg: 60000, iron_kg: 2000}   # was 400,000 stone and a cumulative-iron condition nothing measured; estimates
-      labor_person_days: 500000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
+      labor_person_days: 350000   # J pass 1: x0.7 so the first year of iron isn't one long build; estimate
     milestones:
       - {at: 0.5, id: furnace_stack_raised, effect: "The stack is up; the workshop shows the stack_height dial and a preview of tons/day before the first campaign"}
     unlocks:
@@ -682,10 +685,13 @@ nodes:
     kind: project
     critical_path: false
     problem: "Cast iron shatters under a hammer; you need tough wrought iron for tools, chains and plate."
+    tradeoff: "Pig iron fined into wrought bar: a quarter more tools from the same iron, for another hearth to feed."
     requires:
       nodes: [blast_furnace]
       resources: {iron_kg: 1000, charcoal_kg: 8000}
       labor_person_days: 400000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
+    milestones:
+      - {at: 0.5, id: first_fining, effect: "The first pig iron goes into the finery hearth"}
     modifiers: {yield: {forge_iron_tools: 1.25}}   # tougher bar: a quarter more tools per kg; estimate
     unlocks:
       jobs: [fine_pig_iron]       # 1.3 kg pig + 1 kg charcoal -> 1 kg bar (estimate); no rates yet, see modifiers
@@ -711,7 +717,7 @@ nodes:
     requires:
       nodes: [blast_furnace]
       resources: {iron_kg: 3000, wood_kg: 10000}
-      labor_person_days: 300000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
+      labor_person_days: 200000   # J pass 1: the engines wait on it; estimate
     unlocks:
       jobs: [cast_iron_parts]
     reads_state: [has_cast_iron]
@@ -739,6 +745,8 @@ nodes:
       nodes: [water_wheels, bloom_smithing]   # was [water_wheels, finery_forge]: hammers worked blooms before fineries (2026-09-27)
       resources: {iron_kg: 800, wood_kg: 10000}
       labor_person_days: 250000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
+    milestones:
+      - {at: 0.5, id: first_strike, effect: "The water-driven hammer strikes its first bloom"}
     unlocks:
       effects: ["Bar and tool output x2 at a wheel site"]
     modifiers: {rate: {smith_bloom: 2, forge_iron_tools: 2}}   # estimate
@@ -893,6 +901,8 @@ nodes:
       any_of: [[near_seam], [far_seam]]   # an engine eats coal
       resources: {iron_kg: 12000, copper_kg: 1000, wood_kg: 30000}   # was 20,000 iron; estimate
       labor_person_days: 400000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
+    milestones:
+      - {at: 0.5, id: boiler_lit, effect: "The boiler is lit for the first time and holds; the cylinder is still being fitted"}
     unlocks:
       jobs: [tend_engine]         # 250 kg coal -> 10 kWh of pumping per tender-day (the 4 kW worked example)
       effects:
@@ -929,6 +939,8 @@ nodes:
       any_of: [[water_wheels], [newcomen_engine]]
       resources: {iron_kg: 8000}
       labor_person_days: 700000   # trimmed (owner playtest 2026-09-27: a decision every year, a shorter stage); estimate
+    milestones:
+      - {at: 0.5, id: boring_bar_turns, effect: "The wheel turns the boring bar; the first test bore is round to a hair"}
     unlocks:
       effects: ["Bored cylinders: the condenser option becomes possible; machinists_trained +60 (estimate)"]
     reads_state: [draft_roster]

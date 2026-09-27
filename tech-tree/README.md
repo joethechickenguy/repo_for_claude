@@ -90,6 +90,7 @@ nodes:
     log: "Optional: the log's line when it completes, in the colony's voice"
     modifiers: {rate: {smelt_copper: 2}, toolLife: {blades: 2.5}}   # optional: applied for good on completion
     pressure_per_day: {wood_distance: 0.07}    # optional: added to that bar's model per_day once complete
+    pressure_scale: {haul_labor: 0.2}          # optional: multiplies what that bar's model adds each day (per_unit_*, per_worker, per_state) once complete
     adjusts_state: {iron_quality: -1}          # optional: shifts a number once on completion (sources add up)
     reads_state: [has_coal]
     writes_state: [engine_type, mine_drained_by_engine]

@@ -115,6 +115,13 @@ export function perDayFor(tree: Tree, pressureId: string, base: number, book: Re
   return out;
 }
 
+/** What multiplies a pressure's model terms: every completed node's `pressure_scale:` for it (1 if none). */
+export function scaleFor(tree: Tree, pressureId: string, book: Readonly<NodeBook>): number {
+  let out = 1;
+  for (const id of book.completed) out *= tree.nodes[id]?.pressureScale?.[pressureId] ?? 1;
+  return out;
+}
+
 /**
  * Play value (estimate): a bar that goes red again within this many days of its last red slowdown
  * doesn't slow the game again (a brownout that clears itself by halving the loads flickers daily).
@@ -141,14 +148,15 @@ export class PressureSystem implements EngineSystem {
     for (const p of openPressures(this.tree, book)) {
       const m = p.model;
       if (m && e.state.has(p.drives)) {
-        let v = m.flow ? 0 : e.state.getNumber(p.drives);
-        for (const [r, k] of Object.entries(m.perUnitProduced)) v += (ctx.report.produced[r] ?? 0) * k;
-        for (const [r, k] of Object.entries(m.perUnitConsumed)) v += (ctx.report.consumed[r] ?? 0) * k;
+        let add = 0;
+        for (const [r, k] of Object.entries(m.perUnitProduced)) add += (ctx.report.produced[r] ?? 0) * k;
+        for (const [r, k] of Object.entries(m.perUnitConsumed)) add += (ctx.report.consumed[r] ?? 0) * k;
         for (const [j, k] of Object.entries(m.perWorker ?? {})) {
           const jr = ctx.report.jobs[j];
-          if (jr) v += jr.throughput * jr.fraction * k;
+          if (jr) add += jr.throughput * jr.fraction * k;
         }
-        for (const [x, k] of Object.entries(m.perState ?? {})) v += e.state.getNumber(x) * k;
+        for (const [x, k] of Object.entries(m.perState ?? {})) add += e.state.getNumber(x) * k;
+        let v = (m.flow ? 0 : e.state.getNumber(p.drives)) + add * scaleFor(this.tree, p.id, book);
         v += perDayFor(this.tree, p.id, m.perDay, book);
         if (m.min !== undefined) v = Math.max(m.min, v);
         if (m.max !== undefined) v = Math.min(m.max, v);

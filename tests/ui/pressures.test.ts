@@ -9,6 +9,7 @@ import {
   nodeBeatOpen,
   pressureSource,
   redThreshold,
+  scaleFor,
   stageBeats,
 } from "../../src/ui/pressures";
 import { Game } from "../../src/ui/shellGame";
@@ -85,6 +86,13 @@ describe("pressures", () => {
     const cut = g.engine.report!.produced.wood_kg!;
     const m = p1("wood_distance").model!;
     expect(g.engine.state.getNumber("forest_cover")).toBeCloseTo(Math.min(m.max!, before + cut * m.perUnitProduced.wood_kg! + m.perDay));
+  });
+
+  it("rails and canals scale hauling by the fraction their cards promise (-80%, -50%)", () => {
+    expect(scaleFor(tree, "haul_labor", book([]))).toBe(1);
+    expect(scaleFor(tree, "haul_labor", book(["rails_wagonways"]))).toBeCloseTo(1 - 0.8);
+    expect(scaleFor(tree, "haul_labor", book(["canals"]))).toBeCloseTo(1 - 0.5);
+    expect(scaleFor(tree, "wood_distance", book(["rails_wagonways"]))).toBe(1);
   });
 
   it("an unshown bar never applies its effect", () => {

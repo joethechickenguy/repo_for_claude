@@ -286,7 +286,8 @@ Tick when done; add 3-5 lines of what shipped and what was left open.
     makes (LOX); an engine that burns its own coal and counts as energy; machinists at the lathes; late
     parts slow their jobs; firings burn fuel; a second stand.
   - Open: questions 59-62: the game is ~2.6 hours at 1x (the design says 10), the bot's lulls reach ~290
-    days (target 3 minutes), Stage 2's bot run has a 443-day gap, and the hauling bar flickers in Stage 4.
+    days (target 3 minutes), Stage 2's bot run has a 443-day gap, and the hauling bar flickers in Stage 4 (J pass 1 addressed the
+    last three).
   - The works and departments tiers have content: 16 works and 5 departments; foremen switch to works
     and each works starts at its crew's output (question 63).
 - [x] H test campaign
@@ -319,7 +320,15 @@ Tick when done; add 3-5 lines of what shipped and what was left open.
     have no one-line text or hover-nodes of their own in draft.yaml, so a pool shows its `absent` text
     and a category shows none; single-topic categories need the cascade rule). No design system data
     for hover-nodes on roster specialties (only pages have a `pages_bundle` link to nodes).
-- [ ] J tuning
+- [x] J tuning (pass 1; repeatable)
+  - Pass 1 in `docs/playtests/2026-09-27-j1.md` (before/after tables; notes `*-bot-j1.md`, made by
+    `npx vite-node scripts/playtest.ts <date> <label>`). Longest lull per stage now 150-220 days
+    (was up to 288); Stage 2's gap 443 → 378 days.
+  - Levers used: milestones inside long builds (Stages 1, 2, 4, 5), Stage 2 labor trims, trade-off
+    lines on three Stage 2 nodes, and `pressure_scale:` (new node field) so rails and canals cut
+    hauling by the fraction their cards say; the hauling bar no longer flickers in Stages 4-6.
+  - Open: question 64 (9-15 decisions per stage against 20-25 needs content, not tuning) and 59
+    (length ~2.6 h at 1x against 10 h).
 
 ## Conventions for all packages
 

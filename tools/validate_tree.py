@@ -159,6 +159,11 @@ def validate(stages, state_vars, bundles, resources):
             for pid in (n.get("pressure_per_day") or {}):
                 if pid not in pids:
                     errors.append(f"{n['id']}: pressure_per_day names unknown pressure {pid!r}")
+            for pid, v in (n.get("pressure_scale") or {}).items():
+                if pid not in pids:
+                    errors.append(f"{n['id']}: pressure_scale names unknown pressure {pid!r}")
+                elif not isinstance(v, (int, float)) or v < 0:
+                    errors.append(f"{n['id']}: pressure_scale.{pid} must be a number >= 0")
 
     for nid, n in nodes.items():
         for p in all_prereqs(n):

@@ -45,8 +45,9 @@ export interface StageReport {
   gateDay: number | null;
   /** Days from the stage's start at which each decision (trade-off node) first appeared. */
   decisions: { id: string; day: number }[];
-  /** Longest run of days with no slowdown at all. */
+  /** Longest run of days with no slowdown at all, and the day (from the stage's start) it began. */
   longestLullDays: number;
+  longestLullFrom: number;
   /** Longest run of days with no new decision (from the start, between decisions, to the gate). */
   longestDecisionGapDays: number;
   maxControlsPerSlowdown: number;
@@ -125,6 +126,7 @@ export function playRun(plans: Record<number, StagePlan>, untilStage: number, ma
     gateDay: null,
     decisions: [],
     longestLullDays: 0,
+    longestLullFrom: 0,
     longestDecisionGapDays: 0,
     maxControlsPerSlowdown: 0,
     slowdowns: 0,
@@ -135,7 +137,10 @@ export function playRun(plans: Record<number, StagePlan>, untilStage: number, ma
     energyAtGate: 0,
   });
   const close = (r: StageReport, end: number): void => {
-    r.longestLullDays = Math.max(r.longestLullDays, end - lastSlow);
+    if (end - lastSlow > r.longestLullDays) {
+      r.longestLullDays = end - lastSlow;
+      r.longestLullFrom = lastSlow - r.startDay;
+    }
     const ds = [0, ...r.decisions.map((d) => d.day).sort((a, b) => a - b), end - r.startDay];
     r.longestDecisionGapDays = Math.max(0, ...ds.slice(1).map((d, i) => d - ds[i]!));
   };
@@ -215,7 +220,10 @@ export function playRun(plans: Record<number, StagePlan>, untilStage: number, ma
       const controls = reasons.filter((x) => x.kind === INTRO_PAUSE).reduce((s, x) => s + introControls(x.subject).length, 0);
       rep.slowdowns++;
       rep.maxControlsPerSlowdown = Math.max(rep.maxControlsPerSlowdown, controls);
-      rep.longestLullDays = Math.max(rep.longestLullDays, day - lastSlow);
+      if (day - lastSlow > rep.longestLullDays) {
+        rep.longestLullDays = day - lastSlow;
+        rep.longestLullFrom = lastSlow - rep.startDay;
+      }
       lastSlow = day;
       for (const x of reasons) {
         const k = `${x.kind}:${x.subject ?? ""}`;
