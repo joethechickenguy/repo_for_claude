@@ -18,7 +18,7 @@ import {
   transmissionLoss,
 } from "../../models";
 import type { Condenser, EngineType, Flywheel, GeneratorKind, GeneratorResult, PlateType, PrimeMover, Transmission } from "../../models";
-import { DAYS_PER_YEAR, type JsonValue, type TickContext } from "../../engine";
+import { DAYS_PER_YEAR, ELECTRICITY_KW_METRIC, type JsonValue, type TickContext, WORK_KW_METRIC } from "../../engine";
 import { registerWorkshop } from "../shell";
 import { yearDay } from "../shellFormat";
 import { registerGameSystem, type Game } from "../shellGame";
@@ -96,9 +96,16 @@ interface EngineData {
   history: HistoryEntry[];
   /** This workshop's factor on the tender job's yield (so it replaces, not stacks on, node factors). */
   factor: number;
+  /** The running engine had no coal today. */
+  starved?: boolean;
 }
 
-const initial: EngineData = { dials: {}, building: null, running: null, history: [], factor: 1 };
+const initial: EngineData = { dials: {}, building: null, running: null, history: [], factor: 1, starved: false };
+
+/** A shaft or generator engine (not a pump the tenders feed): it burns its own coal from the stores. */
+export function burnsOwnCoal(e: EngineDesign): boolean {
+  return (e.rotative || e.generator !== "none") && e.kind !== "savery";
+}
 
 export function engineDials(game: Game): DialView[] {
   const locks: Record<string, Record<string, string>> = {
@@ -281,6 +288,25 @@ export function buildEngine(game: Game): boolean {
   return true;
 }
 
+/** The running engine's day: burn its coal, deliver its power (energy counts work and electricity x2.5). */
+function runEngine(game: Game, ctx: TickContext, d: EngineData): void {
+  const e = d.running?.design;
+  const eng = ctx.engine;
+  if (!e || !burnsOwnCoal(e)) {
+    eng.setMetric(WORK_KW_METRIC, 0);
+    eng.setMetric(ELECTRICITY_KW_METRIC, 0);
+    return;
+  }
+  const fed = e.coal_per_day <= 0 || eng.spend({ coal_kg: e.coal_per_day });
+  d.starved = !fed;
+  const kw = e.dynamo?.dynamo_output_kw ?? 0;
+  setState(game, "dynamo_output_kw", fed ? kw : 0);
+  if (e.rotative) setState(game, "factory_power_kw", fed ? e.shaft_kw : 0);
+  if (e.line_loss_pct !== null) setState(game, "grid_kw", fed ? e.delivered_kw : 0);
+  eng.setMetric(ELECTRICITY_KW_METRIC, fed ? e.delivered_kw : 0);
+  eng.setMetric(WORK_KW_METRIC, fed && kw <= 0 ? e.shaft_kw : 0);
+}
+
 function tickEngine(game: Game, ctx: TickContext, sys: WorkshopSystem<EngineData & JsonValue>): void {
   const d = sys.data;
   const today = ctx.day + 1;
@@ -303,6 +329,7 @@ function tickEngine(game: Game, ctx: TickContext, sys: WorkshopSystem<EngineData
     pushHistory(d.history, { day: today, title: r.design.title, detail: S.burst, tone: "bad" });
     ctx.pause(doneReason(ENGINE_WS));
   }
+  runEngine(game, ctx, d);
 }
 
 registerGameSystem((game) => new WorkshopSystem<EngineData & JsonValue>(ENGINE_WS, initial as EngineData & JsonValue, (ctx, sys) => tickEngine(game, ctx, sys)));
@@ -331,6 +358,7 @@ registerWorkshop(ENGINE_WS, (el, game) => {
           : null;
       h += actionHTML("build", fill(S.build, { days }), blocked);
       if (d.running && !d.building) h += noteHTML(S.replaced);
+      if (d.running && d.starved) h += noteHTML(S.noCoal, true);
       if (d.running) h += outputsBlock(engineRows(game, d.running.design, d.running.done), `${S.running}: ${d.running.design.title}`);
       else h += `<h3>${esc(S.running)}</h3>` + noteHTML(S.none);
       return h;

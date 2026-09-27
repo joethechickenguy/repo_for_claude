@@ -24,6 +24,7 @@ variables:
   haul_workers: {type: count, description: "People carrying things between sites. Roads and rails reduce it."}
   chemical_balance: {type: number, description: "Alkali and acid supply minus demand (Stage 4)."}
   iron_quality: {type: count, default: 3, description: "0-3, starts 3. Phosphorus ore -1, sulfur coke -1, over-blown steel -1. Below 2: tool life and plate strength fall a third."}
+  parts_too_tight: {type: count, description: "Queued parts needing a tighter fit than the machine shop holds (machine shop workshop)."}
   tolerance_mm: {type: number, unit: mm, default: 1.0, description: "Best routine machining fit. Hand 1.0; flat reference 0.5; lead screw 0.25; gauges 0.1; micrometer 0.02; grinding 0.01."}
   known_flaws: {type: set, description: "Flaws revealed by testing (failure-modes.md)."}
 

@@ -105,6 +105,7 @@ describe("E2 engine workshop", () => {
     setBook(g, [...NEWCOMEN, "high_pressure_engine", "plate_rolling", "rotative_engine_shafting", "dynamo"]);
     g.engine.state.set("bearing_quality", 1);
     g.engine.addStock("iron_kg", 100_000);
+    g.engine.addStock("coal_kg", 1e6);
     sys(g).data.dials = { ...NEWCOMEN_DIALS, cylinder_diameter: 1.2, boiler_pressure: 3, plate: { value: 20, option: "rolled" }, flywheel: "rotative", generator: "self_excited" };
     expect(engineDesign(g, { ...sys(g).data.dials, flywheel: "beam_pump" }).needsRotative).toBe(true);
     const e = engineDesign(g, sys(g).data.dials);
@@ -113,6 +114,15 @@ describe("E2 engine workshop", () => {
     days(g, 180);
     expect(g.engine.get("dynamo_output_kw")).toBeGreaterThanOrEqual(50);
     expect(g.engine.get("factory_power_kw")).toBeCloseTo(e.shaft_kw, 6);
+    // It burns its design's coal from the stores, and its electricity counts toward energy.
+    const coal = g.engine.stock("coal_kg");
+    days(g, 1);
+    expect(coal - g.engine.stock("coal_kg")).toBeCloseTo(e.coal_per_day, 3);
+    expect(g.engine.metric("electricity_kw")).toBeCloseTo(e.dynamo!.dynamo_output_kw, 6);
+    // Out of coal, it stands cold.
+    g.engine.spend({ coal_kg: g.engine.stock("coal_kg") });
+    days(g, 1);
+    expect(g.engine.get("dynamo_output_kw")).toBe(0);
   });
 
   it("Stage 4: AC delivers nearly everything the dynamo makes; DC loses most of it over the colony", () => {

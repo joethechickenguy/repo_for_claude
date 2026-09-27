@@ -43,6 +43,8 @@ export interface PartKind {
   hours: number;
   tolerance_mm: number;
   after: string;
+  /** Jobs that wait on this part: they run at `play.late_part_rate` while it's late. */
+  jobs?: string[];
 }
 
 interface Setup {
@@ -92,10 +94,18 @@ export function shopSetup(game: Game, values: Record<string, JsonValue>): Setup 
   };
 }
 
-/** Shop hours a day for a setup, from the machinists the colony has trained. */
+/** The job machinists work at; its trained people are the shop's machinists. */
+export const SHOP_JOB = "turn_parts";
+
+/** Machinists at work: trained machinists, as many as are on the lathes. */
+export function machinistsAtWork(game: Game): number {
+  return Math.min(num(game, "machinists_trained"), game.engine.assigned(SHOP_JOB));
+}
+
+/** Shop hours a day for a setup, from the trained machinists working the lathes. */
 export function shopHours(game: Game, setup: Setup | null): number {
   return shopHoursPerDay(setup?.dials ?? { flat_reference: "none" }, {
-    machinists: num(game, "machinists_trained"),
+    machinists: machinistsAtWork(game),
     has_planer: isDone(game, "planer_milling"),
     has_tool_steel: isDone(game, "alloy_steels"),
   });
@@ -150,6 +160,24 @@ export function movePart(game: Game, id: string, delta: -1 | 1): void {
   sys.data.order = [...ids, ...sys.data.order.filter((x) => !ids.includes(x))];
 }
 
+/** Modifier source for jobs slowed by late parts. */
+const LATE_SOURCE = `workshop:${SHOP}:late`;
+
+/** Late parts slow the jobs that wait on them; parts too tight for the shop are counted for the bar. */
+function applyQueueEffects(game: Game, d: ShopData): void {
+  const tol = d.current?.tolerance_mm ?? num(game, "tolerance_mm");
+  const parts = queuedParts(game, d.order);
+  setState(game, "parts_too_tight", parts.filter((p) => p.tolerance_mm < tol).length);
+  const q = runQueue(game, parts, tol, Math.max(shopHours(game, d.current), 1e-9));
+  const year = playNum(game, SHOP, "queue_year_days");
+  const rate = playNum(game, SHOP, "late_part_rate");
+  const late = new Set<string>();
+  parts.forEach((p, i) => {
+    if ((q?.parts[i]?.finish_day ?? Infinity) > year) for (const j of p.jobs ?? []) late.add(j);
+  });
+  for (const p of partKinds(game)) for (const j of p.jobs ?? []) game.engine.setModifier("rate", j, LATE_SOURCE, late.has(j) ? rate : null);
+}
+
 function tickShop(game: Game, ctx: TickContext, sys: WorkshopSystem<ShopData & JsonValue>): void {
   if (!isDone(game, game.tree.workshops[SHOP]!.opensWith)) return;
   const d = sys.data;
@@ -168,6 +196,7 @@ function tickShop(game: Game, ctx: TickContext, sys: WorkshopSystem<ShopData & J
     ctx.pause(doneReason(SHOP));
   }
   setState(game, "shop_hours_balance", shopBalance(game, d));
+  applyQueueEffects(game, d);
 }
 
 registerGameSystem((game) => new WorkshopSystem<ShopData & JsonValue>(SHOP, initial as ShopData & JsonValue, (ctx, sys) => tickShop(game, ctx, sys)));
@@ -176,7 +205,7 @@ function setupRows(game: Game, s: Setup, hours: number, q: QueueResult | null, y
   const rows: OutputRow[] = [
     { label: S.tolerance, value: n(s.tolerance_mm, "mm") },
     { label: S.bearings, value: n(s.bearing_quality) },
-    { label: S.machinists, value: n(num(game, "machinists_trained")) },
+    { label: S.machinists, value: fill(S.machinistsLine, { at: n(machinistsAtWork(game)), trained: n(num(game, "machinists_trained")), job: n(game.engine.assigned(SHOP_JOB)) }) },
     { label: S.hours, value: n(hours) },
   ];
   if (q) {
@@ -197,6 +226,7 @@ function queueHTML(game: Game, parts: readonly PartKind[], q: QueueResult | null
     const bits = [fill(S.part, { hours: n(p.hours), tol: n(p.tolerance_mm) })];
     if (r && r.reject_rate > 0) bits.push(fill(S.reject, { pct: n(r.reject_rate * 100) }));
     if (r) bits.push(r.finish_day > year ? S.late : fill(S.finish, { n: n(r.finish_day) }));
+    if (r && r.finish_day > year && p.jobs?.length) bits.push(fill(S.slows, { jobs: p.jobs.map((j) => game.jobName(j)).join(", ") }));
     h += `<li class="${bad ? "bad" : ""}" data-part="${esc(p.id)}"><span class="grow"><b>${esc(p.name)}</b> <span class="small muted num">${esc(bits.join(" · "))}</span></span>`;
     h += `<button type="button" data-act="up:${esc(p.id)}" aria-label="${esc(fill(S.upLabel, { name: p.name }))}"${i === 0 ? " disabled" : ""}>${S.up}</button>`;
     h += `<button type="button" data-act="down:${esc(p.id)}" aria-label="${esc(fill(S.downLabel, { name: p.name }))}"${i === parts.length - 1 ? " disabled" : ""}>${S.down}</button></li>`;

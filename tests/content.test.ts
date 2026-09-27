@@ -75,7 +75,7 @@ describe("compiled tree", () => {
     expect(p(2, "fuel_balance").redWhen.expr).toEqual({ kind: "cmp", ref: "fuel_balance", op: "<", value: 0 });
     expect(p(2, "fuel_balance").heartbeat).toBe(true);
     expect(p(2, "tools_iron").heartbeat).toBe(false);
-    expect(p(3, "shop_hours").redWhen.expr).toBeNull();
+    expect(p(3, "shop_hours").redWhen.expr).not.toBeNull(); // G3 made it an expression
   });
 
   it("reads the optional default, writes_values and without_pages_labor fields", () => {

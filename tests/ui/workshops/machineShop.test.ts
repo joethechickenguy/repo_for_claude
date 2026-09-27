@@ -7,7 +7,7 @@ import type { JsonValue } from "../../../src/engine";
 import { mountShell } from "../../../src/ui/shell";
 import { Game } from "../../../src/ui/shellGame";
 import { workshopSystem } from "../../../src/ui/workshops/kit";
-import { movePart, partKinds, queuedParts, runQueue, SHOP, shopDials, shopSetup, startRetool } from "../../../src/ui/workshops/machineShop";
+import { movePart, partKinds, queuedParts, runQueue, SHOP, shopDials, shopHours, shopSetup, startRetool } from "../../../src/ui/workshops/machineShop";
 import { WS } from "../../../src/ui/workshops/strings";
 
 const frame = () => new Promise((r) => setTimeout(r, 30));
@@ -79,14 +79,38 @@ describe("E3 machine shop", () => {
     expect(tight.queue_days).toBeLessThan(loose.queue_days);
   });
 
-  it("the heartbeat: with no machinists the balance is negative; enough machinists and the queue fits in a year", () => {
+  it("the heartbeat: shop hours are trained machinists at the lathes; too few and the balance goes negative", () => {
     const g = new Game(tree);
     setBook(g, [...SHOP_NODES, "rotative_engine_shafting"]);
+    g.engine.unlockJob("turn_parts");
+    g.engine.state.set("machinists_trained", 200);
     g.step();
-    expect(g.engine.get("shop_hours_balance")).toBeLessThan(0);
-    g.engine.state.set("machinists_trained", 50);
+    expect(g.engine.get("shop_hours_balance")).toBeLessThan(0); // trained, but nobody at the lathes
+    g.engine.assign("turn_parts", 200);
     g.step();
     expect(g.engine.get("shop_hours_balance")).toBeGreaterThan(0);
+    g.engine.assign("turn_parts", 900);
+    g.step();
+    expect(shopHours(g, null)).toBe(200 * 10); // only the 200 trained count
+  });
+
+  it("a late part slows the job waiting on it; moving it up the queue fixes that", () => {
+    const g = new Game(tree);
+    setBook(g, [...SHOP_NODES, "rotative_engine_shafting", "rails_wagonways", "newcomen_engine"]);
+    for (const j of ["turn_parts", "tend_engine"]) g.engine.unlockJob(j);
+    g.engine.state.set("machinists_trained", 64);
+    g.engine.assign("turn_parts", 64);
+    // 640 h/day: a year is ~234,000 h; rails (120,000) first, with the rest remade at hand tolerance,
+    // pushes the engine parts past the year.
+    sys(g).data.order = ["rails", "lathe_screws", "gauges", "engine_parts"];
+    g.step();
+    expect(g.engine.modifier("rate", "tend_engine")).toBeCloseTo(0.75, 9);
+    expect(g.engine.get("parts_too_tight")).toBe(3); // engine parts, lathe screws and gauges are tighter than hand work (1.0 mm); rails aren't
+    movePart(g, "engine_parts", -1);
+    movePart(g, "engine_parts", -1);
+    movePart(g, "engine_parts", -1);
+    g.step();
+    expect(g.engine.modifier("rate", "tend_engine")).toBe(1);
   });
 
   it("the screen shows the queue and its arrows reorder it", async () => {
@@ -95,6 +119,8 @@ describe("E3 machine shop", () => {
     const g = new Game(tree);
     setBook(g, [...SHOP_NODES, "rotative_engine_shafting", "rails_wagonways"]);
     g.engine.state.set("machinists_trained", 20);
+    g.engine.unlockJob("turn_parts");
+    g.engine.assign("turn_parts", 20);
     const unmount = mountShell(root, g, { autoStart: false });
     for (let d = 0; d < 8 && !root.querySelector(`button[data-open-ws="${SHOP}"]`); d++) {
       g.step();

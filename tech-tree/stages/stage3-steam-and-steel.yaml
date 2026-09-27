@@ -14,21 +14,70 @@ gate:
     state: ["dynamo_output_kw >= 50"]
   routes: [A_steam_dynamo, B_water_turbine, T_magneto]
 
+# Job rates per worker-day (G3; all estimates unless noted).
+jobs:
+  turn_parts:
+    name: Turn parts
+    what: "A day at a lathe or planer; uses 5 kg of iron. Each trained machinist here is 10 shop hours"
+    why: "The machine shop's hours are machinists at machines: the parts queue moves only as fast as they do."
+    inputs: {iron_kg: 5}
+    tool: true
+  blow_steel:
+    name: Blow steel
+    what: "Uses 110 kg pig iron. Makes 100 kg steel"         # a Bessemer crew blows tons an hour; a tenth lost to the flame (estimate)
+    why: "Air through molten pig iron burns out the carbon in twenty minutes, no fuel needed."
+    inputs: {iron_kg: 110}
+    outputs: {steel_kg: 100}
+  mine_mineral:
+    name: Mine minerals
+    what: "One crew across the sites prospecting found: sand, salt, lead, zinc, sulfur, graphite and the rarer ores"
+    why: "Glass, acid, batteries, alloys and aluminum each need a mineral that isn't iron or coal."
+    outputs: {sand_kg: 40, salt_kg: 20, lead_kg: 5, sulfur_kg: 5, zinc_kg: 3, graphite_kg: 5, mercury_kg: 0.2, silver_kg: 0.05, chromium_ore_kg: 5, tungsten_kg: 0.05, bauxite_kg: 20}   # a basket per worker-day (estimate)
+    tool: true
+  make_glass:
+    name: Make glass
+    what: "Uses 20 kg sand, 4 kg lime and 15 kg coal. Makes 20 kg glass"
+    why: "Sand melted with lime and alkali: gauge glasses, lamp bulbs, laboratory ware, and later vacuum tubes."
+    inputs: {sand_kg: 20, lime_kg: 4, coal_kg: 15}
+    outputs: {glass_kg: 20}
+    burns: {coal_kg: 15}
+  make_sulfuric_acid:
+    name: Make sulfuric acid
+    what: "Uses 3 kg sulfur. Makes 9 kg acid"                 # 98/32 kg acid per kg sulfur, lead chambers (stoichiometry)
+    why: "Burn sulfur, oxidize it in lead chambers, dissolve it in water: the acid half of chemistry."
+    inputs: {sulfur_kg: 3}
+    outputs: {acid_kg: 9}
+  make_cement:
+    name: Make cement
+    what: "Uses 120 kg limestone, 30 kg clay and 25 kg coal. Makes 100 kg cement"
+    why: "Limestone and clay burned together and ground: a stone you can pour, for foundations and test stands."
+    inputs: {stone_kg: 120, clay_kg: 30, coal_kg: 25}
+    outputs: {cement_kg: 100}
+    burns: {coal_kg: 25}
+
+# Either/or decisions, about one a year (G3). Starting one option closes the other for good.
+choices:
+  - id: transport
+    prompt: "Carting ore and coal takes more people than digging it. Lay iron rails, or cut canals?"
+    options: [rails_wagonways, canals]
+  - id: dynamo_drive
+    prompt: "What turns the first big generator: a steam engine house, or a water turbine on the river?"
+    options: [steam_engine_house, water_turbine]
 pressures:
   - id: shop_hours
     name: Machine shop
     drives: shop_hours_balance
     heartbeat: true
     rises_with: ["every engine, rail, wheel, wire die and instrument needs machine time; the queue is visible and the player orders it"]
-    red_when: "queue exceeds a year of shop time"
+    red_when: "shop_hours_balance < 0"        # the machine shop (E3) writes it: hours a day minus a year's queue per day
     effect_when_red: "Projects waiting on parts stall; the player reorders the queue or builds more shop"
     answers: [machine_shop, planer_milling, electric_motors_preview]
     introduced_in_beat: 2
   - id: reject_rate
     name: Parts that don't fit
-    drives: tolerance_mm
+    drives: parts_too_tight
     rises_with: ["every new machine asks for a tighter fit than the shop can hold"]
-    red_when: "a queued part needs a tolerance tighter than tolerance_mm"
+    red_when: "parts_too_tight > 0"          # queued parts needing a tighter fit than the shop holds (E3)
     effect_when_red: "That part is remade repeatedly; shop hours burn with no output"
     answers: [machine_shop, bearings_lubrication]
     introduced_in_beat: 2
@@ -40,6 +89,8 @@ pressures:
     effect_when_red: "A fifth of the colony carries things; production jobs starve"
     answers: [rails_wagonways]
     introduced_in_beat: 3
+    model: {per_unit_produced: {iron_ore_kg: 0.01, coal_kg: 0.01, stone_kg: 0.005, iron_kg: 0.01}, min: 0, max: 5000, flow: true}   # people-equivalents carting today's tonnage (estimate)
+    red_modifiers: {rate: {mine_iron_ore: 0.8, mine_coal: 0.8, quarry_stone: 0.8, mine_mineral: 0.8}}
   - id: iron_quality
     name: Iron and steel quality
     drives: iron_quality
@@ -48,6 +99,7 @@ pressures:
     effect_when_red: "Boiler plate, rails and machine frames crack; life of everything iron falls by a third"
     answers: [furnace_workshop, mineral_prospecting]
     introduced_in_beat: 4
+    red_modifiers: {toolLife: {iron_tools: 0.67}}
 
 workshops:
   - id: furnace_workshop
@@ -105,21 +157,23 @@ workshops:
     play:
       retool_days: 30                # re-setting the shop to new dials: scraping plates, cutting screws, making gauges (estimate)
       queue_year_days: 365           # shop_hours red_when: "queue exceeds a year of shop time"
-      # The parts queue: a year's standing demand per kind of part, joining the queue when `after` is
-      # built. Hours are for a year's batch at a fit the shop can hold; all estimates (play values).
+      late_part_rate: 0.75           # a job waiting on a late part runs at this rate (estimate; G3: ordering bites)
+      # The parts queue: a year's standing demand per kind of part (x4 in G3 so a middling shop is busy), joining the queue when `after` is
+      # built. Hours are for a year's batch at a fit the shop can hold; `jobs` run at late_part_rate while
+      # the part is late (done after a year). All estimates (play values).
       parts:
-        - {id: engine_parts, name: "Engine cylinders, pistons and valves", hours: 20000, tolerance_mm: 0.5, after: rotative_engine_shafting}
-        - {id: lathe_screws, name: "Lead screws and slides for new lathes", hours: 5000, tolerance_mm: 0.25, after: screw_cutting_lathe}
-        - {id: gauges, name: "Gauges and instruments", hours: 4000, tolerance_mm: 0.1, after: measurement}
-        - {id: rails, name: "Rail chairs, wheels and axles", hours: 30000, tolerance_mm: 1.0, after: rails_wagonways}
-        - {id: wire_dies, name: "Wire-drawing dies", hours: 3000, tolerance_mm: 0.25, after: wire_drawing}
-        - {id: dynamo_parts, name: "Dynamo armatures and shafts", hours: 15000, tolerance_mm: 0.25, after: dynamo}
-        - {id: turbine_blades, name: "Turbine blades and rotors", hours: 12000, tolerance_mm: 0.1, after: steam_turbine}
-        - {id: compressor_parts, name: "Compressor pistons and valves", hours: 10000, tolerance_mm: 0.1, after: compressors}
-        - {id: expander_pistons, name: "Cold expansion-engine pistons", hours: 6000, tolerance_mm: 0.05, after: claude_expander}
-        - {id: injectors, name: "Rocket injectors", hours: 5000, tolerance_mm: 0.05, after: injector_design}
-        - {id: gyro_parts, name: "Gyroscope rotors and gimbals", hours: 4000, tolerance_mm: 0.01, after: gyroscopes}
-        - {id: turbopump_parts, name: "Turbopump impellers and bearings", hours: 8000, tolerance_mm: 0.01, after: gas_generator_turbopump}
+        - {id: engine_parts, name: "Engine cylinders, pistons and valves", hours: 80000, tolerance_mm: 0.5, after: rotative_engine_shafting, jobs: [tend_engine]}
+        - {id: lathe_screws, name: "Lead screws and slides for new lathes", hours: 20000, tolerance_mm: 0.25, after: screw_cutting_lathe, jobs: [turn_parts]}
+        - {id: gauges, name: "Gauges and instruments", hours: 16000, tolerance_mm: 0.1, after: measurement, jobs: [blow_steel]}
+        - {id: rails, name: "Rail chairs, wheels and axles", hours: 120000, tolerance_mm: 1.0, after: rails_wagonways, jobs: [mine_iron_ore, mine_coal]}
+        - {id: wire_dies, name: "Wire-drawing dies", hours: 12000, tolerance_mm: 0.25, after: wire_drawing, jobs: []}
+        - {id: dynamo_parts, name: "Dynamo armatures and shafts", hours: 60000, tolerance_mm: 0.25, after: dynamo, jobs: []}
+        - {id: turbine_blades, name: "Turbine blades and rotors", hours: 48000, tolerance_mm: 0.1, after: steam_turbine, jobs: []}
+        - {id: compressor_parts, name: "Compressor pistons and valves", hours: 40000, tolerance_mm: 0.1, after: compressors, jobs: [separate_oxygen]}
+        - {id: expander_pistons, name: "Cold expansion-engine pistons", hours: 24000, tolerance_mm: 0.05, after: claude_expander, jobs: [separate_oxygen]}
+        - {id: injectors, name: "Rocket injectors", hours: 20000, tolerance_mm: 0.05, after: injector_design, jobs: []}
+        - {id: gyro_parts, name: "Gyroscope rotors and gimbals", hours: 16000, tolerance_mm: 0.01, after: gyroscopes, jobs: []}
+        - {id: turbopump_parts, name: "Turbopump impellers and bearings", hours: 32000, tolerance_mm: 0.01, after: gas_generator_turbopump, jobs: []}
 
 nodes:
 
@@ -134,7 +188,7 @@ nodes:
     requires:
       nodes: [gate_steam]
       state: ["jobs_active >= 20"]
-      labor_person_days: 100000
+      labor_person_days: 50000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       effects: ["Labor tier: works. Each facility gets a target output; foremen staff it from the pool and report the crew it took. Jobs stay one expander away and can be pinned"]
     writes_state: [labor_tier]
@@ -158,11 +212,12 @@ nodes:
     requires:
       nodes: [gate_steam]
       resources: {iron_kg: 30000, wood_kg: 20000}
-      labor_person_days: 2000000
+      labor_person_days: 500000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       effects: ["One engine drives a whole workshop by belts; machines no longer need a river. Adds dial: engine_workshop.flywheel (rotative)"]
     reads_state: [engine_type]
     writes_state: [factory_power_kw]
+    writes_values: {factory_power_kw: 40}   # a mill engine driving one workshop (estimate)
     pages_bundle: steam_engines
     without_pages: "2x labor; crank and flywheel geometry learned by trial (engines stall at the ends of the stroke until the flywheel is heavy enough)"
     numbers_status: "Estimate"
@@ -185,11 +240,12 @@ nodes:
     requires:
       nodes: [rotative_engine_shafting]
       resources: {iron_kg: 2000}
-      labor_person_days: 500000
+      labor_person_days: 100000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       effects: ["Opens the machine shop workshop: the parts queue, shop hours, and the reference-surface dial. Trains machinists"]
     reads_state: [machinists_trained]
     writes_state: [has_flat_reference, machinists_trained, tolerance_mm]
+    adjusts_state: {machinists_trained: 100}   # "Trains machinists" (estimate)
     pages_bundle: machine_tools
     without_pages: "Different route: the dial offers only two_plates at first; the shop discovers matching curves when parts still don't fit, and three_plates appears after ~1 year"
     numbers_status: "Method sourced; tolerance steps are game values"
@@ -211,11 +267,12 @@ nodes:
       nodes: [surface_plates]
       state: ["has_steel_edges == true OR iron_tools > 5000"]
       resources: {iron_kg: 6000, copper_kg: 500}
-      labor_person_days: 1200000
+      labor_person_days: 300000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       jobs: [turn_parts]
       effects: ["Adds the lead_screw dial. Interchangeable fasteners; lathes can make better lathes"]
-    writes_state: [has_lathe, machinists_trained]
+    writes_state: [has_lathe]
+    adjusts_state: {machinists_trained: 100}   # estimate
     pages_bundle: machine_tools
     without_pages: "3x labor"
     numbers_status: "Maudslay c. 1800 sourced"
@@ -233,10 +290,11 @@ nodes:
     kind: project
     critical_path: true
     problem: "Workshops disagree on what a millimeter is, and the furnace crew judges heat by color."
+    tradeoff: "Gauges and micrometers: the tolerance compressors and rockets need, and thermometers for the furnaces."
     requires:
       nodes: [screw_cutting_lathe]
       resources: {iron_kg: 500, copper_kg: 200}
-      labor_person_days: 400000
+      labor_person_days: 100000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     milestones:
       - {at: 0.5, id: thermometers_and_gauges, effect: "Thermometers and pressure gauges: the furnace and engine workshops show measured values instead of estimates"}
     unlocks:
@@ -263,7 +321,7 @@ nodes:
       nodes: [measurement]
       any_of: [[tin_bronze], [arsenical_copper], [stone_molds]]
       resources: {copper_kg: 800, iron_kg: 500}
-      labor_person_days: 400000
+      labor_person_days: 100000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       effects: ["Adds the bearings dial. Bronze journals and mineral or plant oil: shafts run 5x faster and last 10x. The bearing thread continues through ball bearings (Stage 5)"]
     reads_state: [has_bronze]
@@ -285,11 +343,12 @@ nodes:
     kind: upgrade
     critical_path: false
     problem: "Flat faces on big castings are still chiseled and filed by hand, weeks per engine."
+    tradeoff: "Three times the shop hours from the same machinists; a big build while the queue waits."
     requires:
       nodes: [measurement]
       state: ["shop_hours_balance < 0"]
       resources: {iron_kg: 12000}
-      labor_person_days: 1000000
+      labor_person_days: 250000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       effects: ["Shop hours x3"]
     writes_state: [shop_hours_balance]
@@ -311,17 +370,20 @@ nodes:
     kind: project
     critical_path: false
     problem: "Carting coal and ore on dirt tracks takes more workers than mining it."
+    tradeoff: "Rails carry ore, coal and later oil fast and anywhere, but eat 200 t of iron; canals are cheap and slow and never reach the oil."
     requires:
       nodes: [rotative_engine_shafting]
       state: ["haul_workers > 1500"]
       resources: {iron_kg: 200000, wood_kg: 150000}
-      labor_person_days: 4000000
+      labor_person_days: 1000000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     milestones:
       - {at: 0.5, id: first_line_open, effect: "Mine-to-furnace line open: haul labor on that route -60%"}
     unlocks:
       effects: ["Haul labor between linked sites -80%. Repeatable per route. Locomotives (needs high_pressure_engine or plate_rolling) remove the rest"]
     reads_state: [haul_distance_days]
-    writes_state: [rail_km, haul_workers]
+    writes_state: [rail_km]
+    writes_values: {rail_km: 20}   # the first lines, mine to furnace to works (estimate)
+    pressure_per_day: {haul_labor: -1500}   # -80% of a busy colony's hauling (estimate)
     pages_bundle: steam_engines
     without_pages: "No penalty"
     numbers_status: "Estimate; ~30-60 kg iron per meter of light track"
@@ -333,6 +395,35 @@ nodes:
       steam locomotives ran on them.
 
   # ---- Beat 4: steel --------------------------------------------------------------------------------------------------
+  - id: canals
+    name: Canals
+    stage: 3
+    beat: 3
+    kind: decision_option
+    critical_path: false
+    problem: "Carting coal and ore on dirt tracks takes more workers than mining it."
+    tradeoff: "Cheap: one horse tows fifty tons on still water. Slow, fixed to the valleys, and no rails for the oil fields later."
+    requires:
+      nodes: [rotative_engine_shafting]
+      state: ["haul_workers > 1500"]
+      resources: {iron_kg: 5000, wood_kg: 60000, stone_kg: 60000}
+      labor_person_days: 600000   # digging is most of it (estimate)
+    unlocks:
+      effects: ["Haul labor between the valley sites -50%. No rail_km: the oil node (Stage 4) needs rails"]
+    reads_state: [haul_distance_days]
+    writes_state: []
+    pressure_per_day: {haul_labor: -1000}   # estimate
+    pages_bundle: none
+    without_pages: "No penalty"
+    numbers_status: "A canal horse tows ~30-50 t (sourced); the rest are estimates"
+    sources: ["https://en.wikipedia.org/wiki/Canal"]
+    tags: [substantive]
+    notebook: >
+      A horse can pull about a ton and a half on a good road and around thirty tons on rails, but
+      pulling a barge on still water it moves fifty. Britain's canal age, from the Bridgewater Canal
+      of 1761, carried the coal of the early industrial revolution. Canals follow the land's levels,
+      though, and locks are slow; railways soon took the traffic.
+
   - id: bessemer_converter
     name: Bessemer converter
     stage: 3
@@ -345,7 +436,7 @@ nodes:
       nodes: [measurement]
       state: ["iron_kg_total > 200000"]
       resources: {iron_kg: 30000, clay_kg: 20000}
-      labor_person_days: 1800000
+      labor_person_days: 450000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       jobs: [blow_steel]
       effects:
@@ -375,14 +466,15 @@ nodes:
     kind: upgrade
     critical_path: false
     problem: "Blast furnaces burn tons of fuel per ton of iron, and the coal pits can't keep up."
+    tradeoff: "The same coke makes half again as much iron; the stoves cost clay and a winter of builders."
     requires:
       nodes: [blast_furnace, measurement]
-      state: ["fuel_balance < 0"]
       resources: {iron_kg: 8000, clay_kg: 20000}
-      labor_person_days: 700000
+      labor_person_days: 200000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       effects: ["Furnace workshop dial: blast temperature. Fuel per ton of iron falls by a third to two thirds"]
     writes_state: [coke_rate]
+    modifiers: {yield: {run_coke_furnace: 1.5, run_blast_furnace: 1.5}}   # fuel per ton down a third (Neilson)
     pages_bundle: metallurgy_2
     without_pages: "1.5x labor"
     numbers_status: "Neilson 1828: 8.06 -> 5.16 long tons coal per ton iron at 149 C blast (sourced)"
@@ -400,13 +492,15 @@ nodes:
     kind: upgrade
     critical_path: false
     problem: "A Bessemer blow is over in minutes, too fast to test and correct the steel."
+    tradeoff: "Steel to a specification (quality 3) for boilers and turbines; slower and costs clay you also need for cement."
     requires:
       nodes: [bessemer_converter, hot_blast]
       resources: {iron_kg: 20000, clay_kg: 40000}
-      labor_person_days: 1200000
+      labor_person_days: 300000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       effects: ["Steel to a specification: steel_quality 3; remelts scrap. Pressure vessels and turbines want it"]
     writes_state: [steel_quality, has_open_hearth]
+    writes_values: {steel_quality: 3}
     pages_bundle: metallurgy_2
     without_pages: "2x labor"
     numbers_status: "Siemens-Martin (1860s) sourced"
@@ -427,12 +521,13 @@ nodes:
     requires:
       nodes: [measurement]
       resources: {iron_kg: 2000, wood_kg: 20000}
-      labor_person_days: 1200000
+      labor_person_days: 300000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       jobs: [mine_mineral]        # one crew per site: salt, sand, lead, zinc, sulfur, manganese, dolomite, graphite, mercury, chromite, bauxite...
       effects: ["Reveals mineral sites over several years, nearest first. Later nodes list the mineral they need; a missing one uses the node's substitute"]
     reads_state: [bundles_taken, rail_km]
     writes_state: [mineral_sites]
+    writes_values: {mineral_sites: [salt, sand, lead, zinc, sulfur, manganese, dolomite, graphite, mercury, silver, chromite, tungsten, bauxite, oil_seeps]}   # every site in reach found (simplest reading; open question 59)
     pages_bundle: survey_minerals
     without_pages: "Different route: sites turn up in a slower, arbitrary order and scarce ones (tungsten, chromite) may not be found at all; their nodes then use substitutes"
     numbers_status: "Anatolian chromite (Guleman), bauxite (Seydisehir) are sourced; the rest is a design list"
@@ -453,11 +548,12 @@ nodes:
     requires:
       nodes: [mineral_prospecting]
       resources: {sand_kg: 20000, lime_kg: 5000, clay_kg: 20000}
-      labor_person_days: 600000
+      labor_person_days: 150000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       jobs: [make_glass]          # soda-lime glass; alkali from wood-ash potash until soda ash (Stage 4)
       effects: ["Glassware for chemistry; later gauge glasses, bulbs and tubes. Trains glassblowers"]
     writes_state: [has_glass, glassblowers_trained]
+    adjusts_state: {glassblowers_trained: 50}   # estimate
     pages_bundle: industrial_chemistry
     without_pages: "Different route: cloudy, water-soluble glass until the lime fraction is found by trial (~5 batches)"
     numbers_status: "Soda-lime composition standard; labor is an estimate"
@@ -478,7 +574,7 @@ nodes:
     requires:
       nodes: [glassworks]
       resources: {lead_kg: 8000, sulfur_kg: 2000}
-      labor_person_days: 900000
+      labor_person_days: 200000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       jobs: [make_sulfuric_acid]
     writes_state: [has_sulfuric_acid]
@@ -499,11 +595,12 @@ nodes:
     kind: project
     critical_path: false
     problem: "Lime mortar sets slowly and stays weak, and heavy engines and furnaces crack their foundations."
+    tradeoff: "Poured foundations for engines and, later, the test stand; kilns burn coal and quarrymen leave the mines."
     requires:
       nodes: [lime_burning, rotative_engine_shafting]
-      state: ["boiler_explosions > 0 OR factory_power_kw > 100"]
+      state: ["boiler_explosions > 0 OR factory_power_kw > 30"]   # an engine drives the works (rotative shafting: 40 kW)
       resources: {iron_kg: 5000, stone_kg: 100000}
-      labor_person_days: 1000000
+      labor_person_days: 250000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       jobs: [make_cement]
     writes_state: [has_cement]
@@ -524,14 +621,16 @@ nodes:
     kind: project
     critical_path: false
     problem: "Hard rock in the deep galleries stops the picks, and fire-setting fills the mine with smoke."
+    tradeoff: "Blasting powder: quarries and mineral crews dig 2.5x faster, and the first fixed nitrogen, for years of dung and patience."
     requires:
       nodes: [mineral_prospecting, lime_burning]
       resources: {wood_kg: 20000, sulfur_kg: 500}
-      labor_person_days: 700000
+      labor_person_days: 200000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       jobs: [tend_niter_beds, make_black_powder]
       effects: ["Blasting: hard-rock mining and tunnelling x2.5. First fixed nitrogen (nitrate_source: niter_beds), a trickle"]
     writes_state: [has_nitrate, nitrate_source]
+    modifiers: {rate: {quarry_stone: 2.5, mine_mineral: 2.5}}   # "hard-rock mining x2.5"
     pages_bundle: nitrogen_fuels
     without_pages: "Different route: leaching and crystallizing found by trial; first usable powder after ~3 years instead of ~1.5"
     numbers_status: "Beds took a year or more to mature (commonly cited; estimate)"
@@ -553,7 +652,7 @@ nodes:
     requires:
       nodes: [measurement]
       resources: {copper_kg: 5000, iron_kg: 2000}
-      labor_person_days: 500000
+      labor_person_days: 100000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     milestones:
       - {at: 0.6, id: insulation, effect: "Cotton- or silk-wrapped, varnished wire: coils that don't short"}
     unlocks:
@@ -579,7 +678,7 @@ nodes:
     requires:
       nodes: [wire_drawing, sulfuric_acid]
       resources: {zinc_kg: 500, copper_kg: 1000, iron_kg: 500}
-      labor_person_days: 900000
+      labor_person_days: 200000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     milestones:
       - {at: 0.3, id: batteries, effect: "Zinc-copper cells in acid: a steady current"}
       - {at: 0.6, id: electromagnets, effect: "Coils around soft iron lift hundreds of kilograms; galvanometers measure current"}
@@ -606,10 +705,11 @@ nodes:
     route: [T_magneto]
     critical_path: false
     problem: "You want current without batteries, using the strongest magnets you have."
+    tradeoff: "Electricity now, from permanent magnets; the magnets cap it at a few hundred watts."
     requires:
       nodes: [electrical_laboratory]
       resources: {iron_kg: 2000, copper_kg: 2000}
-      labor_person_days: 600000
+      labor_person_days: 150000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       effects: ["Works. Output capped by the magnets at a few hundred watts; the gate needs 50 kW. The workshop shows the cap"]
     writes_state: [has_magneto]
@@ -624,6 +724,34 @@ nodes:
       were weak and faded with heat and vibration, so output stayed small however hard you turned.
       Early magneto machines lit lighthouses, one arc lamp at a time.
 
+  - id: steam_engine_house
+    name: Engine house for the generator
+    stage: 3
+    beat: 7
+    kind: decision_option
+    route: [A_steam_dynamo]
+    critical_path: false
+    problem: "A generator needs its own steady, fast engine; the mill engines already have work to do."
+    tradeoff: "A big rotative engine on its own foundation: power anywhere, burning coal every day it runs."
+    requires:
+      nodes: [bearings_lubrication, rotative_engine_shafting]
+      resources: {iron_kg: 20000, stone_kg: 40000}
+      labor_person_days: 250000   # estimate
+    unlocks:
+      effects: ["The engine workshop's rotative engine can drive a generator; the design's coal comes from the stores every day it runs"]
+    reads_state: [engine_type, bearing_quality]
+    writes_state: []
+    pages_bundle: steam_engines
+    without_pages: "No penalty"
+    numbers_status: "Estimate"
+    sources: ["https://en.wikipedia.org/wiki/Stationary_steam_engine"]
+    tags: [substantive]
+    notebook: >
+      A dynamo wants a shaft turning fast and steadily. Early central stations, like Edison's Pearl
+      Street in 1882, set high-speed steam engines on heavy foundations, belted or coupled directly to
+      the generators, and burned coal around the clock. Steady speed mattered as much as power: a
+      flywheel smooths the piston's pulses so the lamps don't flicker.
+
   - id: water_turbine
     name: Water turbine
     stage: 3
@@ -632,11 +760,12 @@ nodes:
     route: [B_water_turbine]
     critical_path: false
     problem: "Water wheels turn slowly, but a generator wants to spin hundreds of times a minute."
+    tradeoff: "Fast shaft power with no coal, but only at the river, and only as many turbines as there are sites."
     requires:
-      nodes: [bearings_lubrication, planer_milling]
+      nodes: [bearings_lubrication]
       state: ["river_sites > 0"]
       resources: {iron_kg: 12000}
-      labor_person_days: 1200000
+      labor_person_days: 300000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       effects: ["High-speed shaft power at river sites, no fuel. Cheap electricity in Stage 4 makes aluminum and arc processes attractive"]
     reads_state: [river_sites, bearing_quality]
@@ -662,9 +791,9 @@ nodes:
     problem: "Batteries and magnetos give watts; your works needs tens of kilowatts."
     requires:
       nodes: [electrical_laboratory, bearings_lubrication]
-      any_of: [[rotative_engine_shafting], [water_turbine]]
+      any_of: [[steam_engine_house], [water_turbine]]
       resources: {iron_kg: 8000, copper_kg: 4000}
-      labor_person_days: 1200000
+      labor_person_days: 300000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       effects: ["Engine workshop gains a generator dial: field (permanent / self-excited), size (kW). 50-100 kW per machine; arc lighting; opens Stage 4"]
     reads_state: [engine_type, hydro_kw, bearing_quality]
@@ -686,10 +815,11 @@ nodes:
     kind: upgrade
     critical_path: false
     problem: "Line shafting wastes a third of the engine in belts, and every machine stops when one belt breaks."
+    tradeoff: "A motor on every machine: half again the shop hours, and the first use for the dynamo's power."
     requires:
       nodes: [dynamo]
       resources: {copper_kg: 8000, iron_kg: 8000}
-      labor_person_days: 800000
+      labor_person_days: 200000   # x0.25 for a ~5-year stage (G3, open question 59); estimate
     unlocks:
       effects: ["Machine shop dial shop_power: individual motors. Shop hours +50%; machines placed freely"]
     writes_state: [shop_hours_balance]

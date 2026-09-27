@@ -78,6 +78,7 @@ export const WS = {
     built: "Built and running.",
     replaced: "replaces the running engine when it's done",
     lowIron: "Iron quality is low: plate strength falls by a third.",
+    noCoal: "No coal in store today: the engine stood cold. It burns its design's coal every day it runs.",
   },
   shop: {
     setup: "This setup",
@@ -103,7 +104,9 @@ export const WS = {
     down: "↓",
     upLabel: "Move {name} up",
     downLabel: "Move {name} down",
-    noMachinists: "No machinists trained yet: train some (idle people learn the trade you pick).",
+    noMachinists: "No machinists at the lathes: put trained machinists on Turn parts (idle people learn the trade you pick).",
+    machinistsLine: "{at} ({trained} trained, {job} on Turn parts)",
+    slows: "slowing {jobs}",
     adopted: "{tol} mm, bearing quality {bq}.",
   },
   liquefier: {
