@@ -81,7 +81,7 @@ class Projects implements EngineSystem {
         else this.skippedJobs.push(job); // no rate for it in the fixture yet
       }
       this.completedOn[ev.node] = ctx.day;
-      ctx.pause(`${tree.nodes[ev.node]!.name} complete`);
+      ctx.pause({ kind: "node_complete", subject: ev.node });
     }
   }
 
