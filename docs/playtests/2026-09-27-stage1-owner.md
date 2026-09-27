@@ -42,3 +42,23 @@ Each item names the package that should pick it up. These are fixes for later, n
    the stages fit together, instead of only the list in the log and notebook. The data exists:
    nodes, requires, beats, stages and gates in `tree.json`, and routes in
    `tech-tree/generated/routes.md`.
+
+## Status (same day)
+
+1. **Done** (`57a26ae`). Double-click or Enter on any number in the people control to type a value;
+   it's clamped to the allowed range. Works in the draft and the colony's people panel. It also
+   exposed two old draft bugs (a specialty past its own `full`; children not summing to the parent
+   after ± with every sibling pinned), both fixed and covered by a 40-seed stress test.
+2. **Done** (`cc9253c`). Four exclusive choices in Stage 1, about one a year: tools, woods, ore and
+   air. `tests/ui/stage1-decisions.test.ts` plays two opposite players and checks a new decision
+   appears at least every 365 days until the gate (longest gap now 360). Effects that were prose
+   are real modifiers now. A red bar, or one heading for red, names what fixes it and what that
+   waits on. Open for J: the rates are estimates, and the new options are balanced by reasoning,
+   not play.
+3. **Done** (`cc9253c`). Options of a choice share one "Choose one" box with the prompt and each
+   option's trade-off; starting one closes the other for good.
+4. **Open, the owner's call after tuning.** Speeds are still 0.5×/1×/2× (open question 50).
+5. **Done** (`16f4a7e`). Training appears only when someone is idle or has trained, says what it
+   does with the engine's rate, and shows counts, progress and which projects read the trade.
+6. **Done** (`ca368d2`). A Tech map screen: the six-stage chain with gates and energy targets, and
+   each stage's projects by step with their dependency lines and status.

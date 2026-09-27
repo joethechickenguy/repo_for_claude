@@ -228,3 +228,9 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     100-200 years" only fits the 100-year end (100 years = 36,500 days needs an average of ~1×; 200
     years would need 2× throughout with no slowdowns). Either stages get shorter in years, or the
     10-hour target grows.
+51. **Choices and real effects (owner playtest 2026-09-27).** Stage files now carry `choices:` and
+    nodes `tradeoff`, `modifiers` and `pressure_per_day` (tech-tree/README.md). This settles question
+    44 for Stage 1: axes, sledges, roasting, the eastern outcrop, wind, bellows and arsenic change
+    the numbers. Stages 2-6 still have prose-only effects; their G packages should convert them. The
+    air-supply multipliers (wind x3, bellows x2) are rate modifiers on `smelt_copper` for now; E1's
+    furnace workshop should take them over through its `air_supply` dial, not stack on them.
