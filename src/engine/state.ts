@@ -144,7 +144,7 @@ export class StateStore {
    */
   addMember(id: string, member: string, share?: number): void {
     const s = this.getSet(id);
-    const isMap = !Array.isArray(s) && (Object.keys(s).length > 0 || share !== undefined);
+    const isMap = Array.isArray(s) ? s.length === 0 && share !== undefined : true;
     if (isMap) {
       this.set(id, { ...(s as Readonly<Record<string, number>>), [member]: share ?? 1 });
     } else {

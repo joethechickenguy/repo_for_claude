@@ -58,6 +58,9 @@ export type TickListener = (report: TickReport) => void;
 
 const SAVE_VERSION = 1 as const;
 
+/** Rounding slack so 365 days of 1/365 add up to a whole trained person despite float drift. */
+const TRAINING_EPS = 1e-9;
+
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T;
 }
@@ -574,8 +577,8 @@ export class Engine implements StateView {
       const gain =
         (staffing.idle * dt * mods.get("training", trade)) / this.params.trainingPersonDaysPerPerson;
       const p = (this.s.training.progress[trade] ?? 0) + gain;
-      const whole = Math.floor(p);
-      this.s.training.progress[trade] = p - whole;
+      const whole = Math.floor(p + TRAINING_EPS);
+      this.s.training.progress[trade] = Math.max(0, p - whole);
       if (whole > 0 && this.state.has(trade)) {
         const before = this.state.getNumber(trade);
         const after = Math.min(this.population, before + whole);
