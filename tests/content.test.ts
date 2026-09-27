@@ -63,4 +63,42 @@ describe("compiled tree", () => {
     expect(w("crucibles_blowpipes").find((x) => x.variable === "has_copper")?.value).toBe(true);
     expect(w("stone_molds").find((x) => x.variable === "metal_tools")?.value).toBeNull();
   });
+
+  it("parses red_when when it is an expression and leaves prose to package F", () => {
+    const p = (stage: number, id: string) => tree.stages[stage - 1]!.pressures.find((x) => x.id === id)!;
+    expect(p(1, "ore_outcrop").redWhen.expr).toEqual({ kind: "cmp", ref: "malachite_left_kg", op: "<", value: 20000 });
+    expect(p(1, "wood_distance").redWhen.expr).toEqual({ kind: "cmp", ref: "forest_cover", op: "<", value: 70 });
+    expect(p(1, "tool_wear").redWhen).toEqual({ text: "tools < tool users", expr: null });
+    expect(p(2, "fuel_balance").redWhen.expr).toBeNull();
+    expect(p(2, "fuel_balance").heartbeat).toBe(true);
+    expect(p(2, "tool_wear").heartbeat).toBe(false);
+  });
+
+  it("reads the optional default, writes_values and without_pages_labor fields", () => {
+    const raw = loadRaw();
+    raw.stateVariables.variables.iron_quality.default = 3;
+    const roast = raw.stages[0]!.data.nodes.find((n: { id: string }) => n.id === "ore_roasting");
+    roast.writes_values = { ore_type: "sulfide" };
+    const kiln = raw.stages[0]!.data.nodes.find((n: { id: string }) => n.id === "pit_kiln");
+    kiln.without_pages_labor = 2;
+    const { tree: t, errors, warnings } = compileTree(raw, exprLib);
+    expect(errors).toEqual([]);
+    expect(t.stateVariables.iron_quality!.default).toBe(3);
+    expect(t.nodes.ore_roasting!.writesState.find((w) => w.variable === "ore_type")?.value).toBe("sulfide");
+    expect(warnings.some((w) => w.startsWith("ore_roasting: writes enum"))).toBe(false);
+    expect(t.nodes.pit_kiln!.withoutPagesLaborFactor).toBe(2);
+
+    const bad = loadRaw();
+    bad.stateVariables.variables.engine_type.default = "diesel";
+    bad.stages[0]!.data.nodes.find((n: { id: string }) => n.id === "pit_kiln").requires.state = ["clay_kg >"];
+    const r = compileTree(bad, exprLib);
+    expect(r.errors.some((e) => e.includes("engine_type default"))).toBe(true);
+    expect(r.errors.some((e) => e.startsWith("pit_kiln: cannot parse"))).toBe(true);
+  });
+
+  it("lists the names conditions read, and which the engine must supply", () => {
+    expect(tree.identifiers.wood_kg).toBe("resource");
+    expect(tree.identifiers.tool_wear).toBe("state");
+    expect(tree.identifiers.energy_w_per_person).toBe("undeclared");
+  });
 });
