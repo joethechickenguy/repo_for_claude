@@ -171,6 +171,7 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     energy.md §1 also says "about a third of a percent", which would give 3.8 t/day. The model uses
     0.5%, which matches the example and energy.md's own 10 kW → ~6 t/day arithmetic.
 
+<<<<<<< HEAD
 ## Shell and pressures (packages D, F)
 
 41. **Beat gating reading.** A node of beat N shows only once a node of the nearest *lower beat that
@@ -202,3 +203,22 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     day 0, then Build and the Tools bar the next day.
 46. **Trade names.** Trades (`trained_smiths`, `machinists_trained`, ...) have no display name in
     `state-variables.yaml`; the training menu shows the description or the id with spaces.
+
+## Draft (package I)
+
+47. **Which roster pool is the remainder.** DESIGN.md and draft.yaml's comments say builders "are the
+    remainder" but nothing in the compiled `Draft` marks which pool that is (no `remainder: true`
+    field). Reading: it's `builders` by name (the one pool with `thin: 0` and a note calling it "the
+    default pool"); `src/ui/draft/model.ts` hardcodes that id as `BUILDERS_POOL_ID`. If a future
+    draft.yaml renames it, this needs updating alongside.
+48. **Pool-level "speeds"/"skips" text and hover nodes.** draft.yaml gives a one-line `speeds` per
+    *specialty* and `skips` per *topic*, but no one-line text on a *pool* or *category* itself, and no
+    node list for roster pools/specialties at all (`generated/bundles.md` only covers pages).
+    Readings taken: a pool row shows its `absent` text (what its absence costs; the "what it speeds
+    up" half is left to its specialties once expanded); a category row shows no text of its own;
+    hover-nodes ("the nodes it changes") are shown for page topics and categories only (from each
+    node's `pagesBundle`), since roster has no equivalent link to specific nodes.
+49. **Page categories with a single topic.** `primitive` and `cryogenics` each have exactly one topic,
+    so editing that topic *is* editing the category (there's no sibling to reallocate against).
+    `stepTopic`/`stepSpecialty` cascade to the parent's own ± in that case (and whenever every sibling
+    happens to be pinned by hand), rather than leaving a shortfall the spread can't place.
