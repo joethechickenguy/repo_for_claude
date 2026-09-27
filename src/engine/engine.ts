@@ -211,11 +211,13 @@ export class Engine implements StateView {
   /**
    * StateView (package B): a declared state variable, else a metric the engine or a system computes
    * (energy_w_per_person, campaigns_run). Undefined for unknown names; a condition on one is false.
-   * Resource names go to `stock()` (B's `lookupFor` routes them).
+   * B's `lookupFor` sends resources.yaml names to `stock()`; engine resources the YAML doesn't
+   * declare (ore_kg, copper_tools) are answered here with their stock.
    */
   get(name: string): StateValue | undefined {
     if (this.state.has(name)) return this.state.get(name);
     if (Object.prototype.hasOwnProperty.call(this.s.metrics, name)) return this.s.metrics[name];
+    if (this.resourceDefs.has(name)) return this.stock(name);
     return undefined;
   }
 
