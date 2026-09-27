@@ -11,74 +11,107 @@ people_total: 10000
 page_budget: 10000
 
 # ---- Roster --------------------------------------------------------------------------------------------
-# `speeds` names the workshops and node tags this pool accelerates. Effect: skilled-job output and
-# research-loop speed scale with pool size up to `full`; above `full` extra people add nothing but
-# can retrain. `absent` is what the player is told if the pool is under `thin`.
+# Pools work like page categories: + / - at the pool level; expand a pool to allocate its specialties.
+# Unpinned specialties share the pool's people in proportion to `full`. A specialty's fill = people /
+# full (capped at 1) scales the output of its skilled jobs and the speed of its research loops. Anyone
+# in a pool can retrain into another; teachers set how fast. `absent` is shown when a pool is under `thin`.
 roster:
   - id: builders
     name: Builders and laborers
     default: 5000
     thin: 0
     full: 10000
-    speeds: ["every project's labor_person_days"]
     absent: ""
-    note: "The default pool. Anyone not a specialist starts here and can train into any other pool."
+    note: "The default pool: everyone not a specialist. Any allocation of the 10,000 is allowed."
+    specialties:
+      - {id: laborers, name: "Laborers", full: 8000, speeds: "Gathering, digging, hauling, Build"}
+      - {id: masons_carpenters, name: "Masons and carpenters", full: 2000, speeds: "Furnaces, kilns, mills, the launch complex: construction projects -20% with a full pool"}
+
   - id: primitive_skills
     name: Primitive-skills experts
     default: 200
     thin: 100
     full: 500
-    speeds: ["Stage 1 nodes", "furnace_workshop before iron"]
     absent: "The first year runs on trial and error: Stage 1 projects ~1.5x."
+    specialties:
+      - {id: flintknappers, name: "Flintknappers and toolmakers", full: 200, speeds: "Blades and axes per worker-day; tool life"}
+      - {id: potters, name: "Potters and kiln builders", full: 150, speeds: "Pit kiln, crucibles, furnace linings"}
+      - {id: charcoal_burners, name: "Charcoal burners and woodsmen", full: 150, speeds: "Charcoal yield, coppicing"}
+
   - id: prospectors
     name: Prospectors and miners
     default: 800
     thin: 300
     full: 1500
-    speeds: ["mining jobs", "prospecting and survey nodes", "mine drainage"]
     absent: "Deposits and seams are found late; hard-rock mining is slow."
+    specialties:
+      - {id: geologists, name: "Field geologists", full: 300, speeds: "Every prospecting and survey node; reading the survey pages"}
+      - {id: miners, name: "Miners", full: 900, speeds: "Ore and coal per worker-day; fire-setting and blasting"}
+      - {id: mine_engineers, name: "Mine engineers", full: 300, speeds: "Drainage: bucket chains, adits, pump layout"}
+
   - id: metallurgists
     name: Smiths and metallurgists
     default: 800
     thin: 300
     full: 1500
-    speeds: ["furnace_workshop", "smelting and casting jobs", "quench and converter research loops"]
     absent: "Every furnace campaign takes twice as many tries to converge."
+    specialties:
+      - {id: smelters, name: "Smelters and furnace masters", full: 600, speeds: "Furnace workshop campaigns: copper, bloomery, blast furnace"}
+      - {id: blacksmiths, name: "Smiths", full: 500, speeds: "Bloom smithing, forging, quench trials, tool output"}
+      - {id: steelmakers, name: "Steelmakers and alloy metallurgists", full: 400, speeds: "Converter dials, open hearth, alloy steels, aluminum"}
+
   - id: mechanics
     name: Machinists and mechanics
     default: 800
     thin: 300
     full: 1500
-    speeds: ["engine_workshop", "machine_shop", "tolerance_mm progression", "bearings, turbines, turbopumps"]
     absent: "Engines and machine tools are built by trial; the boring mill and condenser arrive years later."
+    specialties:
+      - {id: machinists, name: "Machinists", full: 600, speeds: "Machine shop: tolerance_mm progression, shop hours"}
+      - {id: engine_builders, name: "Engine and boiler builders", full: 500, speeds: "Engine workshop designs; boiler safety margin read correctly"}
+      - {id: millwrights, name: "Millwrights and bearing makers", full: 400, speeds: "Water wheels, turbines, bearings, grinding, turbopump machining"}
+
   - id: chemists
     name: Chemists
     default: 400
     thin: 200
     full: 1000
-    speeds: ["acid, alkali, glass, cement, cryogenics and propellant nodes", "liquefier_workshop"]
     absent: "Stage 3-4 chemistry runs as trial and error, about 2x longer; the liquefier takes many runs."
+    specialties:
+      - {id: industrial_chemists, name: "Industrial chemists", full: 400, speeds: "Acid, alkali, glass, cement, electrolysis"}
+      - {id: fuel_chemists, name: "Fuel and propellant chemists", full: 300, speeds: "Alcohol, petroleum, nitrogen fixation, peroxide, hypergolics, solids"}
+      - {id: cryogenic_engineers, name: "Cryogenic engineers", full: 300, speeds: "Compressors, liquefier workshop, rectification"}
+
   - id: electrical
     name: Electrical engineers
     default: 300
     thin: 150
     full: 800
-    speeds: ["electrical_laboratory, dynamo, grid, tubes and radio", "instrumentation"]
     absent: "Self-excitation, transformers and the triode are found late."
+    specialties:
+      - {id: power_engineers, name: "Power engineers", full: 400, speeds: "Electrical laboratory, dynamo, grid, motors, arc furnace"}
+      - {id: electronics_engineers, name: "Electronics engineers", full: 400, speeds: "Vacuum tubes, radio, instrumentation, radar altimeter, tracking"}
+
   - id: rocket_engineers
     name: Rocket and aero engineers
     default: 200
     thin: 100
     full: 500
-    speeds: ["rocket_engine_workshop", "rocket_workshop", "test campaign flaw discovery"]
     absent: "Each hidden flaw needs about twice as many tests to find."
+    specialties:
+      - {id: propulsion_engineers, name: "Propulsion engineers", full: 250, speeds: "Rocket engine workshop; injector and cooling loops; flaw discovery on static fires"}
+      - {id: guidance_engineers, name: "Guidance and controls engineers", full: 150, speeds: "Gyroscopes, TVC, inertial platform, guidance_quality"}
+      - {id: mission_planners, name: "Mission planners and computers", full: 100, speeds: "Computing office output, trajectories, test campaign planning"}
+
   - id: teachers
     name: Teachers
     default: 1500
     thin: 500
     full: 2500
-    speeds: ["training rate: how fast idle people join a pool"]
     absent: "Retraining is slow; the roster you drafted is roughly the roster you keep."
+    specialties:
+      - {id: instructors, name: "Instructors", full: 2000, speeds: "Training rate: how fast idle people join a pool"}
+      - {id: technical_writers, name: "Technical writers and librarians", full: 500, speeds: "Notebook entries fill faster; partial page coverage counts as known one tier sooner for one topic of the player's choice"}
 
 # ---- Pages ------------------------------------------------------------------------------------------------
 # A category's pages are spread over its topics in proportion to `full` unless the player sets topics

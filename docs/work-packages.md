@@ -141,7 +141,8 @@ the same choices and seed always give the same result.
 
 **Delivers.** The screen described in `DESIGN.md` § Stage 0, from `tech-tree/draft.yaml`. Two
 columns: roster pools with + / − (blocks of 100; builders absorb the remainder so the total is always
-10,000) and page categories with + / − (blocks of 100 against a 10,000 budget), each category
+10,000), each expandable to its specialties with their own + / − and the same pin-and-spread rule as
+topics; and page categories with + / − (blocks of 100 against a 10,000 budget), each category
 expandable to its topics with their own + / −; topic edits pin that topic and the category's remaining
 pages spread over the unpinned ones. Every pool and topic shows its one-line "speeds" / "skips" text
 and, on hover, the nodes it changes (from `generated/bundles.md`). The "Weakest area" line recomputes

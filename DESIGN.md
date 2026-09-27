@@ -126,7 +126,9 @@ but not good, and the player can depart at once.
 
 - **Who goes.** 10,000 people across nine pools (builders, primitive skills, prospectors,
   metallurgists, mechanics, chemists, electrical, rocket engineers, teachers), each with + / − in
-  blocks. Each pool's card says in one line what it speeds up and what its absence costs. Any
+  blocks. Each pool expands to two or three specialties (smelters / smiths / steelmakers; machinists /
+  engine builders / millwrights) for players who want to go finer; otherwise people spread over them
+  automatically. Each card says in one line what it speeds up and what its absence costs. Any
   allocation is allowed; builders are the remainder.
 - **What they carry.** 10,000 pages across eight categories (survey, first-year guide, metallurgy,
   engines and machine tools, chemistry, electricity, cryogenics, rocketry), each with + / −. A

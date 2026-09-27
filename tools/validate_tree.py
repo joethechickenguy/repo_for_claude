@@ -90,6 +90,14 @@ def validate(stages, state_vars, bundles, resources):
     for a in bundles["areas"]:
         if a["roster"] not in roster_ids or a["pages"] not in cat_ids:
             errors.append(f"draft.yaml: area {a['id']} references unknown roster or pages category")
+    spec_ids = set()
+    for r in bundles["roster"]:
+        for sp in r.get("specialties") or []:
+            if sp["id"] in spec_ids:
+                errors.append(f"draft.yaml: duplicate specialty id {sp['id']}")
+            spec_ids.add(sp["id"])
+        if r.get("specialties") and sum(sp["full"] for sp in r["specialties"]) != r["full"]:
+            errors.append(f"draft.yaml: pool {r['id']} specialties' full sizes do not sum to the pool's full")
     if sum(r["default"] for r in bundles["roster"]) != bundles["people_total"]:
         errors.append("draft.yaml: roster defaults do not sum to people_total")
     if sum(c["default"] for c in bundles["pages"]) != bundles["page_budget"]:
