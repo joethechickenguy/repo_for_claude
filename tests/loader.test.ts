@@ -210,7 +210,7 @@ describe("headless Stage 1 by scripted choices (stub state; tests/loader-engine.
 
     // Beat 5: crucibles open the furnace workshop
     expect(nodeStatus(tree, "crucibles_blowpipes", w.view, w.book)).toBe("hidden");
-    w.metrics.ore_kg = 200;
+    w.add({ ore_kg: 200 }); // a resources.yaml stock since D declared it (open question 26)
     w.add({ pots: 400, charcoal_kg: 2000 });
     expect(w.reveal()).toContain("crucibles_blowpipes");
     w.start("crucibles_blowpipes");

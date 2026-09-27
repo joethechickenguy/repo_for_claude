@@ -18,8 +18,8 @@ variables:
   lox_balance: {type: number, unit: kg, description: "LOX stock minus the next test's need."}
   year: {type: number, description: "In-game year. Stage 6 heartbeat and the score."}
   dv_margin_km_s: {type: number, unit: km/s, description: "Vehicle Δv minus the 15.3 km/s budget. Below 0.3, guidance flaws become fatal."}
-  forest_cover: {type: number, unit: percent, description: "Forest within two days' walk. Charcoal, construction and fuel crops lower it; coppice sets a floor."}
-  malachite_left_kg: {type: number, unit: kg, description: "Ore left in the Stage 1 outcrop. Below 20 t, ore per miner halves."}
+  forest_cover: {type: number, unit: percent, default: 100, description: "Forest within two days' walk. Charcoal, construction and fuel crops lower it; coppice sets a floor."}
+  malachite_left_kg: {type: number, unit: kg, default: 80000, description: "Ore left in the Stage 1 outcrop. Below 20 t, ore per miner halves."}
   mine_water_m: {type: number, unit: m, description: "Workings below the water table not yet drained. Rises with cumulative extraction and the wet season."}
   haul_workers: {type: count, description: "People carrying things between sites. Roads and rails reduce it."}
   chemical_balance: {type: number, description: "Alkali and acid supply minus demand (Stage 4)."}

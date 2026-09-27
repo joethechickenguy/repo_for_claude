@@ -7,6 +7,76 @@ opening_problem: "Ten thousand people on a hillside in eastern Anatolia, holding
 heartbeat: tool_wear
 labor_tier: people
 starting_jobs: [gather_wood, knap_flint, build]
+
+# Job rates per worker-day (open question 25), the shape the engine takes: inputs, outputs, burns
+# (the part of inputs burned as fuel for work), tool (wears a tool; bare-handed at a quarter speed),
+# labor (the pool it feeds). All estimates. Sources: the rate comments after `unlocks.jobs` below
+# and, where the YAML is silent, the Stage 1 prototype. `name`, `what` and `why` are the people
+# panel's row and its introduction card; a job's `why` defaults to the problem of the node that
+# unlocks it. Jobs not listed here (hammer_native_copper, hunt_for_hides, roast_sulfide_ore, ...)
+# have no rates yet and make nothing.
+jobs:
+  gather_wood:
+    name: Gather wood
+    what: "40 kg of wood a day with a blade, 10 bare-handed"   # prototype; ground_stone_axes says 40 without an axe
+    why: "Wood is fuel and building stock for everything that follows: digging sticks, kilns, charcoal."
+    outputs: {wood_kg: 40}
+    tool: true
+  knap_flint:
+    name: Knap flint
+    what: "3 blades a day from river flint"                       # prototype; the YAML has no rate
+    why: "Blades are the only tools there are, and every gatherer, digger, miner and builder wears one out."
+    outputs: {blades: 3}
+  build:
+    name: Build
+    what: "Works on every project under way, one person-day at a time"
+    why: "Nothing gets built without hands; projects move only as fast as the builders."
+    labor: build
+    tool: true                                                    # prototype: builders wear tools
+  grind_axes:
+    name: Grind axes
+    what: "1 axe per 4 worker-days; an axe lasts about 100 worker-days"   # ground_stone_axes comment
+    outputs: {axes: 0.25}
+  dig_clay:
+    name: Dig clay
+    what: "50 kg of clay a day with a tool"                       # digging_sticks comment
+    outputs: {clay_kg: 50}
+    tool: true
+  fire_pottery:
+    name: Fire pottery
+    what: "Uses 12 kg clay and 24 kg wood. Makes 2 pots"          # pit_kiln comment
+    inputs: {clay_kg: 12, wood_kg: 24}
+    outputs: {pots: 2}
+    burns: {wood_kg: 24}
+  burn_charcoal:
+    name: Burn charcoal
+    what: "Uses 100 kg wood. Makes 20 kg charcoal"                # charcoal_clamps comment
+    inputs: {wood_kg: 100}
+    outputs: {charcoal_kg: 20}
+  mine_malachite:
+    name: Mine malachite
+    what: "15 kg of ore a day with a tool"                        # trail_green_stones comment
+    outputs: {ore_kg: 15}
+    tool: true
+  smelt_copper:
+    name: Smelt copper
+    what: "Uses 2.5 kg ore, 5 kg charcoal, a twentieth of a pot. Makes 0.5 kg copper"   # 20% yield (crucibles_blowpipes); quantities prototype
+    inputs: {ore_kg: 2.5, charcoal_kg: 5, pots: 0.05}
+    outputs: {copper_kg: 0.5}
+    burns: {charcoal_kg: 5}
+  cast_copper_tools:
+    name: Cast copper tools
+    what: "Uses 1 kg copper per tool. Makes 4 tools"              # stone_molds comment
+    inputs: {copper_kg: 4}
+    outputs: {copper_tools: 4}
+
+# Tools (open question 26): worker-days one tool lasts, from the tool_wear pressure ("flint lasts
+# ~20 worker-days, copper ~200") and the grind_axes comment (~100). Users take the longest-lived first.
+tools:
+  blades: {life_worker_days: 20}
+  axes: {life_worker_days: 100}
+  copper_tools: {life_worker_days: 200, metal: true}
+
 gate:
   id: gate_reliable_smelting
   name: Reliable smelting
@@ -21,10 +91,11 @@ pressures:
     drives: tool_wear
     heartbeat: true
     rises_with: ["every gatherer, digger, miner and builder wears a tool; flint lasts ~20 worker-days, copper ~200, bronze ~400"]
-    red_when: "tools < tool users"
+    red_when: "tool_wear < 1"          # tools < tool users; the engine keeps tool_wear = tools / users
     effect_when_red: "Workers without a tool drop to quarter speed"
     answers: [ground_stone_axes, stone_molds, tin_bronze, arsenical_copper]
     introduced_in_beat: 1
+    # No model: the engine binds tool_wear. The quarter speed is the engine's bare-hand rule.
   - id: wood_distance
     name: Nearest wood
     drives: forest_cover
@@ -33,6 +104,10 @@ pressures:
     effect_when_red: "Wood per gatherer falls by a third as crews walk farther"
     answers: [ground_stone_axes, charcoal_clamps]
     introduced_in_beat: 3
+    # Estimates (play values, package F): 1 point of cover per 1,700 t of wood cut; stands regrow
+    # 0.01 points a day. ~2,700 gatherers with blades (108 t/day) reach red in about a year and a half.
+    model: {per_unit_produced: {wood_kg: -0.0000006}, per_day: 0.01, min: 0, max: 100}
+    red_modifiers: {rate: {gather_wood: 0.667}}
   - id: ore_outcrop
     name: Green stone left
     drives: malachite_left_kg
@@ -41,6 +116,10 @@ pressures:
     effect_when_red: "Ore per miner halves; the outcrop is running out"
     answers: [ore_roasting, tin_survey_kestel]
     introduced_in_beat: 5
+    # Estimate (package F): the outcrop starts at 80 t (state default); each kg mined removes a kg.
+    # The gate needs ~27 t of ore at 20% yield, so a player who over-mines sees it go red.
+    model: {per_unit_produced: {ore_kg: -1}, min: 0}
+    red_modifiers: {rate: {mine_malachite: 0.5}}
 
 workshops:
   - id: furnace_workshop

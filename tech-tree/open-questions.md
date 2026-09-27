@@ -94,6 +94,13 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     has them, `tests/engine/fixtures/stage1.ts` transcribes Stage 1's with a citation per number.
     Proposed: a `jobs:` map per stage file, e.g. `fire_pottery: {inputs: {clay_kg: 12, wood_kg: 24},
     outputs: {pots: 2}, burns: {wood_kg: 24}}`, and `build: {labor: build, tool: true}`.
+    **Taken (D):** Stage 1's file now has that `jobs:` map (the fixture's nine jobs plus `grind_axes`
+    from its comment), each entry with `name`, `what` and `why` for the people panel and its
+    introduction card; B's loader carries it as `Job.rates/name/what/why`, and the game builds its
+    engine content from it (`src/ui/shellContent.ts`), never from the fixture. A test pins the YAML
+    to the fixture. Still without rates: `hammer_native_copper`, `hunt_for_hides`,
+    `roast_sulfide_ore`, `mine_arsenical_ore`, `mine_cassiterite`, `smelt_tin`, `cast_bronze_tools`
+    and every Stage 2+ job; they don't get a people-panel row until they have rates (G1..G6).
 26. **Tools aren't declared.** Tool lifetimes (flint ~20 worker-days, copper ~200, bronze ~400) and
     bare-hand speed (a quarter) are prose in the `tool_wear` pressure; copper/bronze/iron tools and
     axes aren't resources, though `metal_tools` counts them; `ore_kg` is read by a condition but not
@@ -101,6 +108,9 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     fixture), users take the longest-lived first, `metal_tools` is their stock. Proposed:
     `tool_life_worker_days` and `metal: true` on tool resources in `resources.yaml`, and a
     `bare_hand_efficiency` number; the engine's defaults (`src/engine/params.ts`) are estimates.
+    **Taken (D):** a stage file `tools:` map (`blades` 20, `axes` 100, `copper_tools` 200 metal),
+    carried as `Tree.tools`; `ore_kg`, `axes` and `copper_tools` are declared in `resources.yaml`,
+    which also gains optional `name` and `fuel` per resource. Bare-hand speed stays the engine default.
 27. **Spoilage rate.** `resources.yaml` says which resources are perishable, not how fast.
     Engine estimate: 0.1%/day (half-life ~2 years). Proposed: `spoil_per_day` per resource.
 28. **Pull vs "piles up visibly".** Reading: pull-based capping applies to works whose target is

@@ -54,6 +54,34 @@ export interface Resource {
   producedBy: string;
   perishable: boolean;
   note?: string;
+  /** Display name (resources.yaml `name`), e.g. "Wood (kg)". Optional; added for package D. */
+  name?: string;
+  /** Fuel kind when burned for work (`wood`, `charcoal`, ...; energy.md), read by the energy system. */
+  fuel?: string;
+}
+
+/**
+ * Structured job rates per worker-day, from a stage file's `jobs:` map (open question 25). Resource
+ * ids are resources.yaml ids. Added for packages D/G1; all optional.
+ */
+export interface JobRates {
+  inputs?: Record<string, number>;
+  outputs?: Record<string, number>;
+  /** The part of inputs burned as fuel for work (energy accounting). */
+  burns?: Record<string, number>;
+  /** Workers wear a tool and drop to bare-hand speed without one. */
+  tool?: boolean;
+  /** Labor pool the job feeds (`build`). */
+  labor?: string;
+}
+
+/** A resource that serves as a tool (stage file `tools:` map; open question 26). */
+export interface ToolSpec {
+  resource: string;
+  /** Worker-days one tool lasts. */
+  lifeWorkerDays: number;
+  /** Counts toward `metal_tools`. */
+  metal: boolean;
 }
 
 export interface Job {
@@ -68,6 +96,12 @@ export interface Job {
   produces: string[];
   /** The rate comment after `jobs: [...]` in the stage file, verbatim (all estimates). */
   rateNote?: string;
+  /** From the stage file's `jobs:` map, when it lists the job: display name, one line on what it does, one on why. */
+  name?: string;
+  what?: string;
+  why?: string;
+  /** Structured rates from the stage file's `jobs:` map. Jobs without them make nothing yet. */
+  rates?: JobRates;
 }
 
 // ---- Expressions ---------------------------------------------------------------------------------------
@@ -159,6 +193,30 @@ export interface Pressure {
   effectWhenRed: string;
   answers: string[];
   introducedInBeat: number;
+  /** How the simulation moves `drives` each day (pressure `model:`), when the YAML gives it. Package F. */
+  model?: PressureModel;
+  /** `effect_when_red` as production fractions (pressure `red_modifiers:`), applied while red. Package F. */
+  redModifiers?: PressureModifier[];
+}
+
+/**
+ * Per-day movement of a pressure's variable: + `perUnitProduced[r]` for each unit of r produced that
+ * day, + `perUnitConsumed[r]` per unit consumed, + `perDay`, clamped to [min, max]. The variable's
+ * start is its state default. Numbers are estimates (play values).
+ */
+export interface PressureModel {
+  perUnitProduced: Record<string, number>;
+  perUnitConsumed: Record<string, number>;
+  perDay: number;
+  min?: number;
+  max?: number;
+}
+
+/** One engine modifier a red bar applies: kind `rate` | `yield` | `toolLife` | `training`. */
+export interface PressureModifier {
+  kind: "rate" | "yield" | "toolLife" | "training";
+  target: string;
+  factor: number;
 }
 
 export interface Gate {
@@ -277,4 +335,6 @@ export interface Tree {
   /** Every identifier used in a node, gate or pressure expression, with how it resolves. */
   identifiers: Record<string, IdentifierKind>;
   warnings: string[];
+  /** Tool resources from the stage files' `tools:` maps, keyed by resource id. Added for D/G1. */
+  tools?: Record<string, ToolSpec>;
 }

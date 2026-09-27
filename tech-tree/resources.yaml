@@ -2,15 +2,20 @@
 # The validator checks each key is used correctly and that the producing job is unlocked by an
 # ancestor of the consuming node or by an earlier stage. Production is pull-based in the engine
 # (see DESIGN.md); only wood, charcoal and clay spoil in the open.
+# Optional: `name` (what the stores panel shows) and `fuel` (the energy.md fuel it counts as when burned).
 
 resources:
-  wood_kg:           {produced_by: gather_wood, perishable: true}
-  blades:            {produced_by: knap_flint}
-  clay_kg:           {produced_by: dig_clay, perishable: true}
-  pots:              {produced_by: fire_pottery}
-  charcoal_kg:       {produced_by: burn_charcoal, perishable: true}
-  copper_kg:         {produced_by: smelt_copper}
-  tin_kg:            {produced_by: smelt_tin}
+  wood_kg:           {produced_by: gather_wood, perishable: true, name: "Wood (kg)", fuel: wood}
+  blades:            {produced_by: knap_flint, name: "Flint blades"}
+  clay_kg:           {produced_by: dig_clay, perishable: true, name: "Clay (kg)"}
+  pots:              {produced_by: fire_pottery, name: "Fired pots"}
+  charcoal_kg:       {produced_by: burn_charcoal, perishable: true, name: "Charcoal (kg)", fuel: charcoal}
+  copper_kg:         {produced_by: smelt_copper, name: "Copper (kg)"}
+  # Read by conditions (ore_kg > 150) and made by Stage 1 jobs; declared for the engine (open question 26).
+  ore_kg:            {produced_by: mine_malachite, name: "Malachite (kg)"}
+  axes:              {produced_by: grind_axes, name: "Ground-stone axes"}
+  copper_tools:      {produced_by: cast_copper_tools, name: "Copper tools"}
+  tin_kg:            {produced_by: smelt_tin, name: "Tin (kg)"}
   stone_kg:          {produced_by: quarry_stone}
   lime_kg:           {produced_by: burn_lime}
   iron_kg:           {produced_by: smelt_iron_bloom, note: "Also run_blast_furnace (pig) and fine_pig_iron (bar). Costs accept any."}

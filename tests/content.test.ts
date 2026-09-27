@@ -68,7 +68,7 @@ describe("compiled tree", () => {
     const p = (stage: number, id: string) => tree.stages[stage - 1]!.pressures.find((x) => x.id === id)!;
     expect(p(1, "ore_outcrop").redWhen.expr).toEqual({ kind: "cmp", ref: "malachite_left_kg", op: "<", value: 20000 });
     expect(p(1, "wood_distance").redWhen.expr).toEqual({ kind: "cmp", ref: "forest_cover", op: "<", value: 70 });
-    expect(p(1, "tool_wear").redWhen).toEqual({ text: "tools < tool users", expr: null });
+    expect(p(1, "tool_wear").redWhen.expr).toEqual({ kind: "cmp", ref: "tool_wear", op: "<", value: 1 });
     expect(p(2, "fuel_balance").redWhen.expr).toBeNull();
     expect(p(2, "fuel_balance").heartbeat).toBe(true);
     expect(p(2, "tool_wear").heartbeat).toBe(false);

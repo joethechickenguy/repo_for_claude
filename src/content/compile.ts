@@ -13,15 +13,19 @@ import type {
   Draft,
   IdentifierKind,
   Job,
+  JobRates,
   LaborTier,
   NodeKind,
   Pressure,
+  PressureModifier,
+  PressureModel,
   Resource,
   Stage,
   StateValue,
   StateVariable,
   StateVarType,
   StateWrite,
+  ToolSpec,
   Tree,
   TreeNode,
   Workshop,
@@ -103,6 +107,8 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     const meta = obj(m);
     const r: Resource = { id, producedBy: String(meta.produced_by), perishable: meta.perishable === true };
     if (meta.note !== undefined) r.note = String(meta.note);
+    if (meta.name !== undefined) r.name = String(meta.name);
+    if (meta.fuel !== undefined) r.fuel = String(meta.fuel);
     resources[id] = r;
   }
 
@@ -359,6 +365,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
         effectWhenRed: String(pr.effect_when_red ?? ""),
         answers: arr(pr.answers).map(String),
         introducedInBeat: Number(pr.introduced_in_beat ?? 1),
+        ...pressureExtras(pr, `${file}: pressure ${pr.id}`, errors),
       };
     });
     const hb = d.heartbeat;
@@ -433,6 +440,50 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     const n = nodes[nid]!;
     for (const id of n.unlocks.jobs) job(id, n.stage).unlockedBy.push(nid);
   }
+  // Structured rates and texts: each stage file's `jobs:` map (open question 25) and `tools:` map (26).
+  const tools: Record<string, ToolSpec> = {};
+  for (const { file, data } of raw.stages) {
+    const d = obj(data);
+    for (const [id, m] of Object.entries(obj(d.jobs))) {
+      const meta = obj(m);
+      const j = jobs[id];
+      if (!j) {
+        errors.push(`${file}: jobs.${id} is not a starting job or unlocked by any node`);
+        continue;
+      }
+      if (meta.name !== undefined) j.name = String(meta.name);
+      if (meta.what !== undefined) j.what = String(meta.what);
+      if (meta.why !== undefined) j.why = String(meta.why);
+      const rates: JobRates = {};
+      for (const part of ["inputs", "outputs", "burns"] as const) {
+        const amounts = obj(meta[part]);
+        if (!Object.keys(amounts).length) continue;
+        const out: Record<string, number> = {};
+        for (const [r, v] of Object.entries(amounts)) {
+          if (!(r in resources)) errors.push(`${file}: jobs.${id}.${part} names ${JSON.stringify(r)}, not in resources.yaml`);
+          if (typeof v !== "number" || !(v >= 0)) errors.push(`${file}: jobs.${id}.${part}.${r} must be a number >= 0`);
+          out[r] = Number(v);
+        }
+        rates[part] = out;
+      }
+      if (meta.tool === true) rates.tool = true;
+      if (meta.labor !== undefined) rates.labor = String(meta.labor);
+      if (Object.keys(rates).length) j.rates = rates;
+    }
+    for (const [res, m] of Object.entries(obj(d.tools))) {
+      const meta = obj(m);
+      if (!(res in resources)) errors.push(`${file}: tools.${res} is not in resources.yaml`);
+      const life = Number(meta.life_worker_days);
+      if (!(life > 0)) errors.push(`${file}: tools.${res}.life_worker_days must be > 0`);
+      tools[res] = { resource: res, lifeWorkerDays: life, metal: meta.metal === true };
+    }
+  }
+  for (const s of stages)
+    for (const p of s.pressures)
+      for (const m of p.redModifiers ?? [])
+        if ((m.kind === "rate" || m.kind === "yield") && !jobs[m.target] && m.target !== "*")
+          errors.push(`${s.file}: pressure ${p.id} red_modifiers names unknown job ${JSON.stringify(m.target)}`);
+
   for (const r of Object.values(resources)) {
     const j = jobs[r.producedBy];
     if (j) j.produces.push(r.id);
@@ -453,8 +504,50 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     draft,
     identifiers: Object.fromEntries(Object.entries(identifiers).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
     warnings,
+    tools,
   };
   return { tree, errors, warnings };
+}
+
+const MODIFIER_KINDS: readonly PressureModifier["kind"][] = ["rate", "yield", "toolLife", "training"];
+
+/** A pressure's optional `model:` and `red_modifiers:` (package F; see PressureModel). */
+function pressureExtras(pr: Y, where: string, errors: string[]): { model?: PressureModel; redModifiers?: PressureModifier[] } {
+  const out: { model?: PressureModel; redModifiers?: PressureModifier[] } = {};
+  const nums = (v: Y, what: string): Record<string, number> => {
+    const r: Record<string, number> = {};
+    for (const [k, x] of Object.entries(obj(v))) {
+      if (typeof x !== "number") errors.push(`${where}: ${what}.${k} must be a number`);
+      r[k] = Number(x);
+    }
+    return r;
+  };
+  if (pr.model !== undefined) {
+    const m = obj(pr.model);
+    const model: PressureModel = {
+      perUnitProduced: nums(m.per_unit_produced, "model.per_unit_produced"),
+      perUnitConsumed: nums(m.per_unit_consumed, "model.per_unit_consumed"),
+      perDay: typeof m.per_day === "number" ? m.per_day : 0,
+    };
+    if (typeof m.min === "number") model.min = m.min;
+    if (typeof m.max === "number") model.max = m.max;
+    out.model = model;
+  }
+  if (pr.red_modifiers !== undefined) {
+    const mods: PressureModifier[] = [];
+    for (const [kind, targets] of Object.entries(obj(pr.red_modifiers))) {
+      if (!MODIFIER_KINDS.includes(kind as PressureModifier["kind"])) {
+        errors.push(`${where}: red_modifiers kind ${JSON.stringify(kind)} is not one of ${MODIFIER_KINDS.join(", ")}`);
+        continue;
+      }
+      for (const [target, f] of Object.entries(nums(targets, `red_modifiers.${kind}`))) {
+        if (!(f >= 0)) errors.push(`${where}: red_modifiers.${kind}.${target} must be >= 0`);
+        mods.push({ kind: kind as PressureModifier["kind"], target, factor: f });
+      }
+    }
+    out.redModifiers = mods;
+  }
+  return out;
 }
 
 function typeDefault(type: StateVarType, values: string[] | undefined): StateValue {

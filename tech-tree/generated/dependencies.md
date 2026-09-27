@@ -8,7 +8,7 @@ Heartbeat: `tool_wear`. Gate: Reliable smelting.
 
 | Pressure | Red when | Answers |
 | --- | --- | --- |
-| Tools | tools < tool users | ground_stone_axes, stone_molds, tin_bronze, arsenical_copper |
+| Tools | tool_wear < 1 | ground_stone_axes, stone_molds, tin_bronze, arsenical_copper |
 | Nearest wood | forest_cover < 70 (stage 1 scale) | ground_stone_axes, charcoal_clamps |
 | Green stone left | malachite_left_kg < 20000 | ore_roasting, tin_survey_kestel |
 
