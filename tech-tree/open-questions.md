@@ -288,3 +288,12 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     stores only with a column and air_separation built; without them it makes liquid air
     (`has_liquid_air`, `cryo_process`). The compressor's draw isn't yet a load on the Stage 4 power
     balance (G4/F). A plant that never liquefies is given up after `play.trial_days`.
+57. **Rocket engine firings.** The engine burns kerosene and LOX once `has_kerosene`, else alcohol
+    and LOX (the two routes into first_liquid_rocket); no dial chooses. Every firing is planned for
+    60 s (the gate's number) and takes `play.firing_days` of stand time and the LOX that burn needs
+    from the stores; the chamber lasts `min(60, burn_time_s)`. The best firing (longest, then most
+    thrust) supplies `engine_static_fire_s` and `engine_thrust_kn`, so a worse later firing never
+    loses the gate. `stand_days_balance` = a year minus the queued stand days; `lox_balance` = LOX in
+    store minus the next firing's need; one stand (test_stand's "a second stand doubles throughput"
+    isn't counted). Roughness on the pressure trace is a picture of the stability margin, not a flaw:
+    flaws, their discovery and fixes are package H's; the screen says so.

@@ -66,6 +66,11 @@ workshops:
          effect: "Sea-level engines want a short nozzle; vacuum stages want a long one. The screen shows Isp at sea level and in vacuum",
          basis: "Overexpansion and flow separation at sea level"}
     outputs: [thrust_kn, isp_sl_s, isp_vac_s, burn_time_s, flaws_found]
+    play:
+      firing_days: 14                # stand days per static fire: mount, instrument, fire, strip down (estimate)
+      planned_burn_s: 60             # every firing is planned for the gate's 60 s; the chamber may not last
+      queue_year_days: 365           # stand_time red_when: "queue exceeds a year"
+      default_nozzle: 4              # expansion ratio before the nozzle dial (a V-2-like short bell; estimate)
 
 nodes:
 
