@@ -69,6 +69,26 @@ jobs:
     what: "Uses 1 kg copper per tool. Makes 4 tools"              # stone_molds comment
     inputs: {copper_kg: 4}
     outputs: {copper_tools: 4}
+  # The tin route (D_tin), so it isn't a dead end (owner playtest 2026-09-27). All estimates.
+  mine_cassiterite:
+    name: Mine cassiterite
+    what: "10 kg of tin ore a day with a tool"                    # poorer and harder than malachite; estimate
+    why: "Bronze needs tin, and the only tin is in these thin, dark veins."
+    outputs: {tin_ore_kg: 10}
+    tool: true
+  smelt_tin:
+    name: Smelt tin
+    what: "Uses 2 kg cassiterite and 3 kg charcoal. Makes 1 kg tin"   # cassiterite is ~78% tin; estimate
+    why: "Cassiterite gives up its tin at a lower heat than copper ore, in the same charcoal fire."
+    inputs: {tin_ore_kg: 2, charcoal_kg: 3}
+    outputs: {tin_kg: 1}
+    burns: {charcoal_kg: 3}
+  cast_bronze_tools:
+    name: Cast bronze tools
+    what: "Uses 0.9 kg copper and 0.1 kg tin per tool. Makes 4 tools"   # tin_bronze comment
+    why: "Bronze tools last twice as long as copper and cast cleaner."
+    inputs: {copper_kg: 3.6, tin_kg: 0.4}
+    outputs: {bronze_tools: 4}
 
 # Tools (open question 26): worker-days one tool lasts, from the tool_wear pressure ("flint lasts
 # ~20 worker-days, copper ~200") and the grind_axes comment (~100). Users take the longest-lived first.
@@ -76,6 +96,7 @@ tools:
   blades: {life_worker_days: 20}
   axes: {life_worker_days: 100}
   copper_tools: {life_worker_days: 200, metal: true}
+  bronze_tools: {life_worker_days: 400, metal: true}   # tool_wear pressure: bronze ~400
 
 gate:
   id: gate_reliable_smelting
@@ -512,7 +533,7 @@ nodes:
     route: [B_bellows]
     critical_path: false
     problem: "Blowpipes can't move enough air for a bigger furnace, and breath is mostly carbon dioxide."
-    tradeoff: "Twice the copper per smelter, anywhere; the bellows come with you to Stage 2's iron site. They need hides, and hunters to get them."
+    tradeoff: "Twice the copper per smelter, anywhere; the bellows come with you to Stage 2's iron site."
     modifiers: {rate: {smelt_copper: 2}}   # the 2x in `effects`; E1 takes this over via air_supply
     requires:
       nodes: [crucibles_blowpipes]

@@ -5,11 +5,16 @@
 //
 // All player-facing text comes from content (tree) or ../ui/strings.ts.
 import {
+  checkRequires,
+  closedBy,
+  reach,
+  type Reach,
   currentStage,
   effectiveLabor,
   gateStatus,
   missingResources,
   openWorkshops,
+  type Expr,
   type NodeBook,
   type Tree,
 } from "../content";
@@ -48,7 +53,7 @@ import {
 import { fuelsFromTree, gameContent } from "./shellContent";
 import { defaultDraftOutcome, type DraftOutcome } from "./shellDraft";
 import { fmt, fmtRound, yearDay } from "./shellFormat";
-import { GATE_PAUSE, GateSystem, LogSystem, StandInCampaigns } from "./shellSystems";
+import { GATE_PAUSE, GateSystem, LogSystem, StandInCampaigns, SUPPLIED_METRICS } from "./shellSystems";
 import { fill, STRINGS } from "./strings";
 
 /** People moved by one ± on a job row (DESIGN.md: "± blocks"; the prototype's block). */
@@ -112,6 +117,28 @@ export interface MeterView {
   gates: { watts: number; name: string; stage: number }[];
 }
 
+/**
+ * Nothing in the current stage can move (owner playtest 2026-09-27: years of 20x with nothing to do and
+ * no word why). `waiting`: the next projects and what each waits on; `cantMake`: what nothing in this
+ * build makes or measures, i.e. the stage's content isn't finished, not a player mistake.
+ */
+export interface StuckView {
+  waiting: { id: string; name: string; needs: string[] }[];
+  /** The stage's gate can't be reached with what this build makes: the content isn't finished. */
+  deadEnd: boolean;
+  /** When `deadEnd`: what nothing makes or supplies (display names). */
+  cantMake: string[];
+}
+
+/**
+ * Play value (estimate): with nothing to build for this many days in a row, the game slows down and
+ * says what the next projects wait on. A dead end says so at once.
+ */
+export const IDLE_NOTICE_DAYS = 60;
+
+/** Pause kind when the current stage stops being able to move; subject is the stage number. */
+export const STUCK_PAUSE = "stuck";
+
 /** The tech map (owner playtest 2026-09-27: "how does the big picture fit together?"). */
 export interface TechMap {
   /** Every stage in order, with its gate and energy target. */
@@ -147,6 +174,21 @@ export interface GameOptions {
   draft?: DraftOutcome;
 }
 
+/** `bloom_kg > 500` -> "Bloom (kg) above 500"; null for anything but a plain comparison. */
+function conditionText(x: Expr, label: (ref: string) => string): string | null {
+  if (x.kind !== "cmp") return null;
+  const op = (STRINGS.stuck.ops as Record<string, string>)[x.op];
+  if (!op) return null;
+  const v = typeof x.value === "number" ? fmt(x.value) : String(x.value);
+  return fill(STRINGS.stuck.cond, { name: label(x.ref), op, value: v });
+}
+
+/** An id as words for the screen when content gives no name: `iron_kg_total` -> "Iron (kg) total". */
+export function idWords(id: string): string {
+  const w = id.replace(/_kg(?=_|$)/, " (kg)").replace(/_/g, " ");
+  return w.charAt(0).toUpperCase() + w.slice(1);
+}
+
 /** `trained_smiths` -> "smiths", `electrical_engineers_trained` -> "electrical engineers". */
 export function tradeLabel(id: string): string {
   return id.replace(/^trained_|_trained$/g, "").replace(/_/g, " ");
@@ -175,6 +217,8 @@ export class Game {
   decision: PauseReason[] = [];
   /** The player's own speed before the pending decisions slowed the clock; null when none pend. */
   decisionFromSpeed: ClockSpeed | null = null;
+  private idleDays = 0;
+  private noticed = false;
 
   constructor(
     readonly tree: Tree,
@@ -196,6 +240,19 @@ export class Game {
     this.engine.addSystem(this.log);
     this.clock = new Clock(this.engine);
     this.clock.onDecision((e) => this.noteDecision(e.reasons, e.fromSpeed));
+    // A dead end, or a long stretch with nothing to build, is a decision moment too: slow down and
+    // say why, once per stretch.
+    this.engine.onTick(() => {
+      const s = this.stuck();
+      this.idleDays = s ? this.idleDays + 1 : 0;
+      const notice = !!s && (s.deadEnd || this.idleDays >= IDLE_NOTICE_DAYS);
+      if (notice && !this.noticed) {
+        const r = { kind: STUCK_PAUSE, subject: String(this.stage) };
+        this.log.add({ day: this.engine.day, ...r });
+        this.slowFor([r]);
+      }
+      this.noticed = notice;
+    });
 
     if (!opts.save) {
       const draft = opts.draft ?? defaultDraftOutcome(tree);
@@ -392,7 +449,7 @@ export class Game {
   }
 
   resourceName(id: string): string {
-    return this.tree.resources[id]?.name ?? id;
+    return this.tree.resources[id]?.name ?? idWords(id);
   }
 
   stores(): StoreRow[] {
@@ -695,6 +752,52 @@ export class Game {
     }
     return out.sort((a, b) => a.stage - b.stage);
   }
+
+  /**
+   * Null while there is something to build: a project under way, or a shown project that can start
+   * now or once jobs already working make what it lacks. Otherwise, what the next projects wait on,
+   * and whether the stage's gate can be reached at all with what this build can make (`deadEnd`).
+   */
+  stuck(): StuckView | null {
+    const e = this.engine;
+    const book = this.projects.book;
+    const stage = this.stage;
+    const gateId = this.tree.stages.find((s) => s.stage === stage)!.gate.id;
+    if (this.projects.isComplete(gateId)) return null;
+    if (Object.keys(book.building).length > 0) return null;
+    const makeableNow = (r: string): boolean => e.unlockedJobs().some((j) => (j.outputs?.[r] ?? 0) > 0);
+    const cards = this.projectCards();
+    if (cards.some((c) => c.status === "available" && (c.affordable || c.missing.every((m) => makeableNow(m.resource))))) return null;
+
+    const label = (ref: string): string =>
+      this.tree.resources[ref] ? this.resourceName(ref) : (this.tree.stateVariables[ref]?.description ?? idWords(ref));
+    const waiting: StuckView["waiting"] = [];
+    for (const id of this.tree.stages.find((s) => s.stage === stage)!.nodes) {
+      const n = this.tree.nodes[id]!;
+      const st = this.projects.status(id);
+      if (st === "complete" || st === "closed" || st === "building") continue;
+      const chk = checkRequires(this.tree, id, e, book as NodeBook);
+      if (chk.missingNodes.length || !chk.anyOfMet || !nodeBeatOpen(this.tree, id, book)) continue; // not next up yet
+      const needs = chk.failedState.map((c) => conditionText(c.expr, label) ?? c.text);
+      for (const [r, amount] of Object.entries(missingResources(this.tree, id, e)))
+        needs.push(fill(STRINGS.stuck.more, { n: fmt(Math.ceil(amount)), name: this.resourceName(r).toLowerCase() }));
+      if (needs.length) waiting.push({ id, name: n.name, needs });
+    }
+    const r = this.reachNow();
+    const deadEnd = !r.nodes.has(gateId);
+    return { waiting, deadEnd, cantMake: deadEnd ? [...r.missing].map(label) : [] };
+  }
+
+  /** What can still be reached in the current stage from here (src/content/reach.ts), cached by progress. */
+  private reachNow(): Reach {
+    const book = this.projects.book;
+    const closed = this.tree.nodeOrder.filter((id) => closedBy(this.tree, id, book as NodeBook));
+    const key = `${this.stage}|${book.completed.join(",")}|${closed.join(",")}`;
+    if (this.reachCache?.key !== key)
+      this.reachCache = { key, reach: reach(this.tree, this.stage, book.completed, closed, SUPPLIED_METRICS) };
+    return this.reachCache.reach;
+  }
+  private reachCache: { key: string; reach: Reach } | null = null;
 
   /** The tech map for one stage (default: the current one), plus the chain of every stage. */
   techMap(stage: number = this.stage): TechMap {

@@ -11,3 +11,4 @@ export * from "./types";
 export { parseExpr, printExpr, normalize, exprRefs, exprLeaves, ExprParseError, CMP_OPS } from "./expr";
 export * from "./evaluate";
 export * from "./nodes";
+export * from "./reach";

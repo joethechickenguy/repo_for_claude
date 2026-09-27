@@ -130,6 +130,9 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
   );
 
   c3.appendChild(el("h2", "", esc(S.projects.heading)));
+  const stuckBox = el("div", "stuck");
+  stuckBox.setAttribute("role", "status");
+  c3.appendChild(stuckBox);
   const projBox = el("div");
   c3.appendChild(projBox);
   const wsBox = el("div");
@@ -287,9 +290,10 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
   let wsKey = "";
   let nbCount = -1;
 
-  function renderProjects(cards: ProjectCard[]): void {
+  function renderProjects(cards: ProjectCard[], stuck: boolean): void {
     if (!cards.length) {
-      setHTML(projBox, `<p class="small muted">${esc(S.projects.nothing)}</p>`);
+      // "Keep working; new problems will surface" is only true when something can still move.
+      setHTML(projBox, stuck ? "" : `<p class="small muted">${esc(S.projects.nothing)}</p>`);
       projEls.clear();
       choiceEls.clear();
       return;
@@ -519,8 +523,17 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
       setHTML(trainInfo, lines.map((l) => `<p>${esc(l)}</p>`).join(""));
     }
 
-    // Projects, workshops, log
-    renderProjects(game.projectCards());
+    // Projects, workshops, log. When nothing can move, say what's blocking instead of "keep working".
+    const stuck = game.stuck();
+    if (stuck) {
+      let h = `<h3>${esc(S.stuck.heading)}</h3>`;
+      if (stuck.deadEnd) h += `<p class="dead">${esc(fill(S.stuck.cantMake, { list: stuck.cantMake.join(", ") }))}</p>`;
+      for (const w of stuck.waiting) h += `<p>${esc(fill(S.stuck.waiting, { name: w.name, list: w.needs.join("; ") }))}</p>`;
+      if (!stuck.deadEnd) h += `<p class="muted">${esc(S.stuck.hint)}</p>`;
+      setHTML(stuckBox, h);
+    } else setHTML(stuckBox, "");
+    stuckBox.hidden = !stuck;
+    renderProjects(game.projectCards(), !!stuck);
     const ws = game.workshops();
     const key = ws.map((w) => w.id).join(",");
     if (key !== wsKey) {

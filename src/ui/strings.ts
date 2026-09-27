@@ -114,6 +114,7 @@ export const STRINGS = {
     pressure_red: "{name} is red.",
     workshop_open: "Workshop open: {name}.",
     gate: "Stage {n} complete.",
+    stuck: "Nothing to build: see Projects for what's blocking.",
   },
   pause: {
     node_revealed: "New problem: {name}",
@@ -122,10 +123,20 @@ export const STRINGS = {
     pressure_red: "{name} is red",
     workshop_open: "Workshop open: {name}",
     gate: "Stage {n} gate reached",
+    stuck: "Nothing to build: see Projects for what's blocking",
     join: " · ",
     backTo: "Back to {n}×",
     ok: "Got it",
     newHere: "New",
+  },
+  stuck: {
+    heading: "Nothing to build right now",
+    waiting: "{name} is waiting on: {list}.",
+    more: "{n} more {name}",
+    cond: "{name} {op} {value}",
+    ops: { ">": "above", "<": "below", ">=": "at least", "<=": "at most", "==": "equal to", "!=": "not" },
+    cantMake: "This build can't reach this stage's gate: nothing makes or measures {list}. The stage's content isn't finished yet, and no amount of waiting will change that.",
+    hint: "Start a project, or put people on the jobs that make what a project lacks.",
   },
   map: {
     heading: "Tech map",

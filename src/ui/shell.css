@@ -182,3 +182,9 @@ details p{margin:4px 0 0}
   .tmap-stages li::after{display:none}
   .tmap-grid{grid-auto-flow:row; grid-auto-columns:auto; gap:12px}
 }
+
+/* Nothing can move (owner playtest 2026-09-27): say what's blocking, and when it's the build's fault. */
+.stuck{border:1px solid var(--red); padding:9px 11px; margin-bottom:10px; font-size:14px}
+.stuck h3{color:var(--red); margin-bottom:4px}
+.stuck p{margin:0 0 6px}
+.stuck .dead{font-weight:600}

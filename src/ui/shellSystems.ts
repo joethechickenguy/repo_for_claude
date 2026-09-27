@@ -1,7 +1,7 @@
 // Engine systems the shell adds (package D): the stage gate, a stand-in for the furnace workshop's
 // campaign count until E1 lands, and the log. Deterministic; each saves its own data.
 import { currentStage, gateStatus, type Tree } from "../content";
-import type { EngineSystem, JsonValue, PauseReason, ProjectsSystem, TickContext } from "../engine";
+import { ENERGY_METRIC, type EngineSystem, type JsonValue, type PauseReason, type ProjectsSystem, type TickContext } from "../engine";
 
 /** Pause kind when a stage gate completes; subject is the stage number. */
 export const GATE_PAUSE = "gate";
@@ -42,6 +42,13 @@ export class GateSystem implements EngineSystem {
  */
 export const STANDIN_CAMPAIGN_DAYS = 30;
 export const CAMPAIGNS_METRIC = "campaigns_run";
+
+/**
+ * Names conditions may read that no state variable or resource declares, because a running system
+ * sets them each tick (energy, the campaigns stand-in). Reachability (src/content/reach.ts) treats
+ * these as able to come true; anything else undeclared can never come true.
+ */
+export const SUPPLIED_METRICS: ReadonlySet<string> = new Set([ENERGY_METRIC, CAMPAIGNS_METRIC]);
 
 export class StandInCampaigns implements EngineSystem {
   readonly id = "campaigns";
