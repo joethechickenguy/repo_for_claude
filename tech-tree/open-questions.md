@@ -49,3 +49,38 @@ Unresolved points, roughly by how much they affect the design.
 17. **Zero-page run.** Every node has a `without_pages` route, so it's possible; its length is
     unestimated. Hardest spots: Haber-Bosch (unavailable; arc process instead), the basic lining,
     peroxide.
+
+## Loader (package B)
+
+The loader takes the simplest reading of each and says so in `npm run content` warnings.
+
+18. **Condition names that aren't declared.** `requires.state` and gate conditions read `ore_kg`,
+    `campaigns_run`, `energy_w_per_person`, `bloom_kg`, `iron_kg_total`, `terrain_allows_adit`,
+    `engine_static_fire_s`, `engine_thrust_kn`, `dv_total_km_s` and `crewed_landing_survived`, which
+    are in neither `state-variables.yaml` nor `resources.yaml` (the validator doesn't check
+    conditions). Reading: they are engine metrics, answered by the engine's `StateView.get`, and
+    listed in `tree.identifiers` as `undeclared`. Declare them, or keep them as metrics?
+19. **`bundles_taken has geological_survey`** (`tin_survey_kestel`) names no topic or category in
+    `draft.yaml`, so it is never true and the D_tin route never appears. Probably
+    `survey_copper_tin` (the node's own bundle) or the `survey` category.
+20. **`has` on a map.** `bundles_taken` is topic → coverage. Reading: `has t` is true when coverage
+    of t ≥ the partial threshold (0.5), i.e. the topic isn't absent.
+21. **`writes_state` carries no values.** Reading: flags become true; an enum takes the one value its
+    node id names (`watt_engine` → `watt`); numbers, counts and sets are the simulation's. Eight enum
+    writes name no value: `ore_roasting`, `plate_rolling`, `foremen`, `nitrogen_fixation`,
+    `hydrogen_peroxide`, and the choices `deposit_choice`, `coal_seam_choice`, `guidance_choice`.
+    The loader accepts an optional node field `writes_values: {var: value}` for the first five; the
+    choices are set by the player's pick.
+22. **No starting values.** `state-variables.yaml` has no defaults, so every number starts at 0 and
+    every enum at its first value. Descriptions imply otherwise for `iron_quality` (3),
+    `tolerance_mm` (1.0), `forest_cover`, `malachite_left_kg` and `tool_wear`; at 0,
+    `ground_stone_axes` (`tool_wear < 0.8`) shows on day one and `ore_roasting`
+    (`malachite_left_kg < 20000`) as soon as crucibles are built. The loader reads an optional
+    `default:` per variable.
+23. **"Nx labor" without pages.** The loader takes the first "Nx labor" in `without_pages` as the
+    labor multiplier when the bundle is absent. `guidance_choice` says "Inertial costs 4x labor",
+    which applies only to one option; an optional `without_pages_labor:` number overrides the text.
+24. **Build rules the design leaves open.** Readings: resources are consumed when a project starts;
+    a node once visible stays visible; a stage opens when the previous gate node completes; Build
+    labor is split evenly over active projects; a gate is re-checked when started (it has no labor,
+    so it completes at once). `work-packages.md` names `page-bundles.yaml`, which is `draft.yaml`.

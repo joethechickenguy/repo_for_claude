@@ -2,7 +2,7 @@
 // The engine (package A) owns the NodeBook inside its save and applies what these return:
 // resources to consume, state to write, jobs and workshops that open. Nothing here mutates.
 //
-// Readings of tech-tree/README.md and work-packages.md § B (see open-questions.md, "Loader"):
+// Readings of tech-tree/README.md and work-packages.md § B (open-questions.md, "Loader", 18-24):
 // - A node is visible when its stage is open, `requires.nodes` are complete, one `any_of` group is
 //   complete and every `requires.state` condition holds. Once visible it stays visible (revealed),
 //   so a condition that later lapses doesn't pull a project off the list.
