@@ -168,6 +168,21 @@ controls. Levers: labor costs, rates, pressure slopes, beat thresholds. Record e
 
 ---
 
+## Status
+
+Tick when done; add 3-5 lines of what shipped and what was left open.
+
+- [ ] A engine core
+- [ ] B stage loader
+- [ ] C simulation models
+- [ ] D shell UI
+- [ ] E1 furnace · [ ] E2 engine · [ ] E3 machine shop · [ ] E4 liquefier · [ ] E5 rocket engine · [ ] E6 rocket
+- [ ] F pressures and beats
+- [ ] G1 · [ ] G2 · [ ] G3 · [ ] G4 · [ ] G5 · [ ] G6
+- [ ] H test campaign
+- [ ] I draft
+- [ ] J tuning
+
 ## Conventions for all packages
 
 - Everything the player reads comes from the YAML or a small strings file; no prose in code.
