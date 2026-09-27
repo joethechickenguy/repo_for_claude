@@ -29,6 +29,11 @@ gate:
   condition: {energy_w_per_person: 600, state: ["mine_drained_by_engine == true"]}
   routes: [A_newcomen, B_watt, C_high_pressure, T_savery]   # T_ = trap
 
+choices:                           # optional: exclusive either/ors; starting one option closes the rest
+  - id: air_supply
+    prompt: "The question the player is answering, as one sentence."
+    options: [wind_furnaces, pot_bellows]    # node ids of this stage; each option should set `tradeoff`
+
 pressures:                         # bars the simulation moves
   - id: mine_water
     name: Water in the mine
@@ -37,8 +42,10 @@ pressures:                         # bars the simulation moves
     rises_with: ["what makes it worse"]
     red_when: "mine_water_m > 0"
     effect_when_red: "what visibly stops"
-    answers: [node ids]            # nodes that address it
+    answers: [node ids]            # nodes that address it; the bar names them, and what they wait on
     introduced_in_beat: 6
+    model: {per_unit_produced: {wood_kg: -0.0000006}, per_day: 0.01, min: 0, max: 100}   # optional: how drives moves
+    red_modifiers: {rate: {gather_wood: 0.667}}   # optional: effect_when_red as engine modifiers
 
 workshops:                         # design screens; a base definition once, `extends: true` later
   - id: engine_workshop
@@ -73,6 +80,9 @@ nodes:
     unlocks:
       jobs: [tend_engine]                      # per-worker-day rate in a comment
       effects: ["..."]
+    tradeoff: "One line: what this option gains and gives up (shown on its card)"
+    modifiers: {rate: {smelt_copper: 2}, toolLife: {blades: 2.5}}   # optional: applied for good on completion
+    pressure_per_day: {wood_distance: 0.08}    # optional: replaces that bar's model per_day once complete
     reads_state: [has_coal]
     writes_state: [engine_type, mine_drained_by_engine]
     pages_bundle: steam_engines              # a topic or category id from draft.yaml, or none
@@ -93,7 +103,11 @@ Conventions:
 - `substantive` marks decisions that should count toward the "one every few minutes" target; the
   summary counts them per stage.
 - `accelerant` marks optional nodes that speed the run; `critical_path` marks the minimum path.
-- A `decision_option` is one of several answers at a fork. Building a second is allowed; it costs time.
+- A `decision_option` is one of several answers at a fork. Building a second is allowed; it costs time,
+  unless the options are listed together in a stage `choices:` entry: then starting one closes the
+  others for good (status `closed`), and the projects panel shows them as one "Choose one" box.
+- `modifiers` kinds: `rate` and `yield` (target a job), `toolLife` (a tool resource), `training` (a
+  trade). A factor multiplies; effects written only in `unlocks.effects` prose change nothing.
 - Gates list checks in `requires.state`; the UI shows which are unmet.
 
 ## Numbers
