@@ -18,7 +18,7 @@ pip install pyyaml && python3 tools/validate_tree.py
 
 ## Play it
 
-Needs Node 20 or newer.
+Needs Node 22.18 or newer (the content build loads TypeScript directly).
 
 ```sh
 npm install
