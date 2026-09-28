@@ -118,6 +118,11 @@ Conventions:
 - `modifiers` kinds: `rate` and `yield` (target a job), `toolLife` (a tool resource), `training` (a
   trade). A factor multiplies; effects written only in `unlocks.effects` prose change nothing.
 - Gates list checks in `requires.state`; the UI shows which are unmet.
+- A job in a stage file's `jobs:` map may name a supply `group:` (`fuel`, `tools`, `building`,
+  `metals`, `chemicals`; defined with a name and one line in `resources.yaml` `job_groups:`). Once its
+  stage is past, the job folds into that group's people row: the player sets people per group and
+  the game splits them by need (DESIGN.md, Labor). Leave out `group` for jobs whose output isn't
+  stockpiled (Build, Turn parts, Tend the engine): those always stay rows of their own.
 
 ## Numbers
 

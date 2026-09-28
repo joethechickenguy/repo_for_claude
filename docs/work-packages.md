@@ -320,6 +320,10 @@ Tick when done; add 3-5 lines of what shipped and what was left open.
     have no one-line text or hover-nodes of their own in draft.yaml, so a pool shows its `absent` text
     and a category shows none; single-topic categories need the cascade rule). No design system data
     for hover-nodes on roster specialties (only pages have a `pages_bundle` link to nodes).
+- Supply groups (owner playtest 2026-09-27, after J pass 1): from Stage 2 on, past stages' jobs fold
+  into one people row per group (Fuel, Tools, Building materials, Metals, Chemicals) split by need;
+  Stage 4 goes from ~25 rows to ~9, and Stores fold earlier materials into one line
+  (`src/ui/shellGroups.ts`, `tests/ui/groups.test.ts`, open question 65).
 - [x] J tuning (pass 1; repeatable)
   - Pass 1 in `docs/playtests/2026-09-27-j1.md` (before/after tables; notes `*-bot-j1.md`, made by
     `npx vite-node scripts/playtest.ts <date> <label>`). Longest lull per stage now 150-220 days

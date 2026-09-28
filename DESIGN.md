@@ -111,6 +111,14 @@ department to its works, a works to its jobs, pin anything by hand. Auto-staffin
 dumb (fill targets in priority order, show what it assigned) so cause and effect stay visible. What
 never disappears: the heartbeat bar, the pressures, the idle count, and each works' output vs target.
 
+**Supply groups** (owner playtest 2026-09-27: "over 20 labor controls by Stage 4"). From Stage 2
+on, earlier stages' jobs fold into one row per group: Fuel, Tools, Building materials, Metals,
+Chemicals. The player sets people for the group; every ten days the game splits them by need (what
+the colony uses that no other row makes, what projects wait on, a month's buffer) and never works
+more than that, so spares stay idle and train. Expand a group to see or pin its jobs. The current
+stage's jobs stay rows of their own, so the new work is always hands-on. Stores fold the materials
+only groups make into one "Earlier materials" line, and one comes back out when it runs short.
+
 Idle people are always in **training**: anyone can learn any trade (immortality), so idle labor
 converts to skill, and trained counts (`machinists_trained`, `welders_trained`, ...) gate later
 nodes. Big projects have **milestones** so a long build unlocks something halfway.

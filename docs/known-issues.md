@@ -1,7 +1,7 @@
 # Known issues
 
 Problems found so far, from the owner's playtests, the bot playtests (`docs/playtests/`) and
-`tech-tree/open-questions.md`. Not yet scheduled. Last updated 2026-09-27, build `228663f`.
+`tech-tree/open-questions.md`. Not yet scheduled. Last updated 2026-09-28.
 
 ## Pacing and length
 
@@ -44,8 +44,9 @@ Problems found so far, from the owner's playtests, the bot playtests (`docs/play
 14. **The test campaign's rules are readings, not decisions.** A known fatal flaw always strikes if
     you launch anyway; the escape tower counts only with solid motors; every other flaw strikes on a
     50% roll from a seed fixed at the draft (question 61).
-15. **Foremen and departments are untested in real play.** The bot never uses them; only unit tests
-    cover them.
+15. **Foremen and departments are untested in real play, and now overlap with supply groups.** The
+    bot never uses them; only unit tests cover them. Since supply groups (2026-09-28) already fold
+    earlier jobs, Foremen's per-facility targets may no longer be worth a project (question 65).
 
 ## Interface
 

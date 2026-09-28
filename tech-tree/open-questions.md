@@ -351,3 +351,12 @@ The loader takes the simplest reading of each and says so in `npm run content` w
     or slower rates would stretch the gaps, not add decisions; closing it needs content (more
     either/or choices per stage, or recurring decisions like the machine shop's queue). Rails and
     canals now scale hauling (`pressure_scale:`), so the bar stays green at any tonnage after them.
+65. **Supply groups (owner playtest 2026-09-27).** Past stages' jobs fold into Fuel, Tools, Building
+    materials, Metals and Chemicals (`jobs.<id>.group`, `resources.yaml` `job_groups`). Readings:
+    a group's need for a resource goes to its most productive maker (the newer method on a tie), so
+    the bloomery and flint knapping fade out by themselves once better methods exist; tools count
+    as one need, for the longest-lived tool the group can make; a group never works more people than
+    it needs (spares idle, training); the split reruns every 10 days (estimate) and at once when the
+    player changes a group. Jobs whose output isn't stockpiled stay rows. Works (Foremen) still take
+    jobs out of groups; whether Foremen is still worth having next to groups is the owner's call.
+    The playtest bot sets every job by hand, so inside groups its jobs are pinned.
