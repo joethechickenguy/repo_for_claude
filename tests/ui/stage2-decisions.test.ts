@@ -4,7 +4,8 @@
 // node with a `tradeoff`) at least every 365 days from the start of Stage 2 to its gate.
 import { describe, expect, it } from "vitest";
 import { tree } from "../../src/content";
-import { Game, PEOPLE_BLOCK } from "../../src/ui/shellGame";
+import { Game } from "../../src/ui/shellGame";
+import { setRow } from "../play/bot";
 
 const PLAN1: [string, number][] = [
   ["gather_wood", 2700], ["knap_flint", 1000], ["dig_clay", 600], ["fire_pottery", 200],
@@ -20,17 +21,6 @@ const PLAN2: [string, number][] = [
 ];
 const STAGE1 = ["digging_sticks", "pit_kiln", "charcoal_clamps", "trail_green_stones", "crucibles_blowpipes", "stone_molds", "pot_bellows", "hafted_blades", "coppice_near_woods", "eastern_outcrop", "arsenical_copper"];
 const MAIN2 = ["iron_prospecting", "bloomery", "bloom_smithing", "coal_mining", "lime_burning", "blast_furnace", "sand_casting", "mine_drainage_manual", "newcomen_engine", "finery_forge", "water_wheels"];
-
-function setRow(game: Game, job: string, target: number): void {
-  for (let g = 0; g < 400; g++) {
-    const row = game.peopleRows().find((r) => r.id === job);
-    if (!row) return;
-    const d = target - row.value;
-    if (Math.abs(d) < PEOPLE_BLOCK) return void (d && game.adjust([job], d));
-    if (d > 0 && row.canInc === false) return;
-    game.adjust([job], Math.sign(d) * PEOPLE_BLOCK);
-  }
-}
 
 function play(picks: string[], focused: boolean) {
   const game = new Game(tree);

@@ -9,6 +9,7 @@ import { producers, tree } from "../../src/content";
 import type { PauseReason, SaveGame } from "../../src/engine";
 import { INTRO_PAUSE, introControls } from "../../src/ui/pressures";
 import { Game, PEOPLE_BLOCK } from "../../src/ui/shellGame";
+import type { TreeRow } from "../../src/ui/controls/peopleTree";
 
 export interface StagePlan {
   /** People per job (rows that don't exist yet are skipped; the rest of the idle go to Build). */
@@ -81,14 +82,32 @@ const OPTIONAL_WHEN_BUILDS_BELOW = 2;
 const REASON_WINDOW_DAYS = 3;
 const REASON_KINDS = new Set(["node_complete", "pressure_red", "milestone", "workshop_done", "gate", "workshop_open"]);
 
+/** A job's row anywhere in the people panel (a supply group holds earlier stages' jobs), with its path. */
+export function findRow(game: Game, job: string): { row: TreeRow; path: string[] } | null {
+  const walk = (rows: readonly TreeRow[], at: string[]): { row: TreeRow; path: string[] } | null => {
+    for (const r of rows) {
+      if (r.id === job) return { row: r, path: [...at, r.id] };
+      const hit = r.children ? walk(r.children, [...at, r.id]) : null;
+      if (hit) return hit;
+    }
+    return null;
+  };
+  return walk(game.peopleRows(), []);
+}
+
+/**
+ * Set a job's people in blocks, as a player would. Inside a supply group that pins the job: the bot
+ * staffs every job by hand, so groups never re-split its crews.
+ */
 export function setRow(game: Game, job: string, target: number): void {
   for (let g = 0; g < 600; g++) {
-    const row = game.peopleRows().find((r) => r.id === job);
-    if (!row) return;
+    const hit = findRow(game, job);
+    if (!hit) return;
+    const { row, path } = hit;
     const d = target - row.value;
-    if (Math.abs(d) < PEOPLE_BLOCK) return void (d && game.adjust([job], d));
+    if (Math.abs(d) < PEOPLE_BLOCK) return void (d && game.adjust(path, d));
     if (d > 0 && row.canInc === false) return;
-    game.adjust([job], Math.sign(d) * PEOPLE_BLOCK);
+    game.adjust(path, Math.sign(d) * PEOPLE_BLOCK);
   }
 }
 

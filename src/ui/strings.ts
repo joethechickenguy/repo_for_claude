@@ -50,6 +50,7 @@ export const STRINGS = {
     demand: "needs {n}/day",
     claimed: "{n} waiting for projects",
     empty: "Nothing in store yet.",
+    earlier: "Earlier materials ({n}): all supplied",
   },
   tools: {
     line: "{tools} tools for {users} people who need them.",
@@ -71,6 +72,9 @@ export const STRINGS = {
     pull: "fills demand",
     shortfall: "{n} short",
     priority: "priority {n}",
+    groupAtWork: "{work} at work",
+    groupSpare: "{work} at work, {spare} spare (they train)",
+    groupShort: "short: needs about {n}",
   },
   projects: {
     heading: "Projects",
@@ -117,6 +121,7 @@ export const STRINGS = {
     workshop_done: "{name}: results are in.",
     gate: "Stage {n} complete.",
     stuck: "Nothing to build: see Projects for what's blocking.",
+    groups: "Earlier jobs fold into supply groups: {name}. Set people for a group and it splits them by what's used; open it to see or pin a job.",
   },
   pause: {
     node_revealed: "New problem: {name}",

@@ -106,6 +106,15 @@ export interface Job {
   why?: string;
   /** Structured rates from the stage file's `jobs:` map. Jobs without them make nothing yet. */
   rates?: JobRates;
+  /** Supply group it folds into once its stage is past (the stage file's `jobs.<id>.group`). */
+  group?: string;
+}
+
+/** A supply group (resources.yaml `job_groups:`): one people row for earlier stages' jobs. */
+export interface JobGroup {
+  id: string;
+  name: string;
+  what: string;
 }
 
 // ---- Expressions ---------------------------------------------------------------------------------------
@@ -390,6 +399,8 @@ export interface Tree {
   choices?: Record<string, Choice>;
   /** Facilities of the works tier (stage `works:` lists), in staffing order. */
   works?: WorksSpec[];
+  /** Supply groups in resources.yaml order (owner playtest 2026-09-27). */
+  jobGroups?: JobGroup[];
   /** Departments of the departments tier (stage `departments:`), with starting priorities. */
   departments?: DepartmentSpec[];
 }

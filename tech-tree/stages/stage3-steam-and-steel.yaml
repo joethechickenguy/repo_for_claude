@@ -25,18 +25,21 @@ jobs:
     tool: true
   blow_steel:
     name: Blow steel
+    group: metals
     what: "Uses 110 kg pig iron. Makes 100 kg steel"         # a Bessemer crew blows tons an hour; a tenth lost to the flame (estimate)
     why: "Air through molten pig iron burns out the carbon in twenty minutes, no fuel needed."
     inputs: {iron_kg: 110}
     outputs: {steel_kg: 100}
   mine_mineral:
     name: Mine minerals
+    group: chemicals
     what: "One crew across the sites prospecting found: sand, salt, lead, zinc, sulfur, graphite and the rarer ores"
     why: "Glass, acid, batteries, alloys and aluminum each need a mineral that isn't iron or coal."
     outputs: {sand_kg: 40, salt_kg: 20, lead_kg: 5, sulfur_kg: 5, zinc_kg: 3, graphite_kg: 5, mercury_kg: 0.2, silver_kg: 0.05, chromium_ore_kg: 5, tungsten_kg: 0.05, bauxite_kg: 20}   # a basket per worker-day (estimate)
     tool: true
   make_glass:
     name: Make glass
+    group: building
     what: "Uses 20 kg sand, 4 kg lime and 15 kg coal. Makes 20 kg glass"
     why: "Sand melted with lime and alkali: gauge glasses, lamp bulbs, laboratory ware, and later vacuum tubes."
     inputs: {sand_kg: 20, lime_kg: 4, coal_kg: 15}
@@ -44,12 +47,14 @@ jobs:
     burns: {coal_kg: 15}
   make_sulfuric_acid:
     name: Make sulfuric acid
+    group: chemicals
     what: "Uses 3 kg sulfur. Makes 9 kg acid"                 # 98/32 kg acid per kg sulfur, lead chambers (stoichiometry)
     why: "Burn sulfur, oxidize it in lead chambers, dissolve it in water: the acid half of chemistry."
     inputs: {sulfur_kg: 3}
     outputs: {acid_kg: 9}
   make_cement:
     name: Make cement
+    group: building
     what: "Uses 120 kg limestone, 30 kg clay and 25 kg coal. Makes 100 kg cement"
     why: "Limestone and clay burned together and ground: a stone you can pour, for foundations and test stands."
     inputs: {stone_kg: 120, clay_kg: 30, coal_kg: 25}

@@ -92,6 +92,8 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
   c1.appendChild(el("h2", "", esc(S.stores.heading)));
   const res = el("div", "res");
   c1.appendChild(res);
+  const earlierBox = el("div", "earlier");
+  c1.appendChild(earlierBox);
   const toolsBox = el("div");
   c1.append(el("hr"), toolsBox);
 
@@ -511,17 +513,29 @@ export function mountShell(root: HTMLElement, game: Game, opts: ShellOptions = {
     setHTML(strip, sh);
 
     // Stores
+    const storeRows = (rows: ReturnType<Game["stores"]>): string => {
+      let h = "";
+      for (const r of rows) {
+        const rs = Math.abs(r.rate) < 0.05 ? "" : fill(S.stores.perDay, { sign: r.rate > 0 ? S.stores.plus : S.stores.minus, n: fmt(Math.max(1, Math.abs(r.rate))) });
+        h += `<div>${esc(r.name)}</div><div class="v">${esc(fmt(r.stock))}</div><div class="r ${r.rate < -0.05 ? "red" : "muted"}">${esc(rs)}</div>`;
+        const extra: string[] = [];
+        if (r.demand > 0.05) extra.push(fill(S.stores.demand, { n: fmt(Math.max(1, r.demand)) }));
+        if (r.claimed > 0) extra.push(fill(S.stores.claimed, { n: fmt(r.claimed) }));
+        if (extra.length) h += `<div class="d">${esc(extra.join(" · "))}</div>`;
+      }
+      return h;
+    };
     const rows = game.stores();
-    let rh = "";
-    for (const r of rows) {
-      const rs = Math.abs(r.rate) < 0.05 ? "" : fill(S.stores.perDay, { sign: r.rate > 0 ? S.stores.plus : S.stores.minus, n: fmt(Math.max(1, Math.abs(r.rate))) });
-      rh += `<div>${esc(r.name)}</div><div class="v">${esc(fmt(r.stock))}</div><div class="r ${r.rate < -0.05 ? "red" : "muted"}">${esc(rs)}</div>`;
-      const extra: string[] = [];
-      if (r.demand > 0.05) extra.push(fill(S.stores.demand, { n: fmt(Math.max(1, r.demand)) }));
-      if (r.claimed > 0) extra.push(fill(S.stores.claimed, { n: fmt(r.claimed) }));
-      if (extra.length) rh += `<div class="d">${esc(extra.join(" · "))}</div>`;
-    }
-    setHTML(res, rh || `<p class="small muted">${esc(S.stores.empty)}</p>`);
+    const earlier = game.earlierStores();
+    setHTML(res, storeRows(rows) || (earlier.length ? "" : `<p class="small muted">${esc(S.stores.empty)}</p>`));
+    // Earlier materials: one line, opened on request (the open state survives the redraw).
+    if (earlier.length) {
+      const was = earlierBox.querySelector("details")?.open ?? false;
+      setHTML(
+        earlierBox,
+        `<details${was ? " open" : ""}><summary class="small muted">${esc(fill(S.stores.earlier, { n: earlier.length }))}</summary><div class="res">${storeRows(earlier)}</div></details>`,
+      );
+    } else setHTML(earlierBox, "");
     const t = game.tools();
     if (game.intro.isIntroduced("pressure:tool_wear") || t.users > 0) {
       const bare = Math.max(0, t.users - t.tools);

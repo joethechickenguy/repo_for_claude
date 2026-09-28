@@ -54,6 +54,7 @@ import {
 import { fuelsFromTree, gameContent, workFromTree } from "./shellContent";
 import { defaultDraftOutcome, type DraftOutcome } from "./shellDraft";
 import { fmt, fmtRound, fmtSmart, yearDay } from "./shellFormat";
+import { GROUP_ROW_PREFIX, GroupsSystem } from "./shellGroups";
 import { GATE_PAUSE, GateSystem, LogSystem, StandInCampaigns, SUPPLIED_METRICS, TiersSystem } from "./shellSystems";
 import { fill, STRINGS } from "./strings";
 
@@ -144,6 +145,24 @@ export const IDLE_NOTICE_DAYS = 60;
 
 /** Pause kind when the current stage stops being able to move; subject is the stage number. */
 export const STUCK_PAUSE = "stuck";
+
+/** Log kind when earlier jobs fold into supply groups; subject is the group ids, space-separated. */
+export const GROUPS_LOG = "groups";
+
+/**
+ * Estimate (play value): an earlier material whose stock would run out within this many days at
+ * today's rate shows in Stores again.
+ */
+export const EARLIER_SHORT_DAYS = 60;
+
+/** A people-panel path into a supply group: its row, or one of its jobs. */
+function groupPath(path: readonly string[]): { group: string; job?: string } | null {
+  const i = path.findIndex((p) => p.startsWith(GROUP_ROW_PREFIX));
+  if (i < 0) return null;
+  const group = path[i]!.slice(GROUP_ROW_PREFIX.length);
+  const job = path[i + 1];
+  return job ? { group, job } : { group };
+}
 
 /** The tech map (owner playtest 2026-09-27: "how does the big picture fit together?"). */
 export interface TechMap {
@@ -246,6 +265,8 @@ export class Game {
   readonly pressures: PressureSystem;
   readonly intro: IntroSystem;
   readonly log: LogSystem;
+  /** Supply groups: earlier stages' jobs as one row each (owner playtest 2026-09-27). */
+  readonly groups: GroupsSystem;
   /**
    * What needs the player (the opening, then every red bar, finished project, new node...). The
    * clock never stops; it drops to 0.5x and these stay on the banner, newer ones added, until the
@@ -268,11 +289,18 @@ export class Game {
     this.intro = new IntroSystem(tree, book);
     this.pressures = new PressureSystem(tree, book, (c) => this.intro.isIntroduced(c));
     this.log = new LogSystem();
+    this.groups = new GroupsSystem({
+      tree,
+      stage: () => this.stage,
+      shownJobs: () => this.shownJobs(),
+      projectNeeds: () => this.projectNeeds(),
+    });
     this.engine.addSystem(new EnergySystem(fuelsFromTree(tree), workFromTree(tree)));
     this.engine.addSystem(new StandInCampaigns());
     this.engine.addSystem(this.projects);
     this.engine.addSystem(new GateSystem(tree, this.projects));
     this.engine.addSystem(new TiersSystem(tree));
+    this.engine.addSystem(this.groups);
     this.engine.addSystem(this.pressures);
     this.engine.addSystem(this.intro);
     this.engine.addSystem(this.log);
@@ -282,6 +310,7 @@ export class Game {
     // A dead end, or a long stretch with nothing to build, is a decision moment too: slow down and
     // say why, once per stretch.
     this.engine.onTick(() => {
+      if (this.groups.formed.length) this.log.add({ day: this.engine.day, kind: GROUPS_LOG, subject: this.groups.formed.join(" ") });
       const s = this.stuck();
       this.idleDays = s ? this.idleDays + 1 : 0;
       const notice = !!s && (s.deadEnd || this.idleDays >= IDLE_NOTICE_DAYS);
@@ -356,6 +385,12 @@ export class Game {
    */
   adjust(fullPath: readonly string[], delta: number): void {
     const e = this.engine;
+    const g = groupPath(fullPath);
+    if (g) {
+      if (g.job) this.groups.pin(e, g.group, g.job, (this.groups.pinned(g.job) ?? e.manual(g.job)) + delta);
+      else this.groups.setPeople(e, g.group, this.groups.people(g.group) + delta);
+      return;
+    }
     let path = fullPath;
     if (e.laborTier() === "departments") {
       const inDept = e.works().some((w) => (w.def.department ?? "") === path[0]);
@@ -393,6 +428,12 @@ export class Game {
    */
   setValue(fullPath: readonly string[], value: number): void {
     const e = this.engine;
+    const g = groupPath(fullPath);
+    if (g) {
+      if (g.job) this.groups.pin(e, g.group, g.job, value);
+      else this.groups.setPeople(e, g.group, value);
+      return;
+    }
     let path = fullPath;
     if (e.laborTier() === "departments") {
       const inDept = e.works().some((w) => (w.def.department ?? "") === path[0]);
@@ -417,6 +458,8 @@ export class Game {
   /** Pin toggle (works rows). */
   setPinned(path: readonly string[], pinned: boolean): void {
     const e = this.engine;
+    const g = groupPath(path);
+    if (g?.job) return this.groups.pin(e, g.group, g.job, pinned ? e.manual(g.job) : null);
     const p = e.laborTier() === "departments" ? path.slice(1) : path;
     if (p.length !== 2) return;
     const [w, j] = p as [string, string];
@@ -501,7 +544,17 @@ export class Game {
     return this.tree.resources[id]?.name ?? idWords(id);
   }
 
+  /** The Stores panel: materials made only by supply groups are left out unless short (see `earlierStores`). */
   stores(): StoreRow[] {
+    return this.allStores().filter((row) => !this.isFoldedStore(row));
+  }
+
+  /** Earlier materials folded into one line: made only by supply-group jobs, and not short. */
+  earlierStores(): StoreRow[] {
+    return this.allStores().filter((row) => this.isFoldedStore(row));
+  }
+
+  private allStores(): StoreRow[] {
     const e = this.engine;
     const r = e.report;
     const rows: StoreRow[] = [];
@@ -515,6 +568,36 @@ export class Game {
       rows.push({ id, name: this.resourceName(id), stock, rate: made - used, demand, claimed });
     }
     return rows;
+  }
+
+  /**
+   * A material is folded when every unlocked job that makes it is in a supply group, and it isn't
+   * short: no job ran short of it, projects don't wait on it, and it won't run out within
+   * EARLIER_SHORT_DAYS at today's rate.
+   */
+  private isFoldedStore(row: StoreRow): boolean {
+    const e = this.engine;
+    const makers = e.unlockedJobs().filter((j) => (j.outputs?.[row.id] ?? 0) > 0);
+    if (!makers.length || !makers.every((j) => this.groups.groupOf(e, j.id) !== null)) return false;
+    const jobs = e.report?.jobs ?? {};
+    if (Object.values(jobs).some((j) => j.people > 0 && j.fraction < 0.98 && j.limitedBy === row.id)) return false;
+    if (row.claimed > row.stock || (this.projectNeeds()[row.id] ?? 0) > 0) return false;
+    if (row.rate < 0 && row.stock / -row.rate < EARLIER_SHORT_DAYS) return false;
+    return true;
+  }
+
+  /** What shown projects still lack before they can start: the largest single shortfall per resource. */
+  projectNeeds(): Record<string, number> {
+    const e = this.engine;
+    const out: Record<string, number> = {};
+    for (const id of this.projects.shown()) {
+      if (id in this.projects.book.building) continue;
+      for (const [r, amount] of Object.entries(this.tree.nodes[id]?.requires.resources ?? {})) {
+        const missing = amount - e.stock(r);
+        if (missing > 0) out[r] = Math.max(out[r] ?? 0, missing);
+      }
+    }
+    return out;
   }
 
   idle(): number {
@@ -565,11 +648,45 @@ export class Game {
       };
     };
 
+    // Supply groups: earlier stages' jobs, one row each, split by need; pin a job to hold it.
+    const groups = this.groups.groups(e);
+    const grouped = new Set(groups.flatMap((g) => g.jobs));
+    const standing = this.groups.standing(e);
+    const groupRows: TreeRow[] = groups.map((g) => {
+      const { people, working } = standing[g.id] ?? { people: 0, working: 0 };
+      const need = this.groups.needPeople(g.id);
+      const short = need > people;
+      const detail = short
+        ? fill(STRINGS.people.groupShort, { n: fmt(need) })
+        : people > working
+          ? fill(STRINGS.people.groupSpare, { work: fmt(working), spare: fmt(people - working) })
+          : fill(STRINGS.people.groupAtWork, { work: fmt(working) });
+      return {
+        id: GROUP_ROW_PREFIX + g.id,
+        name: g.name,
+        value: people,
+        note: g.what,
+        detail,
+        tone: short ? "short" : "normal",
+        step: PEOPLE_BLOCK,
+        canInc: idle > 0,
+        canDec: people > 0,
+        children: g.jobs.map((j) => {
+          const pinned = this.groups.pinned(j) !== undefined;
+          const row = jobRow(j, e.manual(j), { step: PEOPLE_BLOCK, canPin: true, pinned });
+          return pinned || row.tone === "short" ? row : { ...row, tone: "auto" };
+        }),
+      } satisfies TreeRow;
+    });
+
     if (tier === "people") {
-      return e
-        .unlockedJobs()
-        .filter((j) => shown.has(j.id))
-        .map((j) => jobRow(j.id, e.manual(j.id), { step: PEOPLE_BLOCK }));
+      return [
+        ...e
+          .unlockedJobs()
+          .filter((j) => shown.has(j.id) && !grouped.has(j.id))
+          .map((j) => jobRow(j.id, e.manual(j.id), { step: PEOPLE_BLOCK })),
+        ...groupRows,
+      ];
     }
 
     // Works and departments: works rows with their jobs; manual jobs outside works stay flat.
@@ -606,9 +723,9 @@ export class Game {
     const inWorks = new Set(e.works().flatMap((w) => [w.def.primaryJob, ...(w.def.supportJobs ?? [])]));
     const flat = e
       .unlockedJobs()
-      .filter((j) => shown.has(j.id) && !inWorks.has(j.id))
+      .filter((j) => shown.has(j.id) && !inWorks.has(j.id) && !grouped.has(j.id))
       .map((j) => jobRow(j.id, e.manual(j.id), { step: PEOPLE_BLOCK }));
-    if (tier === "works") return [...worksRows(), ...flat];
+    if (tier === "works") return [...worksRows(), ...flat, ...groupRows];
     const depts = [...new Set(e.works().map((w) => w.def.department ?? ""))];
     depts.sort((a, b) => (e.departmentPriority(b) ?? 0) - (e.departmentPriority(a) ?? 0));
     return [
@@ -625,6 +742,7 @@ export class Game {
         } satisfies TreeRow;
       }),
       ...flat,
+      ...groupRows,
     ];
   }
 
@@ -754,6 +872,11 @@ export class Game {
     }
     if (kind === "pressure_red") return this.tree.stages.flatMap((x) => x.pressures).find((p) => p.id === s)?.name ?? s;
     if (kind === "workshop_open" || kind === "workshop_done") return this.tree.workshops[s]?.name ?? s;
+    if (kind === GROUPS_LOG)
+      return s
+        .split(" ")
+        .map((g) => this.tree.jobGroups?.find((x) => x.id === g)?.name ?? g)
+        .join(", ");
     if (kind === GATE_PAUSE || kind === "opening") return this.tree.stages.find((x) => String(x.stage) === s)?.gate.name ?? s;
     return this.tree.nodes[s]?.name ?? s;
   }

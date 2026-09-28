@@ -14,6 +14,7 @@ import type {
   Draft,
   IdentifierKind,
   Job,
+  JobGroup,
   JobRates,
   LaborTier,
   NodeKind,
@@ -457,6 +458,12 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
       for (const j of m[1]!.split(",").map((s) => s.trim()).filter(Boolean)) if (!rateNotes.has(j)) rateNotes.set(j, m[2]!);
     }
   }
+  const groupDefs = obj(obj(raw.resources).job_groups);
+  const jobGroups: JobGroup[] = Object.entries(groupDefs).map(([id, g]) => {
+    const m = obj(g);
+    if (m.name === undefined) errors.push(`resources.yaml: job_groups.${id} needs a name`);
+    return { id, name: String(m.name ?? id), what: String(m.what ?? "") };
+  });
   const jobs: Record<string, Job> = {};
   const job = (id: string, stage: number): Job => {
     let j = jobs[id];
@@ -493,6 +500,10 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
       if (meta.name !== undefined) j.name = String(meta.name);
       if (meta.what !== undefined) j.what = String(meta.what);
       if (meta.why !== undefined) j.why = String(meta.why);
+      if (meta.group !== undefined) {
+        j.group = String(meta.group);
+        if (!(j.group in groupDefs)) errors.push(`${file}: jobs.${id}.group names ${JSON.stringify(j.group)}, not in resources.yaml job_groups`);
+      }
       const rates: JobRates = {};
       for (const part of ["inputs", "outputs", "burns"] as const) {
         const amounts = obj(meta[part]);
@@ -617,6 +628,7 @@ export function compileTree(raw: RawContent, lib: ExprLibrary): CompileResult {
     tools,
     choices,
     ...(works.length ? { works } : {}),
+    ...(jobGroups.length ? { jobGroups } : {}),
     ...(departments.length ? { departments } : {}),
   };
   return { tree, errors, warnings };

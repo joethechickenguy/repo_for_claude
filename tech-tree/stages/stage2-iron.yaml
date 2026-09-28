@@ -24,12 +24,14 @@ gate:
 jobs:
   mine_iron_ore:
     name: Mine iron ore
+    group: metals
     what: "30 kg of ore a day with a tool"                       # deposit_choice comment
     why: "Every bloom and every ton of cast iron starts as ore someone dug."
     outputs: {iron_ore_kg: 30}
     tool: true
   smelt_iron_bloom:
     name: Smelt iron (bloomery)
+    group: metals
     what: "Uses 30 kg ore and 30 kg charcoal. Makes 6 kg of bloom"   # charcoal:ore ~1:1, ~17-20% of ore as bloom (bloomery sources)
     why: "Iron never melts in a bloomery; the ore is reduced to a spongy bloom soaked in slag."
     inputs: {iron_ore_kg: 30, charcoal_kg: 30}
@@ -37,6 +39,7 @@ jobs:
     burns: {charcoal_kg: 30}
   smith_bloom:
     name: Smith the bloom
+    group: metals
     what: "Uses 15 kg bloom and 6 kg charcoal. Makes 10 kg of bar iron"   # a third lost to scale and slag (bloom_smithing notebook)
     why: "Hammering squeezes the slag out and welds the iron grains into a bar you can work."
     inputs: {bloom_kg: 15, charcoal_kg: 6}
@@ -44,6 +47,7 @@ jobs:
     burns: {charcoal_kg: 6}
   forge_iron_tools:
     name: Forge iron tools
+    group: tools
     what: "Uses 1.5 kg iron and half a kg of charcoal per tool. Makes 4 tools"   # bloom_smithing comment
     why: "Iron tools last three times as long as bronze."
     inputs: {iron_kg: 6, charcoal_kg: 2}
@@ -51,24 +55,28 @@ jobs:
     burns: {charcoal_kg: 2}
   mine_coal:
     name: Mine coal
+    group: fuel
     what: "400 kg of coal a day with a tool"                      # coal_seam_choice comment says 500 at the outcrop; estimate
     why: "Coal is fuel nobody had to grow this century."
     outputs: {coal_kg: 400}
     tool: true
   coke_coal:
     name: Coke coal
+    group: fuel
     what: "Uses 160 kg coal. Makes 100 kg coke"                   # coke yield 60-70% (coal_seam_choice)
     why: "Coke is strong enough to hold up a tall furnace charge; raw coal crumbles and smothers it."
     inputs: {coal_kg: 160}
     outputs: {coke_kg: 100}
   quarry_stone:
     name: Quarry stone
+    group: building
     what: "250 kg of limestone a day with a tool"
     why: "Stone for furnace stacks, and limestone for lime."
     outputs: {stone_kg: 250}
     tool: true
   burn_lime:
     name: Burn lime
+    group: building
     what: "Uses 100 kg limestone and 50 kg wood. Makes 56 kg lime"   # lime_burning comment; 56% by mass is exact
     why: "Lime lets furnace slag flow without taking the iron with it."
     inputs: {stone_kg: 100, wood_kg: 50}
@@ -76,6 +84,7 @@ jobs:
     burns: {wood_kg: 50}
   run_blast_furnace:
     name: Run the blast furnace
+    group: metals
     what: "Uses 60 kg ore, 50 kg charcoal and 4 kg lime. Makes 30 kg iron"   # ~1 t/day from a crew of ~30; ~1.5 t charcoal per t
     why: "Iron with 4% carbon melts: tons a day instead of kilograms."
     inputs: {iron_ore_kg: 60, charcoal_kg: 50, lime_kg: 4}
@@ -83,6 +92,7 @@ jobs:
     burns: {charcoal_kg: 50}
   run_coke_furnace:
     name: Run the coke furnace
+    group: metals
     what: "Uses 60 kg ore, 80 kg coke and 4 kg lime. Makes 30 kg iron"   # coke burns ~1.6x charcoal by mass here; estimate
     why: "The same furnace on coke: no trees burned."
     inputs: {iron_ore_kg: 60, coke_kg: 80, lime_kg: 4}

@@ -19,12 +19,14 @@ gate:
 jobs:
   farm_fuel_crops:
     name: Farm fuel crops
+    group: fuel
     what: "60 kg of grain and potatoes a day for the stills"      # estimate
     why: "Alcohol for rocket fuel is grown: every ton of it is fields and harvests."
     outputs: {grain_kg: 60}
     tool: true
   ferment_and_distill:
     name: Ferment and distill
+    group: fuel
     what: "Uses 30 kg grain and 10 kg coal. Makes 10 kg of 75% alcohol"   # ~0.3 kg ethanol per kg of starch crop (estimate)
     why: "Yeast turns sugar to alcohol; the still concentrates it to the 75% the V-2 burned."
     inputs: {grain_kg: 30, coal_kg: 10}

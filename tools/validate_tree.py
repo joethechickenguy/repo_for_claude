@@ -30,6 +30,9 @@ REQUIRED_NON_GATE = ["unlocks", "pages_bundle", "without_pages", "numbers_status
 STARTING_JOBS = {"gather_wood", "knap_flint", "build"}
 
 
+GROUP_ERRORS = []
+
+
 def load():
     stages = []
     for path in sorted(glob.glob(os.path.join(ROOT, "stages", "stage*.yaml"))):
@@ -40,7 +43,15 @@ def load():
     with open(os.path.join(ROOT, "draft.yaml")) as f:
         bundles = yaml.safe_load(f)
     with open(os.path.join(ROOT, "resources.yaml")) as f:
-        resources = yaml.safe_load(f)["resources"]
+        res_file = yaml.safe_load(f)
+    resources = res_file["resources"]
+    # Supply groups: validated against the stage files' `jobs.<id>.group` in validate().
+    resources_groups = set((res_file.get("job_groups") or {}).keys())
+    for fname, data in stages:
+        for jid, meta in (data.get("jobs") or {}).items():
+            g = (meta or {}).get("group")
+            if g is not None and g not in resources_groups:
+                GROUP_ERRORS.append(f"{fname}: jobs.{jid}.group names {g!r}, not in resources.yaml job_groups")
     return stages, state_vars, bundles, resources
 
 
@@ -55,7 +66,7 @@ def all_prereqs(node):
 
 
 def validate(stages, state_vars, bundles, resources):
-    errors, warnings = [], []
+    errors, warnings = list(GROUP_ERRORS), []
     nodes = {}
     for fname, data in stages:
         for n in data["nodes"]:

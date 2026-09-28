@@ -57,3 +57,14 @@ resources:
   chromium_ore_kg:   {produced_by: mine_mineral, name: "Chromite (kg)"}
   tungsten_kg:       {produced_by: mine_mineral, name: "Tungsten (kg)", note: "Carbon filaments if none is found"}
   bauxite_kg:        {produced_by: mine_mineral, name: "Bauxite (kg)"}
+
+# Supply groups (owner playtest 2026-09-27: "over 20 labor controls in Stage 4"). From the next stage
+# on, a job with `group:` in its stage file's `jobs:` map folds into its group's row: the player sets
+# people for the group, the game splits them by what's being used and what projects wait on. Jobs of
+# the current stage, and jobs with no group, stay rows of their own.
+job_groups:
+  fuel:      {name: "Fuel", what: "Wood, charcoal, coal and coke, then oil and alcohol: whatever the fires and furnaces burn"}
+  tools:     {name: "Tools", what: "Tools for everyone who works with one; worn-out tools are replaced with the best the colony makes"}
+  building:  {name: "Building materials", what: "Clay, pots, stone, lime, cement and glass"}
+  metals:    {name: "Metals", what: "Ore to metal: copper, tin, iron and steel, made the most productive way the colony knows"}
+  chemicals: {name: "Chemicals", what: "Minerals, acid, soda ash and caustic"}

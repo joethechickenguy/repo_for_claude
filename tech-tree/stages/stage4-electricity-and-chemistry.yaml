@@ -25,18 +25,21 @@ jobs:
     outputs: {electricity_kwh: 240}
   run_arc_furnace:
     name: Run the arc furnace
+    group: metals
     what: "Uses 55 kg iron. Makes 50 kg electric steel. Draws 10 kW"
     why: "An arc between carbon electrodes melts steel with no fuel in it: clean steel, carbide, ferroalloys."
     inputs: {iron_kg: 55, graphite_kg: 0.2}
     outputs: {steel_kg: 50}
   make_alloy_steel:
     name: Make alloy steel
+    group: metals
     what: "Uses 50 kg steel, 3 kg chromite and 1 kg acid. Makes 50 kg alloy steel. Draws 5 kW"
     why: "A few percent chromium, tungsten or nickel: steel that stays hard hot, resists acid, or holds an edge."
     inputs: {steel_kg: 50, chromium_ore_kg: 3, acid_kg: 1}
     outputs: {alloy_steel_kg: 50}
   make_soda_ash:
     name: Make soda ash
+    group: chemicals
     what: "Uses 12 kg salt, 10 kg acid, 10 kg coal and 10 kg wood. Makes 10 kg soda ash and 3 kg paper"   # Leblanc; soda pulping (estimate)
     why: "Salt and sulfuric acid, then limestone and coal: the alkali glass and soap and paper need."
     inputs: {salt_kg: 12, acid_kg: 10, coal_kg: 10, wood_kg: 10}
@@ -44,18 +47,21 @@ jobs:
     burns: {coal_kg: 10}
   electrolyze_brine:
     name: Electrolyze brine
+    group: chemicals
     what: "Uses 17 kg salt. Makes 11 kg caustic soda, chlorine and hydrogen. Draws 10 kW"   # 2 NaCl -> 2 NaOH by mass (stoichiometry)
     why: "Current through salt water splits it: caustic at one electrode, chlorine at the other."
     inputs: {salt_kg: 17}
     outputs: {caustic_kg: 11, rubber_substitute_kg: 0.2}
   pump_crude:
     name: Pump crude
+    group: fuel
     what: "150 kg of crude oil a day from the wells"                 # a cable-tool well's small pump (estimate)
     why: "Oil seeps mark a pool underground; a drilled well brings it up steadily."
     outputs: {crude_kg: 150}
     tool: true
   refine_crude:
     name: Refine crude
+    group: fuel
     what: "Uses 100 kg crude and 5 kg coal. Makes 40 kg kerosene"   # the kerosene cut of a simple still (estimate)
     why: "Heat crude in a still and its parts boil off in turn: light spirits, kerosene, oils, tar."
     inputs: {crude_kg: 100, coal_kg: 5}
