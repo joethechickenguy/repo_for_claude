@@ -26,7 +26,7 @@ Every route passes. Routes starting with T are traps.
 
 | Route | Nodes | State written |
 | --- | --- | --- |
-| A_steam_dynamo | `dynamo` | `dynamo_output_kw`, `electrical_engineers_trained` |
+| A_steam_dynamo | `steam_engine_house`, `dynamo` | `dynamo_output_kw`, `electrical_engineers_trained` |
 | B_water_turbine | `water_turbine`, `dynamo` | `dynamo_output_kw`, `electrical_engineers_trained`, `hydro_kw` |
 | T_magneto | `magneto_generator` | `has_magneto` |
 
@@ -50,7 +50,7 @@ Every route passes. Routes starting with T are traps.
 
 | Route | Nodes | State written |
 | --- | --- | --- |
-| A_direct | `guidance_choice` | `guidance_mode` |
-| B_parking_orbit | `guidance_choice` | `guidance_mode` |
+| A_direct | `guidance_choice`, `radio_command_guidance` | `guidance_mode` |
+| B_parking_orbit | `guidance_choice`, `inertial_guidance` | `guidance_mode` |
 | T_single_stage |  |  |
 

@@ -220,8 +220,8 @@ Heartbeat: `shop_hours`. Gate: Electric power from a generator.
 
 | Pressure | Red when | Answers |
 | --- | --- | --- |
-| Machine shop | queue exceeds a year of shop time | machine_shop, planer_milling, electric_motors_preview |
-| Parts that don't fit | a queued part needs a tolerance tighter than tolerance_mm | machine_shop, bearings_lubrication |
+| Machine shop | shop_hours_balance < 0 | machine_shop, planer_milling, electric_motors_preview |
+| Parts that don't fit | parts_too_tight > 0 | machine_shop, bearings_lubrication |
 | Hauling | haul_workers > 2000 | rails_wagonways |
 | Iron and steel quality | iron_quality < 2 | furnace_workshop, mineral_prospecting |
 
@@ -240,6 +240,7 @@ Heartbeat: `shop_hours`. Gate: Electric power from a generator.
 | 2 | `planer_milling` | upgrade |  | Flat faces on big castings are still chiseled and filed by hand, weeks per engine. |
 | 2 | `screw_cutting_lathe` | project |  | Hand-filed screws are all different, so every nut must be matched to its bolt. |
 | 2 | `surface_plates` | workshop | yes | Nobody can make or check a truly flat surface, so every machine slide is a little crooked and parts don't fit. |
+| 3 | `canals` | decision_option | yes | Carting coal and ore on dirt tracks takes more workers than mining it. |
 | 3 | `rails_wagonways` | project | yes | Carting coal and ore on dirt tracks takes more workers than mining it. |
 | 4 | `bessemer_converter` | workshop | yes | Fined iron comes a few hundred kilograms at a time, and real steel is still a luxury. |
 | 4 | `hot_blast` | upgrade |  | Blast furnaces burn tons of fuel per ton of iron, and the coal pits can't keep up. |
@@ -254,6 +255,7 @@ Heartbeat: `shop_hours`. Gate: Electric power from a generator.
 | 7 | `dynamo` | workshop | yes | Batteries and magnetos give watts; your works needs tens of kilowatts. |
 | 7 | `electric_motors_preview` | upgrade |  | Line shafting wastes a third of the engine in belts, and every machine stops when one belt breaks. |
 | 7 | `magneto_generator` | decision_option |  | You want current without batteries, using the strongest magnets you have. |
+| 7 | `steam_engine_house` | decision_option | yes | A generator needs its own steady, fast engine; the mill engines already have work to do. |
 | 7 | `water_turbine` | project | yes | Water wheels turn slowly, but a generator wants to spin hundreds of times a minute. |
 | 8 | `gate_generator` | gate |  | A generator delivers sustained power to the works. |
 
@@ -278,6 +280,8 @@ flowchart TD
   measurement --> planer_milling
   rails_wagonways["Iron rails"]
   rotative_engine_shafting --> rails_wagonways
+  canals["Canals"]
+  rotative_engine_shafting --> canals
   bessemer_converter["Bessemer converter"]
   measurement --> bessemer_converter
   hot_blast["Hot blast"]
@@ -305,13 +309,15 @@ flowchart TD
   sulfuric_acid --> electrical_laboratory
   magneto_generator["Permanent-magnet generator"]
   electrical_laboratory --> magneto_generator
+  steam_engine_house["Engine house for the generator"]
+  bearings_lubrication --> steam_engine_house
+  rotative_engine_shafting --> steam_engine_house
   water_turbine["Water turbine"]
   bearings_lubrication --> water_turbine
-  planer_milling --> water_turbine
   dynamo["Self-excited dynamo"]
   electrical_laboratory --> dynamo
   bearings_lubrication --> dynamo
-  rotative_engine_shafting -.-> dynamo
+  steam_engine_house -.-> dynamo
   water_turbine -.-> dynamo
   electric_motors_preview["Electric motors"]
   dynamo --> electric_motors_preview
@@ -336,13 +342,13 @@ Heartbeat: `power_balance`. Gate: Liquid oxygen on tap.
 
 | Pressure | Red when | Answers |
 | --- | --- | --- |
-| Power | load exceeds generation | distribution_grid, steam_turbine, water_turbine, power_station_expansion |
-| Chemicals | demand exceeds supply for 30 days | soda_ash, chlor_alkali, sulfuric_acid |
-| Fuel | fuel use exceeds production | coal_mining, hot_blast, steam_turbine, water_turbine |
+| Power | power_balance_kw < 0 | distribution_grid, steam_turbine, water_turbine, power_station_expansion |
+| Chemicals | chemical_balance < 0 | soda_ash, chlor_alkali, sulfuric_acid |
+| Fuel | fuel_balance < 0 | coal_mining, hot_blast, steam_turbine, water_turbine |
 
 **engine_workshop** (extends): Transmission (from `distribution_grid`); Prime mover (from `steam_turbine`)
 
-**Liquefier workshop** (opens with `cascade_liquefier`): Method (from `cascade_liquefier`); Compressor pressure (atm) (from `compressors`); Heat exchanger (from `linde_liquefier`); Rectifying column trays (from `air_separation`)
+**Liquefier workshop** (opens with `cascade_liquefier`): Method (from `cascade_liquefier`); Compressor pressure (atm) (from `compressors`); Heat exchanger (from `compressors`); Rectifying column trays (from `air_separation`)
 
 | Beat | Node | Kind | Substantive | Problem |
 | --- | --- | --- | --- | --- |
@@ -353,7 +359,9 @@ Heartbeat: `power_balance`. Gate: Liquid oxygen on tap.
 | 2 | `arc_furnace` | project |  | Some metals and compounds need temperatures no fuel flame reaches. |
 | 2 | `welding` | project |  | Riveted seams leak under pressure and add weight; thin tanks and pipes need continuous joints. |
 | 3 | `chlor_alkali` | project |  | You need caustic soda, chlorine and hydrogen, and chemistry alone makes them slowly and dirtily. |
+| 3 | `heat_resistant_steel` | decision_option | yes | Turbine blades creep and crack when they run hot, so the station runs its steam cooler than it could. |
 | 3 | `soda_ash` | decision_option | yes | Glass and chemistry need alkali by the ton, and burning plants for potash eats forest. |
+| 3 | `tool_steel` | decision_option | yes | Lathe tools soften at red heat, so the machinists cut slowly to keep them hard. |
 | 4 | `compressors` | project |  | You can't hold gas at a hundred atmospheres; single-stage pumps overheat and leak. |
 | 4 | `vacuum_and_dewar` | project |  | Anything colder than ice boils away in minutes in an ordinary container, and no pump gets the air out of glass. |
 | 5 | `air_separation` | project | yes | Liquid air is four-fifths nitrogen, and a rocket burning it would lose most of its punch. |
@@ -377,6 +385,10 @@ flowchart TD
   distribution_grid --> arc_furnace
   alloy_steels["Alloy and tool steels"]
   arc_furnace --> alloy_steels
+  tool_steel["Tool steel"]
+  alloy_steels --> tool_steel
+  heat_resistant_steel["Heat-resistant steel"]
+  alloy_steels --> heat_resistant_steel
   welding["Welding"]
   arc_furnace --> welding
   soda_ash["Soda ash"]
@@ -423,9 +435,9 @@ Heartbeat: `stand_time`. Gate: A booster-class engine fires.
 
 | Pressure | Red when | Answers |
 | --- | --- | --- |
-| Test stand | queue exceeds a year | test_stand, instrumentation |
-| Liquid oxygen | stock < next test's need | lox_plant_scaleup |
-| Power | load exceeds generation | power_station_expansion |
+| Test stand | stand_days_balance < 0 | test_stand, instrumentation |
+| Liquid oxygen | lox_balance < 0 | lox_plant_scaleup |
+| Power | power_balance_kw < 0 | power_station_expansion |
 
 **Rocket engine workshop** (opens with `first_liquid_rocket`): Oxidizer : fuel (from `first_liquid_rocket`); Chamber pressure (bar) (from `first_liquid_rocket`); Cooling (from `regenerative_cooling`); Injector (from `injector_design`); Feed system (from `pressure_fed_booster_engine`); Nozzle expansion (from `instrumentation`)
 
@@ -433,30 +445,35 @@ Heartbeat: `stand_time`. Gate: A booster-class engine fires.
 | --- | --- | --- | --- | --- |
 | 1 | `departments` | project | yes | Twelve works and an oxygen plant, and you're still setting furnace targets by hand while the engine program waits. |
 | 1 | `precision_grinding` | project |  | Shafts at thousands of rpm seize in plain bearings, and cutting tools can't finish hardened steel. |
+| 1 | `rocket_society` | project | yes | Nobody here has built a rocket, and the engineers who will have to are learning from pages. |
+| 2 | `differential_analyzer` | decision_option | yes | Trajectories and engine transients are differential equations, and a person with a desk calculator solves one in weeks. |
 | 2 | `electronics_lab` | project |  | Once a rocket leaves the ground, you won't know what it's doing or why it failed. |
+| 2 | `human_computers` | project |  | Every trajectory, nozzle and orbit needs thousands of hours of arithmetic, and the engineers are doing it themselves. |
 | 2 | `instrumentation` | project | yes | Engines on test will blow up in a fraction of a second, and nobody will see what happened first. |
 | 3 | `gyroscopes` | project |  | A rocket climbing through wind tips over within seconds unless something senses which way is up and pushes back. |
+| 3 | `hypergolic_propellants` | project | yes | Liquid oxygen boils away within days, and a lander must restart its engine after coasting to the Moon. |
+| 3 | `solid_motors` | project |  | You need small, reliable thrusters for separating stages and settling propellant. |
+| 3 | `tracking_network` | project |  | After the engines stop, nobody knows where the vehicle is or whether it's on course. |
 | 4 | `first_liquid_rocket` | workshop | yes | Nobody on your team has ever lit an engine that burns liquid oxygen. |
 | 4 | `fuel_alcohol` | project | yes | Engines need tons of fuel, and without oil the only liquid fuel you can make in bulk is alcohol. |
+| 4 | `nitrogen_fixation` | decision_option | yes | Niter beds make a trickle; nitric acid by the ton needs nitrogen pulled from the air. |
 | 4 | `test_stand` | project |  | You have to fire engines somewhere they can explode without killing anyone, while measuring every second. |
 | 5 | `injector_design` | project | yes | Fuel and oxygen pour in as streams, burn unevenly, and the pressure trace shows the chamber ringing like a bell. |
+| 5 | `launch_complex` | project |  | A fueled rocket weighs hundreds of tons, needs tons of liquid oxygen in its last hours, and would destroy the test stand when it lights. |
 | 5 | `regenerative_cooling` | project | yes | Chamber walls melt within seconds; the flame is hotter than any metal. |
+| 5 | `second_test_stand` | upgrade | yes | Engine designs wait in line for the one stand while the builders stand around. |
 | 6 | `gas_generator_turbopump` | decision_option | yes | Carrying a third propellant just to drive the pump costs mass and a whole chemical plant. |
 | 6 | `hydrogen_peroxide` | decision_option | yes | Pushing propellant with tank pressure means booster tanks as thick as boilers. |
 | 6 | `pressure_fed_booster_engine` | decision_option | yes | Turbopumps look like years of machining; the pressure-fed engine already works on the stand. |
-| 7 | `human_computers` | project |  | Every trajectory, nozzle and orbit needs thousands of hours of arithmetic, and the engineers are doing it themselves. |
-| 7 | `hypergolic_propellants` | project | yes | Liquid oxygen boils away within days, and a lander must restart its engine after coasting to the Moon. |
-| 7 | `launch_complex` | project |  | A fueled rocket weighs hundreds of tons, needs tons of liquid oxygen in its last hours, and would destroy the test stand when it lights. |
 | 7 | `lox_plant_scaleup` | project |  | Every static fire burns tons of liquid oxygen, and a launch will need hundreds. |
-| 7 | `nitrogen_fixation` | decision_option | yes | Niter beds make a trickle; nitric acid by the ton needs nitrogen pulled from the air. |
-| 7 | `solid_motors` | project |  | You need small, reliable thrusters for separating stages and settling propellant. |
-| 7 | `tracking_network` | project |  | After the engines stop, nobody knows where the vehicle is or whether it's on course. |
 | 8 | `gate_engine` | gate |  | An engine big enough for a first stage runs for a full minute on the stand, and there's a pad to fly it from. |
 
 ```mermaid
 flowchart TD
   departments["Departments"]
   gate_liquid_oxygen --> departments
+  rocket_society["Rocket society"]
+  gate_liquid_oxygen --> rocket_society
   precision_grinding["Precision grinding and ball bearings"]
   gate_liquid_oxygen --> precision_grinding
   alloy_steels --> precision_grinding
@@ -470,6 +487,8 @@ flowchart TD
   test_stand["Engine test stand"]
   portland_cement --> test_stand
   welding --> test_stand
+  second_test_stand["Second test stand"]
+  test_stand --> second_test_stand
   first_liquid_rocket["First liquid-fueled engine"]
   test_stand --> first_liquid_rocket
   oil -.-> first_liquid_rocket
@@ -509,8 +528,10 @@ flowchart TD
   launch_complex --> lox_plant_scaleup
   tracking_network["Tracking stations"]
   electronics_lab --> tracking_network
+  differential_analyzer["Differential analyzer"]
+  precision_grinding --> differential_analyzer
   human_computers["Computing office"]
-  instrumentation --> human_computers
+  gate_liquid_oxygen --> human_computers
   gate_engine["Gate: a booster-class engine"]
   injector_design --> gate_engine
   gyroscopes --> gate_engine
@@ -558,10 +579,12 @@ Heartbeat: `calendar`. Gate: A living pilot on the Moon.
 | --- | --- | --- | --- | --- |
 | 1 | `rocket_workshop` | workshop | yes | Engines and tanks exist, but nobody has worked out how big each stage must be to reach the Moon. |
 | 1 | `stage_separation` | project |  | A spent stage must let go cleanly, in thin air, at high speed, without hitting the stage above. |
-| 2 | `guidance_choice` | decision_option | yes | Your gyroscopes drift, and beyond the horizon the ground can't see the rocket. |
+| 2 | `guidance_choice` | project | yes | Your gyroscopes drift, and beyond the horizon the ground can't see the rocket; someone has to own the problem. |
 | 2 | `midcourse_correction` | upgrade |  | A small error at cutoff grows into thousands of kilometers by the Moon. |
 | 3 | `capsule` | project | yes | Above about 18 km the fluids in a body boil at body temperature; the pilot needs a sealed vessel of air, and it fills with carbon dioxide within hours. |
 | 3 | `crew_safety` | upgrade | yes | If the capsule leaks, or the booster fails climbing out, the pilot dies with it. |
+| 3 | `inertial_guidance` | decision_option | yes | Beyond the horizon the ground can't see the rocket, so the rocket has to know where it is itself. |
+| 3 | `radio_command_guidance` | decision_option | yes | The rocket can't tell how fast it's going, but the ground can, by the Doppler shift of its radio. |
 | 4 | `lander_stage` | project | yes | The Moon has no air to slow you down; every meter per second of arrival speed must be cancelled by an engine, and the pilot can't judge height over a gray featureless surface. |
 | 4 | `lander_throttle` | upgrade |  | An engine that only runs at full thrust overshoots to zero speed high above the ground or slams into it. |
 | 5 | `test_campaign` | workshop | yes | Every design hides flaws you can't see on paper. |
@@ -573,10 +596,14 @@ flowchart TD
   gate_engine --> rocket_workshop
   stage_separation["Staging hardware"]
   rocket_workshop --> stage_separation
-  guidance_choice["Guidance"]
+  guidance_choice["Guidance group"]
   rocket_workshop --> guidance_choice
   tracking_network --> guidance_choice
   gyroscopes --> guidance_choice
+  radio_command_guidance["Radio command guidance"]
+  guidance_choice --> radio_command_guidance
+  inertial_guidance["Inertial guidance"]
+  guidance_choice --> inertial_guidance
   midcourse_correction["Midcourse correction"]
   guidance_choice --> midcourse_correction
   capsule["Capsule and life support"]
@@ -599,6 +626,8 @@ flowchart TD
   capsule --> test_campaign
   lander_stage --> test_campaign
   guidance_choice --> test_campaign
+  radio_command_guidance -.-> test_campaign
+  inertial_guidance -.-> test_campaign
   gate_landing["Gate: a living pilot on the Moon"]
   test_campaign --> gate_landing
   launch_complex --> gate_landing
