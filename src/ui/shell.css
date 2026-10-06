@@ -122,7 +122,6 @@ details p{margin:4px 0 0}
 .notebook .entry{border-top:1px solid var(--rule); padding:8px 0}
 
 /* Draft hook (until package I's screen lands) */
-.hook{max-width:640px; margin:40px auto; padding:0 20px}
 
 @media (max-width:480px){
   .wrap{padding:14px 16px 48px}

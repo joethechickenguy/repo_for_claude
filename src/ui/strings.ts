@@ -178,7 +178,6 @@ export const STRINGS = {
     time: "Time: year {year}, day {day}.",
   },
   draft: {
-    hook: "The draft screen isn't on this build yet. Departing with the default draft.",
     depart: "Depart",
     title: "The draft",
     rosterHeading: "Who goes",
