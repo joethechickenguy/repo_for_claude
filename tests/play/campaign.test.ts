@@ -58,13 +58,16 @@ function checkStage(s: StageReport | undefined, maxYears: number, main: boolean)
 
 describe("the campaign, played by a middling bot", () => {
   const starts: Record<number, SaveGame> = {};
-  beforeAll(() => {
-    // One run through the main variants; each stage's start is saved for the variants.
+  beforeAll(async () => {
+    // One run through the main variants; each stage's start is saved for the variants (Stages 3-6).
     let from: SaveGame | undefined;
-    for (const stage of [2, 3, 4, 5, 6]) {
+    for (const stage of [2, 3, 4, 5]) {
       const r = playRun(PLANS, stage, 20 * YEAR, from);
       from = r.game.engine.save();
       starts[stage + 1] = from;
+      // Hand the event loop back between stages: a minute-long synchronous block starves vitest's
+      // worker RPC (60 s timeout) and fails the run with an unhandled "Timeout calling onTaskUpdate".
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }, 600_000);
 
