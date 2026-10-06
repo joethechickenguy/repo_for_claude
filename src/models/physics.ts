@@ -56,6 +56,9 @@ export function bisect(
   const increasing = f(hi) > f(lo);
   for (let i = 0; i < iterations; i++) {
     const mid = (lo + hi) / 2;
+    // At double precision the interval stops shrinking (~60 halvings): every later step would leave
+    // lo and hi as they are, so stopping here returns exactly the same number.
+    if (mid === lo || mid === hi) break;
     const above = f(mid) > target;
     if (above === increasing) hi = mid;
     else lo = mid;
