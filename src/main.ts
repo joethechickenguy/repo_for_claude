@@ -1,14 +1,18 @@
 // Entry point (package D). A saved run resumes straight into the shell; otherwise the draft (package
-// I, Stage 0) comes first and Depart starts Stage 1 with what it wrote.
+// I, Stage 0) comes first and Depart starts Stage 1 with what it wrote. A save that can't be read is
+// kept under UNREADABLE_SAVE_KEY before the new run replaces it.
 import "./ui/shell.css";
 import "./ui/controls/peopleTree.css";
 import { tree } from "./content";
 import type { SaveStorage } from "./engine";
 import { DEFAULT_SAVE_KEY } from "./engine";
 import { mountShell } from "./ui/shell";
-import { defaultDraftOutcome, outcomeFrom, type DraftOutcome } from "./ui/shellDraft";
+import { mountDraft } from "./ui/draft";
+import { outcomeFrom, type DraftOutcome } from "./ui/shellDraft";
 import { Game } from "./ui/shellGame";
-import { STRINGS } from "./ui/strings";
+
+/** Where a save that failed to load is kept, so starting over never destroys it. */
+const UNREADABLE_SAVE_KEY = `${DEFAULT_SAVE_KEY}.unreadable`;
 
 /** localStorage, or null where it is blocked (private windows, previews). */
 function storage(): SaveStorage | null {
@@ -32,43 +36,9 @@ function applyTheme(): void {
   }
 }
 
-type MountDraft = (el: HTMLElement, onDepart: (outcome: unknown) => void) => unknown;
-
-/**
- * HOOK for package I: the first module of `src/ui/draft.ts`, `src/ui/draft/index.ts` or
- * `src/ui/draft/screen.ts` that exports `mountDraft(el, onDepart)` is the first screen of a new run.
- * Until one lands, a one-line screen departs with the default draft.
- */
-const draftModules = import.meta.glob<{ mountDraft?: MountDraft }>(["./ui/draft.ts", "./ui/draft/index.ts", "./ui/draft/screen.ts"]);
-
-async function showDraft(app: HTMLElement, onDepart: (o: DraftOutcome) => void): Promise<void> {
-  let mountDraft: MountDraft | undefined;
-  for (const path of ["./ui/draft.ts", "./ui/draft/index.ts", "./ui/draft/screen.ts"]) {
-    const load = draftModules[path];
-    const mod = load ? await load() : null;
-    if (mod?.mountDraft) {
-      mountDraft = mod.mountDraft;
-      break;
-    }
-  }
+function showDraft(app: HTMLElement, onDepart: (o: DraftOutcome) => void): void {
   app.replaceChildren();
-  if (mountDraft) {
-    mountDraft(app, (o) => onDepart(outcomeFrom(tree, o)));
-    return;
-  }
-  const box = document.createElement("div");
-  box.className = "hook";
-  const h = document.createElement("h1");
-  h.textContent = STRINGS.title;
-  const p = document.createElement("p");
-  p.className = "muted";
-  p.textContent = STRINGS.draft.hook;
-  const b = document.createElement("button");
-  b.type = "button";
-  b.textContent = STRINGS.draft.depart;
-  b.onclick = () => onDepart(defaultDraftOutcome(tree));
-  box.append(h, p, b);
-  app.appendChild(box);
+  mountDraft(app, (o) => onDepart(outcomeFrom(tree, o)));
 }
 
 // Workshop screens (packages E1-E6) register themselves and their game systems on import; load them
@@ -93,7 +63,7 @@ function boot(): void {
     } catch {
       /* nothing saved */
     }
-    void showDraft(app, (outcome) => {
+    showDraft(app, (outcome) => {
       const game = new Game(tree, { draft: outcome });
       if (store) game.save(store);
       play(game);
@@ -103,8 +73,16 @@ function boot(): void {
   let saved: Game | null = null;
   try {
     saved = store ? Game.load(tree, store) : null;
-  } catch {
-    saved = null; // an old or broken save: start over
+  } catch (err) {
+    // An old or broken save: keep a copy, then start over.
+    console.warn("Bootstrap: the saved run could not be loaded; starting a new run.", err);
+    try {
+      const text = store?.getItem(DEFAULT_SAVE_KEY);
+      if (text) store?.setItem(UNREADABLE_SAVE_KEY, text);
+    } catch {
+      /* storage full or blocked */
+    }
+    saved = null;
   }
   if (saved) play(saved);
   else newRun();

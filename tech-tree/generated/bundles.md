@@ -75,6 +75,8 @@ Budget 10000 pages; full coverage of everything would take 22800.
 - S3 `open_hearth`: without pages, 2x labor
 - S4 `alloy_steels`: without pages, 3x labor; many trial heats
 - S4 `arc_furnace`: without pages, 2x labor
+- S4 `heat_resistant_steel`: without pages, 2x labor
+- S4 `tool_steel`: without pages, 2x labor
 
 ## Engines and machine tools (default 1500)
 
@@ -89,6 +91,7 @@ Budget 10000 pages; full coverage of everything would take 22800.
 - S2 `watt_engine`: without pages, Different route: the condenser dial appears only after a Newcomen engine has run for 2 years (you must see the waste before the fix is conceivable); with the pages it's available at once
 - S3 `rails_wagonways`: without pages, No penalty
 - S3 `rotative_engine_shafting`: without pages, 2x labor; crank and flywheel geometry learned by trial (engines stall at the ends of the stroke until the flywheel is heavy enough)
+- S3 `steam_engine_house`: without pages, No penalty
 - S3 `water_turbine`: without pages, 2x labor
 - S4 `steam_turbine`: without pages, 3x labor; blades fail until balancing is learned
 
@@ -168,6 +171,7 @@ Budget 10000 pages; full coverage of everything would take 22800.
 
 ## Rocketry (default 2200)
 
+- S5 `rocket_society`: without pages, No penalty
 
 **Injectors, cooling, turbopumps, and the known failure modes** (full 2400): One hidden flaw per design is revealed for free; injector baffles known
 
@@ -177,6 +181,7 @@ Budget 10000 pages; full coverage of everything would take 22800.
 - S5 `instrumentation`: without pages, 2x labor
 - S5 `pressure_fed_booster_engine`: without pages, Same
 - S5 `regenerative_cooling`: without pages, Different route: film cooling only for two years of burns; channels appear after the film-cooled engine's Isp penalty is shown
+- S5 `second_test_stand`: without pages, No penalty
 - S5 `test_stand`: without pages, 1.5x labor
 - S6 `lander_stage`: without pages, 2x labor
 - S6 `lander_throttle`: without pages, 3x labor
@@ -186,7 +191,9 @@ Budget 10000 pages; full coverage of everything would take 22800.
 **Gyroscopes, accelerometers, control** (full 1200): guidance_quality +1
 
 - S5 `gyroscopes`: without pages, 3x labor; drift is large until balancing is learned
-- S6 `guidance_choice`: without pages, Inertial costs 4x labor
+- S6 `guidance_choice`: without pages, No penalty (the inertial option carries the 4x)
+- S6 `inertial_guidance`: without pages, 4x labor
+- S6 `radio_command_guidance`: without pages, No penalty
 
 **Trajectory and lunar tables** (full 1400): Replaces most computing-office hours; Δv targets shown at once
 

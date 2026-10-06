@@ -6,9 +6,9 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Fire and stone | 18 | 13 | 1 | 3 | 1 | 0 | A_wind, B_bellows, C_arsenic, D_tin |
 | 2 | Iron | 28 | 22 | 0 | 5 | 2 | 1 | A_newcomen, B_watt, C_high_pressure, T_savery |
-| 3 | Steam and steel | 23 | 8 | 8 | 4 | 3 | 1 | A_steam_dynamo, B_water_turbine, T_magneto |
-| 4 | Electricity and chemistry | 17 | 10 | 6 | 3 | 2 | 1 | A_linde, B_claude, T_cascade |
-| 5 | Precision and propulsion | 21 | 11 | 5 | 3 | 1 | 1 | A_steam_turbopump, B_gas_generator, T_pressure_fed_booster |
-| 6 | The rocket | 10 | 6 | 2 | 3 | 2 | 0 | A_direct, B_parking_orbit, T_single_stage |
+| 3 | Steam and steel | 25 | 10 | 8 | 4 | 3 | 1 | A_steam_dynamo, B_water_turbine, T_magneto |
+| 4 | Electricity and chemistry | 19 | 12 | 7 | 3 | 2 | 1 | A_linde, B_claude, T_cascade |
+| 5 | Precision and propulsion | 24 | 14 | 6 | 3 | 1 | 1 | A_steam_turbopump, B_gas_generator, T_pressure_fed_booster |
+| 6 | The rocket | 12 | 8 | 2 | 3 | 2 | 0 | A_direct, B_parking_orbit, T_single_stage |
 
-Total nodes: 117
+Total nodes: 126
